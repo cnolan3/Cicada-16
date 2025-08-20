@@ -1,8 +1,8 @@
-# **Cricket-16 APU \- Architecture**
+# **Cricket-16 APU - Architecture**
 
 This document describes the design of the Audio Processing Unit (APU) for the Cricket-16 fantasy console. The APU is responsible for generating all sound and music. The design is inspired by classic sound chips from the 8-bit and 16-bit eras, featuring four independent sound channels with ADSR envelope control and a simple DSP for effects.
 
-## **1\. Core Features**
+## **1. Core Features**
 
 - **4 Independent Channels**: The APU can play four sounds simultaneously.
 - **Channel 0 (Pulse A)**: A square wave generator with variable duty cycle and a hardware frequency sweep unit.
@@ -14,7 +14,7 @@ This document describes the design of the Audio Processing Unit (APU) for the Cr
 - **Stereo Panning**: Each channel's output can be independently panned.
 - **Master Volume Control**: Global volume control for both left and right stereo outputs.
 
-## **2\. Channel 0 & 1: Pulse Channels**
+## **2. Channel 0 & 1: Pulse Channels**
 
 The two pulse channels generate simple square waves. They are controlled by a set of registers that define their pitch, volume, and timbre.
 
@@ -23,15 +23,15 @@ The two pulse channels generate simple square waves. They are controlled by a se
 - **Duty Cycle**: The "width" of the square wave can be changed (12.5%, 25%, 50%, 75%) to alter the timbre.
 - **Frequency Sweep (Channel 0 Only)**: A hardware unit that can automatically slide the frequency of Channel 0 up or down over time.
 
-## **3\. Channel 2: Wave Channel**
+## **3. Channel 2: Wave Channel**
 
 The wave channel offers the most sonic flexibility by playing back a small, user-defined sample.
 
-- **Wave RAM**: A 4-Kilobyte area of memory at E000\-EFFF stores waveform data.
+- **Wave RAM**: A 4-Kilobyte area of memory at E000-EFFF stores waveform data.
 - **Sample Playback**: The APU reads a 32-byte sample from Wave RAM and plays it back at a specified frequency.
 - **Volume Envelope**: This channel includes the same hardware ADSR envelope found on the Pulse and Noise channels.
 
-## **4\. Channel 3: Noise Channel**
+## **4. Channel 3: Noise Channel**
 
 The noise channel generates pseudo-random noise for percussion and sound effects.
 
@@ -39,7 +39,7 @@ The noise channel generates pseudo-random noise for percussion and sound effects
 - **Frequency Control**: The clock rate of the LFSR can be changed, altering the pitch of the noise.
 - **Volume Envelope**: The noise channel features the same hardware ADSR envelope as the other channels.
 
-## **5\. ADSR Volume Envelopes**
+## **5. ADSR Volume Envelopes**
 
 The APU uses a traditional 4-stage ADSR (Attack, Decay, Sustain, Release) envelope. When a channel is triggered, its volume progresses through these stages:
 
@@ -48,73 +48,70 @@ The APU uses a traditional 4-stage ADSR (Attack, Decay, Sustain, Release) envelo
 - **Sustain**: The volume level that is held as long as the note is "on".
 - **Release**: The rate at which the volume falls from the sustain level to zero after the note is turned "off".
 
-## **6\. DSP (Digital Signal Processor)**
+## **6. DSP (Digital Signal Processor)**
 
 The APU includes a simple DSP unit for a configurable echo/delay effect.
 
 - **Functionality**: The DSP captures the final mixed audio output, delays it, and then mixes it back into the main output.
-- **Delay Buffer**: Uses a dedicated 1 KiB of RAM at F800\-FBFF.
+- **Delay Buffer**: Uses a dedicated 1 KiB of RAM at F800-FBFF.
 - **Control**: Controlled via registers starting at F5A0 for delay time, feedback, and wet/dry mix.
 
-## **7\. APU Registers (F500–F5FF)**
+## **7. APU Registers (F500–F5FF)**
 
 This section details the memory-mapped registers used to control all APU functions, starting with a high-level overview.
 
 ### **Register Map Overview**
 
-| Address      | Name      | Description                                                |
-| :----------- | :-------- | :--------------------------------------------------------- |
-| **Channels** |           |                                                            |
-| F500         | CH0_CTRL  | Pulse A: Control Register                                  |
-| F501-F502    | CH0_ADSR  | ADSR settings for Channel 0                                |
-| F510         | CH1_CTRL  | Pulse B: Control Register                                  |
-| F511-F512    | CH1_ADSR  | ADSR settings for Channel 1                                |
-| F520         | CH2_CTRL  | Wave channel: Control Register                             |
-| F521-F522    | CH2_ADSR  | ADSR settings for Channel 2                                |
-| F530         | CH3_CTRL  | Noise channel: Control Register                            |
-| F531-F532    | CH3_ADSR  | ADSR settings for Channel 3                                |
-| **Mixer**    |           |                                                            |
-| F580         | MIX_CTRL  | Master APU enable, individual channel enables              |
-| F581         | MIX_VOL_L | Master volume Left (0-15)                                  |
-| F582         | MIX_VOL_R | Master volume Right (0-15)                                 |
-| F584-F587    | PAN0-PAN3 | Per-channel stereo panning control                         |
-| **DSP**      |           |                                                            |
-| F5A0         | DSP_CTRL  | DSP Control Register                                       |
-| F5A1         | DSP_DELAY | Delay time/length (controls read offset into delay buffer) |
-| F5A2         | DSP_FBACK | Feedback level (0-15). Controls echo decay.                |
-| F5A3         | DSP_WET   | Wet signal mix level (0-15). Controls echo volume.         |
+| Address   | Name      | Description                                                |
+| :-------- | :-------- | :--------------------------------------------------------- |
+| F500      | CH0_CTRL  | Pulse A: Control Register                                  |
+| F501-F502 | CH0_ADSR  | ADSR settings for Channel 0                                |
+| F510      | CH1_CTRL  | Pulse B: Control Register                                  |
+| F511-F512 | CH1_ADSR  | ADSR settings for Channel 1                                |
+| F520      | CH2_CTRL  | Wave channel: Control Register                             |
+| F521-F522 | CH2_ADSR  | ADSR settings for Channel 2                                |
+| F530      | CH3_CTRL  | Noise channel: Control Register                            |
+| F531-F532 | CH3_ADSR  | ADSR settings for Channel 3                                |
+| F580      | MIX_CTRL  | Master APU enable, individual channel enables              |
+| F581      | MIX_VOL_L | Master volume Left (0-15)                                  |
+| F582      | MIX_VOL_R | Master volume Right (0-15)                                 |
+| F584-F587 | PAN0-PAN3 | Per-channel stereo panning control                         |
+| F5A0      | DSP_CTRL  | DSP Control Register                                       |
+| F5A1      | DSP_DELAY | Delay time/length (controls read offset into delay buffer) |
+| F5A2      | DSP_FBACK | Feedback level (0-15). Controls echo decay.                |
+| F5A3      | DSP_WET   | Wet signal mix level (0-15). Controls echo volume.         |
 
 ### **Channel Register Details**
 
 #### **F500: CH0_CTRL (Pulse A)**
 
-| Bit | Name     | Description                                                     |
-| :-- | :------- | :-------------------------------------------------------------- |
-| 7   | TRIGGER  | Write 1 to (re)start the channel and its envelope. Reads as 0\. |
-| 6-5 | DUTY     | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%    |
-| 4   | SWP_EN   | 1: Enable frequency sweep unit for this channel.                |
-| 3-0 | SWP_RATE | Sweep rate/speed.                                               |
+| Bit | Name     | Description                                                    |
+| :-- | :------- | :------------------------------------------------------------- |
+| 7   | TRIGGER  | Write 1 to (re)start the channel and its envelope. Reads as 0. |
+| 6-5 | DUTY     | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%   |
+| 4   | SWP_EN   | 1: Enable frequency sweep unit for this channel.               |
+| 3-0 | SWP_RATE | Sweep rate/speed.                                              |
 
 #### **F510: CH1_CTRL (Pulse B)**
 
-| Bit | Name    | Description                                                     |
-| :-- | :------ | :-------------------------------------------------------------- |
-| 7   | TRIGGER | Write 1 to (re)start the channel and its envelope. Reads as 0\. |
-| 6-5 | DUTY    | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%    |
-| 4-0 | \-      | Unused.                                                         |
+| Bit | Name    | Description                                                    |
+| :-- | :------ | :------------------------------------------------------------- |
+| 7   | TRIGGER | Write 1 to (re)start the channel and its envelope. Reads as 0. |
+| 6-5 | DUTY    | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%   |
+| 4-0 | -       | Unused.                                                        |
 
 #### **F520: CH2_CTRL (Wave)**
 
-| Bit | Name     | Description                                                     |
-| :-- | :------- | :-------------------------------------------------------------- |
-| 7   | TRIGGER  | Write 1 to (re)start the channel and its envelope. Reads as 0\. |
-| 6-0 | WAVE_IDX | Selects which 32-byte waveform to play from Wave RAM (0-127).   |
+| Bit | Name     | Description                                                    |
+| :-- | :------- | :------------------------------------------------------------- |
+| 7   | TRIGGER  | Write 1 to (re)start the channel and its envelope. Reads as 0. |
+| 6-0 | WAVE_IDX | Selects which 32-byte waveform to play from Wave RAM (0-127).  |
 
 #### **F530: CH3_CTRL (Noise)**
 
 | Bit | Name      | Description                                                       |
 | :-- | :-------- | :---------------------------------------------------------------- |
-| 7   | TRIGGER   | Write 1 to (re)start the channel and its envelope. Reads as 0\.   |
+| 7   | TRIGGER   | Write 1 to (re)start the channel and its envelope. Reads as 0.    |
 | 6   | LFSR_MODE | 0: 15-bit LFSR (Tonal noise), 1: 7-bit LFSR (Metallic noise).     |
 | 5-0 | CLK_DIV   | Clock divider for the LFSR, controls the base pitch of the noise. |
 
@@ -132,19 +129,19 @@ These two registers are identical for each channel (CH0, CH1, CH2, CH3).
 | Bit | Name   | Description                                         |
 | :-- | :----- | :-------------------------------------------------- |
 | 7   | APU_EN | Master APU Enable. 1: On, 0: Off (all sound muted). |
-| 6-4 | \-     | Unused.                                             |
+| 6-4 | -      | Unused.                                             |
 | 3   | CH3_EN | 1: Channel 3 (Noise) is enabled.                    |
 | 2   | CH2_EN | 1: Channel 2 (Wave) is enabled.                     |
 | 1   | CH1_EN | 1: Channel 1 (Pulse B) is enabled.                  |
 | 0   | CH0_EN | 1: Channel 0 (Pulse A) is enabled.                  |
 
-#### **F584 \- F587: PAN0 \- PAN3**
+#### **F584 - F587: PAN0 - PAN3**
 
 Each panning register is one byte and controls a single channel (F584 for CH0, F585 for CH1, etc.).
 
 | Bit | Name  | Description                                         |
 | :-- | :---- | :-------------------------------------------------- |
-| 7-2 | \-    | Unused.                                             |
+| 7-2 | -     | Unused.                                             |
 | 1   | PAN_R | 1: Send this channel's output to the Right speaker. |
 | 0   | PAN_L | 1: Send this channel's output to the Left speaker.  |
 
@@ -155,7 +152,7 @@ _(Note: Setting both PAN_L and PAN_R to 1 results in a centered mono signal for 
 | Bit | Name   | Description                                          |
 | :-- | :----- | :--------------------------------------------------- |
 | 7   | DSP_EN | Master DSP Enable. 1: On, 0: Off.                    |
-| 6-4 | \-     | Unused.                                              |
+| 6-4 | -      | Unused.                                              |
 | 3   | CH3_IN | 1: Send Channel 3's output into the DSP echo buffer. |
 | 2   | CH2_IN | 1: Send Channel 2's output into the DSP echo buffer. |
 | 1   | CH1_IN | 1: Send Channel 1's output into the DSP echo buffer. |

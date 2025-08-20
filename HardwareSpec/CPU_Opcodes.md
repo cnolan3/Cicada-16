@@ -1,4 +1,4 @@
-# **Cricket-16 CPU \- Opcode Map**
+# **Cricket-16 CPU - Opcode Map**
 
 **This document defines the machine code (byte code) encoding for the Cricket-16 Instruction Set Architecture.**
 
@@ -43,17 +43,17 @@
 ## **16-Bit Arithmetic/Logic Instructions**
 
 | Opcode (Hex) | Mnemonic   | Description                                                      |
-| :----------- | :--------- | :--------------------------------------------------------------- | ---- |
-| 80           | ADD rd, rs | 2-byte instruction. 80 followed by ddd sss. rd \= rd \+ rs.      |
-| 09           | ADD r, n16 | 09 rrr n16_lo n16_hi. r \= r \+ n16.                             |
-| 82           | SUB rd, rs | 2-byte instruction. 82 followed by ddd sss. rd \= rd \- rs.      |
-| 0A           | SUB r, n16 | 0A rrr n16_lo n16_hi. r \= r \- n16.                             |
-| 84           | AND rd, rs | 2-byte instruction. 84 followed by ddd sss. rd \= rd & rs.       |
-| 0B           | AND r, n16 | 0B rrr n16_lo n16_hi. r \= r & n16.                              |
-| 86           | OR rd, rs  | 2-byte instruction. 86 followed by ddd sss. rd \= rd             | rs.  |
-| 0C           | OR r, n16  | 0C rrr n16_lo n16_hi. r \= r                                     | n16. |
-| 88           | XOR rd, rs | 2-byte instruction. 88 followed by ddd sss. rd \= rd ^ rs.       |
-| 0D           | XOR r, n16 | 0D rrr n16_lo n16_hi. r \= r ^ n16.                              |
+| :----------- | :--------- | :--------------------------------------------------------------- |
+| 80           | ADD rd, rs | 2-byte instruction. 80 followed by ddd sss. rd = rd + rs.        |
+| 09           | ADD r, n16 | 09 rrr n16_lo n16_hi. r = r + n16.                               |
+| 82           | SUB rd, rs | 2-byte instruction. 82 followed by ddd sss. rd = rd - rs.        |
+| 0A           | SUB r, n16 | 0A rrr n16_lo n16_hi. r = r - n16.                               |
+| 84           | AND rd, rs | 2-byte instruction. 84 followed by ddd sss. rd = rd & rs.        |
+| 0B           | AND r, n16 | 0B rrr n16_lo n16_hi. r = r & n16.                               |
+| 86           | OR rd, rs  | 2-byte instruction. 86 followed by ddd sss. rd = rd              |
+| 0C           | OR r, n16  | 0C rrr n16_lo n16_hi. r = r                                      |
+| 88           | XOR rd, rs | 2-byte instruction. 88 followed by ddd sss. rd = rd ^ rs.        |
+| 0D           | XOR r, n16 | 0D rrr n16_lo n16_hi. r = r ^ n16.                               |
 | 8A           | CMP rd, rs | 2-byte instruction. 8A followed by ddd sss. Compares rd with rs. |
 | 0E           | CMP r, n16 | 0E rrr n16_lo n16_hi. Compares r with n16.                       |
 | 90-97        | INC r      | 90+r. Increment register r.                                      |
