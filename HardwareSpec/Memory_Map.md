@@ -50,26 +50,36 @@
 
 ## **Joypad Register (JOYP)**
 
-The JOYP register at F000 uses a matrix layout to read all 8 buttons (D-Pad + Action buttons) using a small number of bits. The game must first write to the register to select which group of buttons it wants to read, and then read the register to get their state. Buttons that are currently pressed are represented by a 0 bit (active low).
+The JOYP register at F000 uses a matrix layout to read all 12 buttons (D-Pad, Action, Shoulder, and Utility buttons) using a small number of I/O bits. The game must first write to the register to select which group of four buttons it wants to read, and then read the register to get their state. Buttons that are currently pressed are represented by a 0 bit (active low).
 
 ### **JOYP (F000) Bit Assignments**
 
 | Bit   | Name         | Type  | Description                                                       |
 | :---- | :----------- | :---- | :---------------------------------------------------------------- |
 | 7-6   | -            | R     | Unused (read as 1)                                                |
-| **5** | **ACTN_SEL** | **W** | **Write 0 to select Action Buttons (A, B, Select, Start)**        |
-| **4** | **DPAD_SEL** | **W** | **Write 0 to select Directional Buttons (Right, Left, Up, Down)** |
-| **3** | **BTN_3**    | **R** | **Input for Down / Start**                                        |
-| **2** | **BTN_2**    | **R** | **Input for Up / Select**                                         |
-| **1** | **BTN_1**    | **R** | **Input for Left / B**                                            |
-| **0** | **BTN_0**    | **R** | **Input for Right / A**                                           |
+| **5-4** | **GRP_SEL** | **W** | **Selects button group to read (01=D-Pad, 10=Action, 11=Utility)** |
+| **3** | **BTN_3**    | **R** | **Input for Button 3 of the selected group**                      |
+| **2** | **BTN_2**    | **R** | **Input for Button 2 of the selected group**                      |
+| **1** | **BTN_1**    | **R** | **Input for Button 1 of the selected group**                      |
+| **0** | **BTN_0**    | **R** | **Input for Button 0 of the selected group**                      |
+
+### **Button Group Mapping**
+
+The 2-bit value written to GRP_SEL determines which set of physical buttons is mapped to the four readable input bits (BTN_0 to BTN_3).
+
+| GRP_SEL Value | Group Name | BTN_0 (Bit 0) | BTN_1 (Bit 1) | BTN_2 (Bit 2) | BTN_3 (Bit 3) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 01 | **D-Pad** | Right | Left | Up | Down |
+| 10 | **Action** | A | B | X | Y |
+| 11 | **Utility** | Start | Select | R (Right Shoulder) | L (Left Shoulder) |
 
 ### **Reading the Joypad**
 
-1. **Select a Button Column:** Write to F000 to select a column.
-   - To read the D-Pad, write 0x10 (sets bit 4 to 0).
-   - To read the Action Buttons, write 0x20 (sets bit 5 to 0).
-2. **Read the Button State:** Read from F000. The lower 4 bits will reflect the state of the selected buttons. For example, if the D-Pad was selected and the player is pressing **Up** and **Left**, reading the register will return a value where bits 2 and 1 are 0.
+1. **Select a Button Group:** Write a value to F000 to set bits 5-4, selecting a group.
+   - To read the D-Pad, write `0x10`.
+   - To read the Action Buttons (A, B, X, Y), write `0x20`.
+   - To read the Utility Buttons (Start, Select, L, R), write `0x30`.
+2. **Read the Button State:** Read from F000. The lower 4 bits will reflect the state of the selected buttons. For example, if the Action group was selected and the player is pressing **A** and **X**, reading the register will return a value where bits 0 and 2 are 0.
 
 ## **Timer Control Register (TAC)**
 
