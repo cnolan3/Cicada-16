@@ -4,7 +4,7 @@ This document describes the design of the Picture Processing Unit (PPU) for the 
 
 ## **1. Core Components**
 
-- **VRAM (Video RAM):** 8 KiB of dedicated RAM located at 6000-7FFF. VRAM holds the tile data (the 8x8 pixel building blocks for graphics) and the tilemaps (the data that arranges tiles into background layers).
+- **VRAM (Video RAM):** 32 KiB of dedicated, bank-switched RAM. An 8 KiB window of VRAM is accessible to the CPU at any time at `6000-7FFF`. The active bank is selected via the `VRAM_BANK` I/O register. VRAM holds the tile data (the 8x8 pixel building blocks for graphics) and the tilemaps (the data that arranges tiles into background layers).
 - **OAM (Object Attribute Memory):** 512 bytes of dedicated RAM at F600-F7FF used to store the attributes for all 64 hardware sprites (position, tile index, palette, etc.).
 - **CRAM (Color RAM / Palette RAM):** 512 bytes of internal PPU memory that holds the color palette data. This is not directly mapped to the CPU's address space but is accessed via PPU registers.
 - **Screen Resolution:** 240x160 pixels.

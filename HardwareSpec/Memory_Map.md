@@ -6,10 +6,10 @@
 | :--------- | :------- | :--------- | :--------------------------------------------------------- |
 | 0000       | 3FFF     | **16 KiB** | **ROM Bank 0 (fixed)**                                     |
 | 4000       | 5FFF     | **8 KiB**  | **ROM Bank N (switchable, half-select)**                   |
-| 6000       | 7FFF     | **8 KiB**  | **VRAM (PPU-visible)**                                     |
+| 6000       | 7FFF     | **8 KiB**  | **VRAM Window (banked, 1 of 4 banks, 32 KiB total)**       |
 | 8000       | 9FFF     | **8 KiB**  | **Cartridge RAM (banked, battery-backed)**                 |
-| A000       | BFFF     | **8 KiB**  | **Work RAM (WRAM0)**                                       |
-| C000       | DFFF     | **8 KiB**  | **Work RAM (WRAM1)**                                       |
+| A000       | BFFF     | **8 KiB**  | **Work RAM Bank 0 (fixed, 32 KiB total)**                  |
+| C000       | DFFF     | **8 KiB**  | **Work RAM Window (banked, 1 of 3 switchable banks)**      |
 | E000       | EFFF     | **4 KiB**  | **Wave RAM (user wave tables)**                            |
 | F000       | F0FF     | **256 B**  | **IO Registers (joypad, timers/div, RTC, DMA, mapper)**    |
 | F100       | F1FF     | **256 B**  | **PPU Registers (LCDC, STAT, SCX, SCY, LY/LYC, palettes)** |
@@ -20,6 +20,13 @@
 | F600       | F7FF     | **512 B**  | **OAM (sprite attribute table)**                           |
 | F800       | FBFF     | **1 KiB**  | **DSP Delay Buffer**                                       |
 | FC00       | FFFF     | **1 KiB**  | **HRAM (high speed ram)**                                  |
+
+### Memory Banking
+
+The Cricket-16 architecture uses bank switching to expand the amount of available WRAM and VRAM beyond the limits of the 16-bit address space.
+
+-   **WRAM (32 KiB Total):** Work RAM is divided into four 8 KiB banks. Bank 0 is always accessible at `A000-BFFF`. The window at `C000-DFFF` is switchable; the `WRAM_BANK` register at `F014` selects which of the remaining three banks (1, 2, or 3) is mapped into this window.
+-   **VRAM (32 KiB Total):** Video RAM is also divided into four 8 KiB banks. The `VRAM_BANK` register at `F013` selects which of the four banks is made accessible through the single 8 KiB window at `6000-7FFF`.
 
 ## **IO Registers (F000–F0FF)**
 
@@ -40,6 +47,8 @@
 | F010    | **MPR_BANK**  | **ROM bank select (half-select within 16 KiB banks)**       |
 | F011    | **RAM_BANK**  | **Bank select for banked Cart RAM (if enabled)**            |
 | F012    | **WE_LATCH**  | **Write-enable latch for battery RAM (write key)**          |
+| F013    | **VRAM_BANK** | **VRAM Bank Select (0-3 for 6000-7FFF window)**             |
+| F014    | **WRAM_BANK** | **WRAM Bank Select (0-2 for C000-DFFF window -> maps banks 1-3)** |
 | F018    | **RTC_SEC**   | **0..59 (latched)**                                         |
 | F019    | **RTC_MIN**   | **0..59 (latched)**                                         |
 | F01A    | **RTC_HOUR**  | **0..23 (latched)**                                         |
