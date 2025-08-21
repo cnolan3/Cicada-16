@@ -116,7 +116,7 @@
 | CALL n16   | 0x2000    | 3     | 20     | Call subroutine at address n16. Pushes PC+3 onto stack.                              |
 | CALLcc n16 | C, 0x2000 | 3     | 20/8   | Conditional call if condition cc is met.                                             |
 | RET        |           | 1     | 16     | Return from subroutine. Pops PC from stack.                                          |
-| RETI       |           | 1     | 16     | Return from interrupt. Pops PC from stack and enables interrupts.                    |
+| RETI       |           | 1     | 16     | Return from interrupt. Pops PC from stack and enables interrupts. See `Interrupts.md` for details. |
 
 #### **Note on Condition Codes (cc)**
 

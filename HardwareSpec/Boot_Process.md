@@ -8,8 +8,8 @@ This table describes the memory map from the CPU's perspective while the interna
 
 | Address Range   | Description                     | Access     | Notes                                                                                |
 | :-------------- | :------------------------------ | :--------- | :----------------------------------------------------------------------------------- |
-| 0x0000 - 0x3FEF | Internal Boot ROM               | Read-Only  | Mapped only during boot. Overlays Cartridge ROM Bank 0. Inaccessible after handover. |
-| 0x3FF0 - 0x3FFF | Internal Interrupt Vector Table | Hardwired  | Points to ISRs within the Boot ROM.                                                  |
+| 0x0000 - 0x3FFF | Internal Boot ROM               | Read-Only  | Mapped only during boot. Overlays Cartridge ROM Bank 0. Inaccessible after handover. |
+| 0x3FF0 - 0x3FFF | Internal Interrupt Vector Table | Hardwired  | Points to ISRs within the Boot ROM. See `Interrupts.md` for the table layout.      |
 | 0x6000 - 0x7FFF | VRAM Window                     | Read/Write | Locked to VRAM Bank 0 during boot. The `VRAM_BANK` register is ignored.              |
 | 0xA000 - 0xBFFF | Work RAM (WRAM0)                | Read/Write | The WRAM1 window (`C000-DFFF`) is unmapped during boot.                              |
 | 0xE000 - 0xEFFF | Wave RAM                        | Read/Write | Available for boot sound data.                                                       |
@@ -30,19 +30,20 @@ The console contains a small, internal **Boot ROM** that is separate from the ma
 
 ### **2. Boot Mode Interrupts**
 
-During the boot sequence, the CPU operates in a special "Boot Mode" for interrupts. The CPU is hardwired to use a private **Internal Interrupt Vector Table** located at the end of the Boot ROM (e.g., 0x0FF0). This table points to Interrupt Service Routines (ISRs) also contained within the Boot ROM. This allows the Boot ROM to use V-Blank and H-Blank interrupts to perform animated startup sequences without interfering with the game's own interrupt system.
+During the boot sequence, the CPU operates in a special "Boot Mode" for interrupts. The CPU is hardwired to use a private **Internal Interrupt Vector Table** located at the end of the Boot ROM (`0x3FF0-0x3FFF`). This table points to Interrupt Service Routines (ISRs) also contained within the Boot ROM. This allows the Boot ROM to use V-Blank and H-Blank interrupts to perform animated startup sequences without interfering with the game's own interrupt system. See the **`Interrupts.md`** document for full details on the vector table layout and interrupt process.
 
 ### **3. The Boot Sequence**
 
 The code on the Boot ROM executes the following steps in order:
 
-1. **Hardware Initialization**: From power-on, the Boot ROM has full access to WRAM, VRAM, CRAM, OAM, and all I/O registers. It performs basic hardware setup, which includes clearing WRAM, initializing the Stack Pointer (SP) to the top of WRAM (e.g., 0xDFFF), and setting PPU and APU registers to a known-default, disabled state. This access is required for the Boot ROM to load graphics, palettes, and sounds for the boot animation.
-2. **Display Boot Animation**: The Boot ROM displays the console logo, enables interrupts (EI), and uses its internal V-Blank ISR to perform a brief startup animation. It may read the **Boot Animation ID** from the cartridge header to select a specific visual effect.
-3. **Cartridge Detection & Verification**: While the animation is playing, the Boot ROM checks for a cartridge and verifies its header via the temporary "Cartridge Window".
-4. **Configure Game Interrupt Mode**: It reads the "Interrupt Mode" flag from the cartridge header and sets an internal hardware latch that determines where the CPU will look for interrupt vectors once the game starts (either the cartridge ROM or WRAM).
-5. **Initialize RAM Vectors (If Needed)**: If "Enhanced Mode" is selected, the Boot ROM configures and triggers the DMA controller to copy the 16-byte interrupt vector table from the cartridge (at 0x00F0) to WRAM (at 0xC000).
-6. **Finalize and Disable Interrupts**: Once the animation is complete and the cartridge is ready, the Boot ROM executes a DI instruction to disable interrupts, ensuring a clean handover.
-7. **Memory Map Handover**: The Boot ROM writes to a special I/O register that commands the memory controller to:
+1. **Hardware Initialization**: From power-on, the Boot ROM has full access to WRAM, VRAM, CRAM, OAM, and all I/O registers. It performs basic hardware setup, which includes clearing WRAM and initializing the Stack Pointer (SP) to the top of WRAM (e.g., 0xDFFF).
+2. **System Library Copy**: The Boot ROM uses the DMA controller to copy the first 2 KiB of its own address space (which contains the System Library functions) to the dedicated System Library RAM at `0x9000 - 0x97FF`. After this, it sets the PPU and APU registers to a known-default, disabled state.
+3. **Display Boot Animation**: The Boot ROM displays the console logo, enables interrupts (EI), and uses its internal V-Blank ISR to perform a brief startup animation. It may read the **Boot Animation ID** from the cartridge header to select a specific visual effect.
+4. **Cartridge Detection & Verification**: While the animation is playing, the Boot ROM checks for a cartridge and verifies its header.
+5. **Configure Game Interrupt Mode**: It reads the "Interrupt Mode" flag from the cartridge header and sets an internal hardware latch that determines where the CPU will look for interrupt vectors once the game starts (either the cartridge ROM or WRAM).
+6. **Initialize RAM Vectors (If Needed)**: If "Enhanced Mode" is selected, the Boot ROM configures and triggers the DMA controller to copy the 16-byte interrupt vector table from the cartridge (at 0x00F0) to WRAM (at 0xC000).
+7. **Finalize and Disable Interrupts**: Once the animation is complete and the cartridge is ready, the Boot ROM executes a DI instruction to disable interrupts, ensuring a clean handover.
+8. **Memory Map Handover**: The Boot ROM writes to a special I/O register that commands the memory controller to:
    - **Disable and unmap** the internal Boot ROM and its vector table.
    - **Map the game cartridge** to the main memory map, starting at address 0x0000.
-8. **Jump to Game Code**: The very last act of the Boot ROM is to execute a JMP 0x0100 instruction. This transfers control to the game's official entry point. The game is now responsible for enabling its own interrupts when it is ready.
+9. **Jump to Game Code**: The very last act of the Boot ROM is to execute a JMP 0x0100 instruction. This transfers control to the game's official entry point. The game is now responsible for enabling its own interrupts when it is ready.

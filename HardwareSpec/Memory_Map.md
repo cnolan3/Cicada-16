@@ -7,7 +7,9 @@
 | 0000       | 3FFF     | **16 KiB** | **ROM Bank 0 (fixed)**                                     |
 | 4000       | 5FFF     | **8 KiB**  | **ROM Bank N (switchable, half-select)**                   |
 | 6000       | 7FFF     | **8 KiB**  | **VRAM Window (banked, 1 of 4 banks, 32 KiB total)**       |
-| 8000       | 9FFF     | **8 KiB**  | **Cartridge RAM (banked, battery-backed)**                 |
+| 8000       | 8FFF     | **4 KiB**  | **Cartridge RAM Window (banked)**                          |
+| 9000       | 97FF     | **2 KiB**  | **System Library RAM**                                     |
+| 9800       | 9FFF     | **2 KiB**  | **Reserved**                                               |
 | A000       | BFFF     | **8 KiB**  | **Work RAM Bank 0 (fixed, 32 KiB total)**                  |
 | C000       | DFFF     | **8 KiB**  | **Work RAM Window (banked, 1 of 3 switchable banks)**      |
 | E000       | EFFF     | **4 KiB**  | **Wave RAM (user wave tables)**                            |

@@ -37,24 +37,10 @@ The rest of the cartridge ROM is dedicated to the game's program code, graphics 
 - **ROM Bank 0 (0x0100 - 0x3FFF)**: This area contains the rest of the fixed, non-switchable portion of the game's code. It typically holds the main game loop and critical subroutines that need to be accessible at all times.
 - **Switchable ROM Banks (Mapped to 0x4000 - 0x5FFF)**: The remainder of the physical ROM chip contains the switchable banks. The game can map these banks into the CPU's address space to access additional code and data, such as level maps, enemy sprites, and music.
 
-### **3. Hybrid Interrupt Vector Table System**
+### **3. Interrupt Vector Table**
 
-The Cricket-16 supports two types of interrupt handling, determined by a "mode flag" in the cartridge header.
+The 16-byte block from `0x00F0` to `0x00FF` is reserved for the Interrupt Vector Table. This table contains the starting addresses for the game's interrupt service routines.
 
-#### **Standard Mode (ROM-Based Table)**
+The Cricket-16 supports two different modes for handling interrupts ("Standard" and "Enhanced"), which control whether this table is used directly from ROM or copied to RAM for dynamic modification. The desired mode is selected via a flag in the cartridge header (Bit 7 of byte `0x002C`).
 
-This is the default and simplest mode of operation.
-
-- **Cartridge Header Flag**: The "Interrupt Mode" bit in the header is set to 0.
-- **CPU Behavior**: The CPU is hardwired to look for the interrupt vector table at a fixed location within the cartridge ROM: **0x00F0 - 0x00FF**.
-- **Implementation**: The game developers place a list of 16-bit addresses at this location. When an interrupt occurs, the CPU reads the corresponding address from this table and jumps to the handler routine. The table is static.
-
-#### **Enhanced Mode (RAM-Based Table)**
-
-This mode enables advanced programming techniques by allowing the game to modify its interrupt handlers on the fly.
-
-- **Cartridge Header Flag**: The "Interrupt Mode" bit in the header is set to 1.
-- **Console Boot Behavior**: The boot ROM reads this flag and performs two actions:
-  1. It sets a hardware latch that re-routes the CPU's interrupt vector lookups to a fixed location in Work RAM: **0xC000 - 0xC00F**.
-  2. It uses the DMA controller to automatically copy the 16-byte vector table from the cartridge ROM (0x00F0) to WRAM (0xC000).
-- **Flexibility**: The interrupt table in RAM is pre-initialized before the game code starts. The game can then overwrite any of these vector addresses at any time to point to different handler routines.
+For a complete explanation of the interrupt system, vector table layout, and handling modes, see the **`Interrupts.md`** document.
