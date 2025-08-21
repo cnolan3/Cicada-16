@@ -15,47 +15,48 @@
 | F100       | F1FF     | **256 B**  | **PPU Registers (LCDC, STAT, SCX, SCY, LY/LYC, palettes)** |
 | F200       | F200     | **1 B**    | **IE (Interrupt Enable)**                                  |
 | F201       | F201     | **1 B**    | **IF (Interrupt Flag) (write-1-to-clear bits)**            |
-| F202       | F4FF     | **765 B**  | **Reserved**                                               |
+| F202       | F2FF     | **254 B**  | **Reserved**                                               |
+| F300       | F4FF     | **512 B**  | **CRAM (color pallete entries)**                           |
 | F500       | F5FF     | **256 B**  | **APU Registers (Core, Mixer, DSP)**                       |
 | F600       | F7FF     | **512 B**  | **OAM (sprite attribute table)**                           |
 | F800       | FBFF     | **1 KiB**  | **DSP Delay Buffer**                                       |
 | FC00       | FFFF     | **1 KiB**  | **HRAM (high speed ram)**                                  |
 
-### Memory Banking
+### Memory Access Rules
 
-The Cricket-16 architecture uses bank switching to expand the amount of available WRAM and VRAM beyond the limits of the 16-bit address space.
+The Cricket-16 architecture uses several techniques to manage memory access and expand its capabilities.
 
--   **WRAM (32 KiB Total):** Work RAM is divided into four 8 KiB banks. Bank 0 is always accessible at `A000-BFFF`. The window at `C000-DFFF` is switchable; the `WRAM_BANK` register at `F014` selects which of the remaining three banks (1, 2, or 3) is mapped into this window.
--   **VRAM (32 KiB Total):** Video RAM is also divided into four 8 KiB banks. The `VRAM_BANK` register at `F013` selects which of the four banks is made accessible through the single 8 KiB window at `6000-7FFF`.
+-   **Bank Switching:** To expand the amount of available WRAM and VRAM beyond the limits of the 16-bit address space, the system uses bank switching. The `WRAM_BANK` and `VRAM_BANK` registers control which memory bank is currently accessible to the CPU in the upper memory windows.
+-   **Shared Memory (CRAM):** The Color Palette RAM (CRAM) at `F300-F4FF` is shared between the CPU and the PPU. To prevent conflicts, the CPU should only write to this area during non-rendering periods (V-Blank or H-Blank). Reading from CRAM is safe at any time.
 
 ## **IO Registers (F000–F0FF)**
 
-| Address | Name          | Description                                                 |
-| :------ | :------------ | :---------------------------------------------------------- |
-| F000    | **JOYP**      | **Joypad: read buttons, write column select**               |
-| F004    | **DIVL**      | **16-bit free-running divider (low)**                       |
-| F005    | **DIVH**      | **16-bit free-running divider (high)**                      |
-| F006    | **TIMA**      | **8-bit timer counter (IRQ on overflow → IF.TMR)**          |
-| F007    | **TMA**       | **8-bit timer modulo (reload value on overflow)**           |
-| F008    | **TAC**       | **Timer control: bit2=EN, bits1..0=clock sel**              |
-| F00A    | **DMA_SRC_L** | **DMA source address low**                                  |
-| F00B    | **DMA_SRC_H** | **DMA source address high**                                 |
-| F00C    | **DMA_DST_L** | **DMA destination low**                                     |
-| F00D    | **DMA_DST_H** | **DMA destination high**                                    |
-| F00E    | **DMA_LEN**   | **DMA length in bytes (0 => special 256/512 default)**      |
-| F00F    | **DMA_CTL**   | **DMA control: bit0=START, bit1=DIR, bit2=VRAM_ONLY, etc.** |
-| F010    | **MPR_BANK**  | **ROM bank select (half-select within 16 KiB banks)**       |
-| F011    | **RAM_BANK**  | **Bank select for banked Cart RAM (if enabled)**            |
-| F012    | **WE_LATCH**  | **Write-enable latch for battery RAM (write key)**          |
-| F013    | **VRAM_BANK** | **VRAM Bank Select (0-3 for 6000-7FFF window)**             |
+| Address | Name          | Description                                                       |
+| :------ | :------------ | :---------------------------------------------------------------- |
+| F000    | **JOYP**      | **Joypad: read buttons, write column select**                     |
+| F004    | **DIVL**      | **16-bit free-running divider (low)**                             |
+| F005    | **DIVH**      | **16-bit free-running divider (high)**                            |
+| F006    | **TIMA**      | **8-bit timer counter (IRQ on overflow → IF.TMR)**                |
+| F007    | **TMA**       | **8-bit timer modulo (reload value on overflow)**                 |
+| F008    | **TAC**       | **Timer control: bit2=EN, bits1..0=clock sel**                    |
+| F00A    | **DMA_SRC_L** | **DMA source address low**                                        |
+| F00B    | **DMA_SRC_H** | **DMA source address high**                                       |
+| F00C    | **DMA_DST_L** | **DMA destination low**                                           |
+| F00D    | **DMA_DST_H** | **DMA destination high**                                          |
+| F00E    | **DMA_LEN**   | **DMA length in bytes (0 => special 256/512 default)**            |
+| F00F    | **DMA_CTL**   | **DMA control: bit0=START, bit1=DIR, bit2=VRAM_ONLY, etc.**       |
+| F010    | **MPR_BANK**  | **ROM bank select (half-select within 16 KiB banks)**             |
+| F011    | **RAM_BANK**  | **Bank select for banked Cart RAM (if enabled)**                  |
+| F012    | **WE_LATCH**  | **Write-enable latch for battery RAM (write key)**                |
+| F013    | **VRAM_BANK** | **VRAM Bank Select (0-3 for 6000-7FFF window)**                   |
 | F014    | **WRAM_BANK** | **WRAM Bank Select (0-2 for C000-DFFF window -> maps banks 1-3)** |
-| F018    | **RTC_SEC**   | **0..59 (latched)**                                         |
-| F019    | **RTC_MIN**   | **0..59 (latched)**                                         |
-| F01A    | **RTC_HOUR**  | **0..23 (latched)**                                         |
-| F01B    | **RTC_DAY_L** | **day counter low (latched)**                               |
-| F01C    | **RTC_DAY_H** | **day counter high (latched)**                              |
-| F01D    | **RTC_CTL**   | **bit0=HALT, bit1=LATCH (1=latch snapshot)**                |
-| F01E    | **RTC_STS**   | **bit0=LATCHED, bit1=BAT_OK (optional)**                    |
+| F018    | **RTC_SEC**   | **0..59 (latched)**                                               |
+| F019    | **RTC_MIN**   | **0..59 (latched)**                                               |
+| F01A    | **RTC_HOUR**  | **0..23 (latched)**                                               |
+| F01B    | **RTC_DAY_L** | **day counter low (latched)**                                     |
+| F01C    | **RTC_DAY_H** | **day counter high (latched)**                                    |
+| F01D    | **RTC_CTL**   | **bit0=HALT, bit1=LATCH (1=latch snapshot)**                      |
+| F01E    | **RTC_STS**   | **bit0=LATCHED, bit1=BAT_OK (optional)**                          |
 
 ## **Joypad Register (JOYP)**
 
@@ -63,24 +64,24 @@ The JOYP register at F000 uses a matrix layout to read all 12 buttons (D-Pad, Ac
 
 ### **JOYP (F000) Bit Assignments**
 
-| Bit   | Name         | Type  | Description                                                       |
-| :---- | :----------- | :---- | :---------------------------------------------------------------- |
-| 7-6   | -            | R     | Unused (read as 1)                                                |
+| Bit     | Name        | Type  | Description                                                        |
+| :------ | :---------- | :---- | :----------------------------------------------------------------- |
+| 7-6     | -           | R     | Unused (read as 1)                                                 |
 | **5-4** | **GRP_SEL** | **W** | **Selects button group to read (01=D-Pad, 10=Action, 11=Utility)** |
-| **3** | **BTN_3**    | **R** | **Input for Button 3 of the selected group**                      |
-| **2** | **BTN_2**    | **R** | **Input for Button 2 of the selected group**                      |
-| **1** | **BTN_1**    | **R** | **Input for Button 1 of the selected group**                      |
-| **0** | **BTN_0**    | **R** | **Input for Button 0 of the selected group**                      |
+| **3**   | **BTN_3**   | **R** | **Input for Button 3 of the selected group**                       |
+| **2**   | **BTN_2**   | **R** | **Input for Button 2 of the selected group**                       |
+| **1**   | **BTN_1**   | **R** | **Input for Button 1 of the selected group**                       |
+| **0**   | **BTN_0**   | **R** | **Input for Button 0 of the selected group**                       |
 
 ### **Button Group Mapping**
 
 The 2-bit value written to GRP_SEL determines which set of physical buttons is mapped to the four readable input bits (BTN_0 to BTN_3).
 
-| GRP_SEL Value | Group Name | BTN_0 (Bit 0) | BTN_1 (Bit 1) | BTN_2 (Bit 2) | BTN_3 (Bit 3) |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| 01 | **D-Pad** | Right | Left | Up | Down |
-| 10 | **Action** | A | B | X | Y |
-| 11 | **Utility** | Start | Select | R (Right Shoulder) | L (Left Shoulder) |
+| GRP_SEL Value | Group Name  | BTN_0 (Bit 0) | BTN_1 (Bit 1) | BTN_2 (Bit 2)      | BTN_3 (Bit 3)     |
+| :------------ | :---------- | :------------ | :------------ | :----------------- | :---------------- |
+| 01            | **D-Pad**   | Right         | Left          | Up                 | Down              |
+| 10            | **Action**  | A             | B             | X                  | Y                 |
+| 11            | **Utility** | Start         | Select        | R (Right Shoulder) | L (Left Shoulder) |
 
 ### **Reading the Joypad**
 

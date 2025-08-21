@@ -6,7 +6,7 @@ This document describes the design of the Picture Processing Unit (PPU) for the 
 
 - **VRAM (Video RAM):** 32 KiB of dedicated, bank-switched RAM. An 8 KiB window of VRAM is accessible to the CPU at any time at `6000-7FFF` for writing and reading data; the active bank for this window is selected via the `VRAM_BANK` I/O register. For rendering, the PPU has a wider internal address bus and can access the entire 32 KiB of VRAM simultaneously. VRAM holds the tile data (the 8x8 pixel building blocks for graphics) and the tilemaps (the data that arranges tiles into background layers).
 - **OAM (Object Attribute Memory):** 512 bytes of dedicated RAM at F600-F7FF used to store the attributes for all 64 hardware sprites (position, tile index, palette, etc.).
-- **CRAM (Color RAM / Palette RAM):** 512 bytes of internal PPU memory that holds the color palette data. This is not directly mapped to the CPU's address space but is accessed via PPU registers.
+- **CRAM (Color RAM / Palette RAM):** 512 bytes of RAM located at `F300-F4FF` in the main memory map. It holds the 256 16-bit color palette entries.
 - **Screen Resolution:** 240x160 pixels.
 - **Refresh Rate:** 60 Hz.
 
@@ -138,17 +138,19 @@ These registers, mapped to the CPU's address space, control the PPU's operation.
 | F109    | WINX      | **Window X-Position:** The left edge of the Window layer.                                                                                                                                |
 | F10A    | LY        | **LCD Y-Coordinate:** Indicates the current vertical scanline being drawn (Read-only). Ranges from 0 to ~180.                                                                            |
 | F10B    | LYC       | **LY Compare:** The PPU compares LY with this value. If they match, a flag is set in the STAT register, which can trigger an interrupt. Useful for scanline-based effects.               |
-| F110    | CRAM_ADDR | **Color RAM Address:** The CPU writes a CRAM index (0-255) to this register.                                                                                                             |
-| F111    | CRAM_DATA | **Color RAM Data:** The CPU writes a 16-bit color via **two consecutive 8-bit writes** to this address (low byte, then high byte). The CRAM_ADDR auto-increments after the second write. |
 | F112    | BG_MODE   | **Background Mode:** Configures the size (dimensions) of the BG0 and BG1 tilemaps.                                                                                                       |
-| F118    | BG_TMB    | **Background Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for BG0 (bits 3-0) and BG1 (bits 7-4).                                                                          |
+| F118    | BG_TMB    | **Background Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for BG0 (bits 3-0) and BG1 (bits 7-4).                                                                         |
 
-### **7.1. Configuring Tilemap Base Addresses**
+### **7.1. Accessing Color RAM (CRAM)**
+
+Since CRAM is mapped directly to the CPU's address space (`F300-F4FF`), there are no registers for indirect access. This allows for very fast reads and writes. However, to prevent visual artifacts caused by modifying palette data while the PPU is actively drawing, all CPU writes to this memory region should be performed **only during non-rendering periods (V-Blank or H-Blank)**. Reading from CRAM is safe at any time.
+
+### **7.2. Configuring Tilemap Base Addresses**
 
 The `BG_TMB` register at `F118` provides an efficient way to set the starting address for the BG0 and BG1 tilemaps. The 32 KiB of VRAM is divided into 16 slots of 2 KiB each. The `BG_TMB` register uses a 4-bit value for each background layer to specify which slot its tilemap begins in.
 
-- **BG0:** The lower 4 bits (bits 3-0) of `BG_TMB` select the starting slot (0-15) for the BG0 tilemap.
-- **BG1:** The upper 4 bits (bits 7-4) of `BG_TMB` select the starting slot (0-15) for the BG1 tilemap.
+-   **BG0:** The lower 4 bits (bits 3-0) of `BG_TMB` select the starting slot (0-15) for the BG0 tilemap.
+-   **BG1:** The upper 4 bits (bits 7-4) of `BG_TMB` select the starting slot (0-15) for the BG1 tilemap.
 
 The PPU calculates the final base address using the formula: `base_address = slot_id * 2048`. For example, if `BG_TMB` holds the value `0x42`, BG0's tilemap will start at slot 2 (`2 * 2048 = 4096`, address `0x1000`), and BG1's tilemap will start at slot 4 (`4 * 2048 = 8192`, address `0x2000`).
 
