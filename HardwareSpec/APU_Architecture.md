@@ -62,20 +62,19 @@ This section details the memory-mapped registers used to control all APU functio
 
 ### **Register Map Overview**
 
-| Address      | Name      | Description                                                |
-| :----------- | :-------- | :--------------------------------------------------------- |
-| **Channels** |           |                                                            |
-| F500         | CH0_CTRL  | Pulse A: Control Register                                  |
-| F501-F502    | CH0_ADSR  | ADSR settings for Channel 0                                |
-| F504-F505    | CH0_FREQ  | 16-bit frequency for Channel 0                             |
-| F510         | CH1_CTRL  | Pulse B: Control Register                                  |
-| F511-F512    | CH1_ADSR  | ADSR settings for Channel 1                                |
-| F514-F515    | CH1_FREQ  | 16-bit frequency for Channel 1                             |
-| F520         | CH2_CTRL  | Wave channel: Control Register                             |
-| F521-F522    | CH2_ADSR  | ADSR settings for Channel 2                                |
-| F524-F525    | CH2_FREQ  | 16-bit frequency for Channel 2                             |
-| F530         | CH3_CTRL  | Noise channel: Control Register                            |
-| F531-F532    | CH3_ADSR  | ADSR settings for Channel 3                                |
+| Address   | Name      | Description                                                |
+| :-------- | :-------- | :--------------------------------------------------------- |
+| F500      | CH0_CTRL  | Pulse A: Control Register                                  |
+| F501-F502 | CH0_ADSR  | ADSR settings for Channel 0                                |
+| F504-F505 | CH0_FREQ  | 16-bit frequency for Channel 0                             |
+| F510      | CH1_CTRL  | Pulse B: Control Register                                  |
+| F511-F512 | CH1_ADSR  | ADSR settings for Channel 1                                |
+| F514-F515 | CH1_FREQ  | 16-bit frequency for Channel 1                             |
+| F520      | CH2_CTRL  | Wave channel: Control Register                             |
+| F521-F522 | CH2_ADSR  | ADSR settings for Channel 2                                |
+| F524-F525 | CH2_FREQ  | 16-bit frequency for Channel 2                             |
+| F530      | CH3_CTRL  | Noise channel: Control Register                            |
+| F531-F532 | CH3_ADSR  | ADSR settings for Channel 3                                |
 | F580      | MIX_CTRL  | Master APU enable, individual channel enables              |
 | F581      | MIX_VOL_L | Master volume Left (0-15)                                  |
 | F582      | MIX_VOL_R | Master volume Right (0-15)                                 |
@@ -92,7 +91,7 @@ This section details the memory-mapped registers used to control all APU functio
 | Bit | Name     | Description                                                                                             |
 | :-- | :------- | :------------------------------------------------------------------------------------------------------ |
 | 7   | KEY_ON   | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
-| 6-5 | DUTY     | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                             |
+| 6-5 | DUTY     | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
 | 4   | SWP_EN   | 1: Enable frequency sweep unit for this channel.                                                        |
 | 3-0 | SWP_RATE | Sweep rate/speed.                                                                                       |
 
@@ -105,7 +104,7 @@ This 16-bit register controls the period/frequency of the pulse wave for Channel
 | Bit | Name   | Description                                                                                             |
 | :-- | :----- | :------------------------------------------------------------------------------------------------------ |
 | 7   | KEY_ON | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
-| 6-5 | DUTY   | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                             |
+| 6-5 | DUTY   | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
 | 4-0 | -      | Unused.                                                                                                 |
 
 #### **F514-F515: CH1_FREQ**
@@ -117,7 +116,7 @@ This 16-bit register controls the period/frequency of the pulse wave for Channel
 | Bit | Name     | Description                                                                                             |
 | :-- | :------- | :------------------------------------------------------------------------------------------------------ |
 | 7   | KEY_ON   | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
-| 6-0 | WAVE_IDX | Selects which 32-byte waveform to play from Wave RAM (0-127).                                             |
+| 6-0 | WAVE_IDX | Selects which 32-byte waveform to play from Wave RAM (0-127).                                           |
 
 #### **F524-F525: CH2_FREQ**
 
@@ -128,7 +127,7 @@ This 16-bit register controls the playback frequency of the selected waveform fo
 | Bit | Name      | Description                                                                                             |
 | :-- | :-------- | :------------------------------------------------------------------------------------------------------ |
 | 7   | KEY_ON    | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
-| 6   | LFSR_MODE | 0: 15-bit LFSR (Tonal noise), 1: 7-bit LFSR (Metallic noise).                                             |
+| 6   | LFSR_MODE | 0: 15-bit LFSR (Tonal noise), 1: 7-bit LFSR (Metallic noise).                                           |
 | 5-0 | CLK_DIV   | Clock divider for the LFSR, controls the base pitch of the noise.                                       |
 
 #### **F5x1 / F5x2: ADSR Registers**
