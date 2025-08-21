@@ -24,24 +24,51 @@ The PPU's graphics are built from layers of tiles, which are configured by data 
 
 ### **3.1. VRAM Organization**
 
-The developer has complete control over how the 32 KiB of VRAM is partitioned between tile graphics data and tilemap data. This is controlled by the `TDB` register.
-
-- **Tile Graphics Area:** This region of VRAM stores the actual 8x8 pixel data for all tiles (sprites and backgrounds). It always starts at address `0x0000`.
-- **Tilemap Area:** This region of VRAM stores the tilemap data, which is the grid of 16-bit entries that define the background layers. It begins at the address specified by the `TDB` register.
+By hardware rule, the **Tile Graphics Area** is always assumed to begin at address `0x0000` in VRAM. The developer can then place their **Tilemap Area** anywhere else in VRAM. The location and size of the tilemaps for each background layer are defined by a set of PPU registers, giving the developer full control over how VRAM is partitioned.
 
 ### **3.2. Tilemap Data Format**
 
 A tilemap is a 2D grid of 16-bit entries. Each entry tells the PPU which tile to draw at a position, and how to draw it.
 
-| Bit(s) | Name | Description |
-| :--- | :--- | :--- |
-| 15 | **P (Priority)** | Controls layering against sprites. `1` = Tile appears on top of all sprites. `0` = Tile appears behind sprites with priority 0. |
-| 14 | **V (V-Flip)** | `1` = The tile is rendered flipped vertically. |
-| 13 | **H (H-Flip)** | `1` = The tile is rendered flipped horizontally. |
-| 12-9 | **PAL (Palette)** | A 4-bit value (0-15) that selects which of the 16 sub-palettes to use for this tile. |
-| 8 | **(Reserved)** | Reserved for future use. Should be kept at `0`. |
-| 7-0 | **INDEX (Tile Index)** | An 8-bit value (0-255) that specifies which tile to draw from the Tile Graphics Area. Note: The PPU can be configured to draw from a larger pool of up to 1024 tiles. |
+| Bit(s) | Name             | Description                         |
+| :----- | :--------------- | :---------------------------------- |
+| 15     | **P (Priority)** | Priority vs. Sprites. (1 bit)       |
+| 14     | **V (V-Flip)**   | Vertical Flip. (1 bit)              |
+| 13     | **H (H-Flip)**   | Horizontal Flip. (1 bit)            |
+| 10-12  | **PAL**          | **Palette Select (0-7).** (3 bits)  |
+| **9**  | **`INDEX_9`**    | **The 10th bit of the tile index.** |
+| **8**  | **`INDEX_8`**    | **The 9th bit of the tile index.**  |
+| 7-0    | **`INDEX_7_0`**  | The lower 8 bits of the tile index. |
 
+### **3.3. Tile Graphics Data Format (4bpp Planar)**
+
+Each 8x8 tile requires 32 bytes of storage in VRAM. These 32 bytes are organized into four **bit planes**. Each plane holds one bit of the 4-bit color index for all 64 pixels in the tile.
+
+The 32 bytes of a single tile are laid out in VRAM as follows:
+
+- **Bytes 0-7:** **Bit Plane 0** (The least significant bit of the color index for all 64 pixels)
+- **Bytes 8-15:** **Bit Plane 1**
+- **Bytes 16-23:** **Bit Plane 2**
+- **Bytes 24-31:** **Bit Plane 3** (The most significant bit of the color index)
+
+Within each 8-byte plane, each byte represents one row of 8 pixels. For example, in Bit Plane 0:
+
+- Byte 0 holds the LSB for the 8 pixels in Row 0 of the tile.
+- Byte 1 holds the LSB for the 8 pixels in Row 1 of the tile.
+- ...and so on up to Byte 7 for Row 7.
+
+#### How the PPU Reconstructs a Pixel
+
+To find the color of a single pixel, the PPU gathers one bit from each of the four planes and combines them into a 4-bit number.
+
+For example, to get the color for the pixel at coordinate (2, 5) (the 3rd pixel of the 6th row) within a tile:
+
+1.  It reads the 3rd bit from the 6th byte of **Bit Plane 0**.
+2.  It reads the 3rd bit from the 6th byte of **Bit Plane 1**.
+3.  It reads the 3rd bit from the 6th byte of **Bit Plane 2**.
+4.  It reads the 3rd bit from the 6th byte of **Bit Plane 3**.
+
+These four bits are combined to form the final 4-bit color index (a value from 0-15), which is then used to look up the actual color in the sub-palette assigned to that tile.
 
 ## **4. Background Layers**
 
@@ -66,13 +93,36 @@ The PPU can render up to **64** sprites on screen at once.
 - **Attributes:** Each sprite's data is stored in OAM as an 8-byte entry:
   - **Byte 0:** Y-Position (vertical screen coordinate)
   - **Byte 1:** X-Position (horizontal screen coordinate)
-  - **Byte 2:** **Size & Shape attribute** - Defines the sprite's dimensions (e.g., 8x8, 16x16, 8x16, 16x8). This is now a per-sprite setting.
+  - **Byte 2:** **Size & Shape attribute** - Defines the sprite's dimensions (e.g., 8x8, 16x16, 8x16, 16x8).
   - **Byte 3:** Tile Index (which 8x8 tile from VRAM to use)
-  - **Byte 4:** Flags (Palette select, H-Flip, V-Flip, Priority vs. Backgrounds)
+  - **Byte 4:** Attribute Flags, defined below.
   - **Bytes 5-7:** Reserved for future use (e.g., rotation/scaling data).
+
+  **OAM Byte 4 (Sprite Attribute Flags):**
+
+| Bit(s) | Name         | Description                                                                          |
+| :----- | :----------- | :----------------------------------------------------------------------------------- |
+| 7      | **Priority** | `1`=Sprite is in front of high-priority background tiles. `0`=Sprite is behind them. |
+| 6      | **V-Flip**   | `1`=Flip sprite vertically.                                                          |
+| 5      | **H-Flip**   | `1`=Flip sprite horizontally.                                                        |
+| 4      | (Reserved)   | Unused.                                                                              |
+| 3-0    | **PAL**      | **Palette Select (0-15).** A 4-bit value selecting any of the 16 sub-palettes.       |
+
 - **Scanline Limit:** The PPU can render a maximum of **16** sprites per horizontal scanline. If more than 16 sprites are on a line, the additional ones will not be drawn.
 
-## **6. PPU Registers (F100-F1FF)**
+## **6. Layer Priority and Transparency**
+
+The PPU renders the final image by drawing the graphical layers in a specific order with defined transparency rules.
+
+1.  **BG0 (Backdrop Layer):** BG0 is the rearmost background layer. It is always fully opaque. Even if a tile uses color #0 of a sub-palette, the actual color value stored in CRAM for that entry will be drawn to the screen. This ensures the game always has a solid backdrop color.
+
+2.  **BG1 (Overlay Layer):** BG1 is drawn on top of BG0. For any tile on the BG1 layer, color #0 of its assigned sub-palette is treated as **transparent**, allowing the pixels of the BG0 layer to show through.
+
+3.  **Window Layer:** The Window is drawn on top of BG0 and BG1. Like BG1, color #0 of any tile drawn as part of the Window layer is also treated as **transparent**.
+
+4.  **Sprites (Objects):** Sprites are the topmost layer, rendered over all background and window layers. Color #0 of a sprite's assigned sub-palette is always **transparent**. The sprite's priority flag (in its OAM data) can cause it to be rendered behind high-priority background tiles, but it is always drawn on top of low-priority tiles.
+
+## **7. PPU Registers (F100-F1FF)**
 
 These registers, mapped to the CPU's address space, control the PPU's operation.
 
@@ -91,35 +141,42 @@ These registers, mapped to the CPU's address space, control the PPU's operation.
 | F110    | CRAM_ADDR | **Color RAM Address:** The CPU writes a CRAM index (0-255) to this register.                                                                                                             |
 | F111    | CRAM_DATA | **Color RAM Data:** The CPU writes a 16-bit color via **two consecutive 8-bit writes** to this address (low byte, then high byte). The CRAM_ADDR auto-increments after the second write. |
 | F112    | BG_MODE   | **Background Mode:** Configures the size (dimensions) of the BG0 and BG1 tilemaps.                                                                                                       |
-| F114    | TDB       | **Tile Data Boundary:** Sets the end address for tile graphics data / start address for tilemap data. Value is multiplied by 256.                                                        |
-| F118-F119 | BG0_TMB | **BG0 Tilemap Base Address:** A 16-bit register holding the starting address of the BG0 tilemap in VRAM.                                                                                  |
-| F11A-F11B | BG1_TMB | **BG1 Tilemap Base Address:** A 16-bit register holding the starting address of the BG1 tilemap in VRAM.                                                                                  |
+| F118    | BG_TMB    | **Background Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for BG0 (bits 3-0) and BG1 (bits 7-4).                                                                          |
 
-## **7. LCDC Register (F100)**
+### **7.1. Configuring Tilemap Base Addresses**
+
+The `BG_TMB` register at `F118` provides an efficient way to set the starting address for the BG0 and BG1 tilemaps. The 32 KiB of VRAM is divided into 16 slots of 2 KiB each. The `BG_TMB` register uses a 4-bit value for each background layer to specify which slot its tilemap begins in.
+
+- **BG0:** The lower 4 bits (bits 3-0) of `BG_TMB` select the starting slot (0-15) for the BG0 tilemap.
+- **BG1:** The upper 4 bits (bits 7-4) of `BG_TMB` select the starting slot (0-15) for the BG1 tilemap.
+
+The PPU calculates the final base address using the formula: `base_address = slot_id * 2048`. For example, if `BG_TMB` holds the value `0x42`, BG0's tilemap will start at slot 2 (`2 * 2048 = 4096`, address `0x1000`), and BG1's tilemap will start at slot 4 (`4 * 2048 = 8192`, address `0x2000`).
+
+## **8. LCDC Register (F100)**
 
 This 8-bit register is the primary control for the PPU.
 
-| Bit   | Name         | Function                                                                                |
-| :---- | :----------- | :-------------------------------------------------------------------------------------- |
-| **7** | PPU_ENABLE   | 1: PPU is on and drawing to the screen. 0: PPU is off (screen is blank).                |
-| **6** | SPR_ENABLE   | 1: Sprites are enabled and will be drawn. 0: Sprites are disabled.                      |
-| **5** | BG1_ENABLE   | 1: Background Layer 1 is enabled. 0: Background Layer 1 is disabled.                    |
-| **4** | BG0_ENABLE   | 1: Background Layer 0 is enabled. 0: Background Layer 0 is disabled.                    |
-| **3** | (Reserved)   | Unused.                                                                                 |
-| **2** | (Reserved)   | Unused.                                                                                 |
-| **1** | (Reserved)   | Unused.                                                                                 |
-| **0** | WIN_ENABLE   | 1: The Window layer is enabled and will be drawn. 0: The Window is disabled.            |
+| Bit   | Name       | Function                                                                     |
+| :---- | :--------- | :--------------------------------------------------------------------------- |
+| **7** | PPU_ENABLE | 1: PPU is on and drawing to the screen. 0: PPU is off (screen is blank).     |
+| **6** | SPR_ENABLE | 1: Sprites are enabled and will be drawn. 0: Sprites are disabled.           |
+| **5** | BG1_ENABLE | 1: Background Layer 1 is enabled. 0: Background Layer 1 is disabled.         |
+| **4** | BG0_ENABLE | 1: Background Layer 0 is enabled. 0: Background Layer 0 is disabled.         |
+| **3** | (Reserved) | Unused.                                                                      |
+| **2** | (Reserved) | Unused.                                                                      |
+| **1** | (Reserved) | Unused.                                                                      |
+| **0** | WIN_ENABLE | 1: The Window layer is enabled and will be drawn. 0: The Window is disabled. |
 
-## **8. STAT Register (F101)**
+## **9. STAT Register (F101)**
 
 This 8-bit register provides information about the PPU's current state and allows the CPU to request interrupts based on PPU events.
 
-| Bit     | Name        | Function                                                                                                                              |
-| :------ | :---------- | :------------------------------------------------------------------------------------------------------------------------------------ |
-| **7**   | UNUSED      | Unused, always reads 0.                                                                                                               |
-| **6**   | LYC_INT_EN  | 1: Enable interrupt when LY == LYC. 0: Disable.                                                                                       |
-| **5**   | OAM_INT_EN  | 1: Enable interrupt when PPU enters OAM Scan mode. 0: Disable.                                                                        |
-| **4**   | VBLK_INT_EN | 1: Enable interrupt when PPU enters V-Blank. 0: Disable.                                                                              |
-| **3**   | HBLK_INT_EN | 1: Enable interrupt when PPU enters H-Blank. 0: Disable.                                                                              |
-| **2**   | LYC_FLAG    | **(Read-only)** 1 if LY == LYC. 0 otherwise.                                                                                          |
+| Bit     | Name        | Function                                                                                                                      |
+| :------ | :---------- | :---------------------------------------------------------------------------------------------------------------------------- |
+| **7**   | UNUSED      | Unused, always reads 0.                                                                                                       |
+| **6**   | LYC_INT_EN  | 1: Enable interrupt when LY == LYC. 0: Disable.                                                                               |
+| **5**   | OAM_INT_EN  | 1: Enable interrupt when PPU enters OAM Scan mode. 0: Disable.                                                                |
+| **4**   | VBLK_INT_EN | 1: Enable interrupt when PPU enters V-Blank. 0: Disable.                                                                      |
+| **3**   | HBLK_INT_EN | 1: Enable interrupt when PPU enters H-Blank. 0: Disable.                                                                      |
+| **2**   | LYC_FLAG    | **(Read-only)** 1 if LY == LYC. 0 otherwise.                                                                                  |
 | **1-0** | MODE_FLAG   | **(Read-only)** Indicates the PPU's current mode: <br> 00: H-Blank <br> 01: V-Blank <br> 10: OAM Scan <br> 11: Drawing Pixels |
