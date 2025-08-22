@@ -5,13 +5,11 @@
 | Start Addr | End Addr | Size       | Description                                                |
 | :--------- | :------- | :--------- | :--------------------------------------------------------- |
 | 0000       | 3FFF     | **16 KiB** | **ROM Bank 0 (fixed)**                                     |
-| 4000       | 5FFF     | **8 KiB**  | **ROM Bank N (switchable, half-select)**                   |
-| 6000       | 7FFF     | **8 KiB**  | **VRAM Window (banked, 1 of 4 banks, 32 KiB total)**       |
-| 8000       | 8FFF     | **4 KiB**  | **Cartridge RAM Window (banked)**                          |
-| 9000       | 97FF     | **2 KiB**  | **System Library RAM**                                     |
-| 9800       | 9FFF     | **2 KiB**  | **Reserved**                                               |
-| A000       | BFFF     | **8 KiB**  | **Work RAM Bank 0 (fixed, 32 KiB total)**                  |
-| C000       | DFFF     | **8 KiB**  | **Work RAM Window (banked, 1 of 3 switchable banks)**      |
+| 4000       | 7FFF     | **16 KiB** | **ROM Bank N (switchable)**                                |
+| 8000       | 9FFF     | **8 KiB**  | **VRAM Window (banked, 1 of 4 banks, 32 KiB total)**       |
+| A000       | AFFF     | **4 KiB**  | **Cartridge RAM Window (banked)**                          |
+| B000       | CFFF     | **8 KiB**  | **Work RAM Bank 0 (WRAM0, fixed, 32 KiB total)**           |
+| D000       | DFFF     | **4 KiB**  | **Work RAM Window (WRAM1, banked, 1 of 6 switchable banks)** |
 | E000       | EFFF     | **4 KiB**  | **Wave RAM (user wave tables)**                            |
 | F000       | F0FF     | **256 B**  | **IO Registers (joypad, timers/div, RTC, DMA, mapper)**    |
 | F100       | F1FF     | **256 B**  | **PPU Registers (LCDC, STAT, SCX, SCY, LY/LYC, palettes)** |
@@ -47,11 +45,11 @@ The Cricket-16 architecture uses several techniques to manage memory access and 
 | F00D    | **DMA_DST_H** | **DMA destination high**                                          |
 | F00E    | **DMA_LEN**   | **DMA length in bytes (0 => special 256/512 default)**            |
 | F00F    | **DMA_CTL**   | **DMA control: bit0=START, bit1=DIR, bit2=VRAM_ONLY, etc.**       |
-| F010    | **MPR_BANK**  | **ROM bank select (half-select within 16 KiB banks)**             |
+| F010    | **MPR_BANK**  | **ROM bank select for 4000-7FFF window**                          |
 | F011    | **RAM_BANK**  | **Bank select for banked Cart RAM (if enabled)**                  |
 | F012    | **WE_LATCH**  | **Write-enable latch for battery RAM (write key)**                |
-| F013    | **VRAM_BANK** | **VRAM Bank Select (0-3 for 6000-7FFF window)**                   |
-| F014    | **WRAM_BANK** | **WRAM Bank Select (0-2 for C000-DFFF window -> maps banks 1-3)** |
+| F013    | **VRAM_BANK** | **VRAM Bank Select (0-3 for 8000-9FFF window)**                   |
+| F014    | **WRAM_BANK** | **WRAM Bank Select (0-5 for D000-DFFF window -> maps banks 1-6)** |
 | F018    | **RTC_SEC**   | **0..59 (latched)**                                               |
 | F019    | **RTC_MIN**   | **0..59 (latched)**                                               |
 | F01A    | **RTC_HOUR**  | **0..23 (latched)**                                               |
@@ -150,16 +148,7 @@ This register indicates that an interrupt-triggering event has occurred. The har
 
 ## **Cartridge Mapper and Bank Switching**
 
-To support games larger than the CPU's addressable ROM space (24 KiB), the console uses a cartridge-based mapper for bank switching. The mapper hardware resides on the game cartridge and is controlled by writing to I/O registers. The primary register for this is **MPR_BANK** at address F010.
-
-### **MPR_BANK (F010) - Half-Select Mechanism**
-
-The switchable ROM window at 4000-5FFF is 8 KiB. To provide finer control, the mapper uses a "half-select" system based on the 8-bit value written to **MPR_BANK**.
-
-- **Bits 1-7 (Upper 7 bits):** These bits select a 16 KiB bank from the physical ROM on the cartridge.
-- **Bit 0 (Lowest bit):** This bit selects which 8 KiB half of that 16 KiB bank to map into the 4000-5FFF window.
-  - **0:** Selects the first half (offset +0 KiB).
-  - **1:** Selects the second half (offset +8 KiB).
+To support games larger than the CPU's addressable ROM space, the console uses a cartridge-based mapper for bank switching. The mapper hardware resides on the game cartridge and is controlled by writing to I/O registers. The primary register for this is **MPR_BANK** at address F010. The value written to this register directly selects which 16 KiB ROM bank is mapped into the `4000-7FFF` address window.
 
 ## **APU Registers (F500-F5FF)**
 

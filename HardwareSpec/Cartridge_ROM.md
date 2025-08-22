@@ -35,7 +35,7 @@ The rest of the cartridge ROM is dedicated to the game's program code, graphics 
 
 - **Entry Point (0x0100)**: After the boot sequence, the CPU begins executing game code starting at address 0x0100.
 - **ROM Bank 0 (0x0100 - 0x3FFF)**: This area contains the rest of the fixed, non-switchable portion of the game's code. It typically holds the main game loop and critical subroutines that need to be accessible at all times.
-- **Switchable ROM Banks (Mapped to 0x4000 - 0x5FFF)**: The remainder of the physical ROM chip contains the switchable banks. The game can map these banks into the CPU's address space to access additional code and data, such as level maps, enemy sprites, and music.
+- **Switchable ROM Banks (Mapped to 0x4000 - 0x7FFF)**: The remainder of the physical ROM chip contains the switchable banks. The game can map these banks into the CPU's address space to access additional code and data, such as level maps, enemy sprites, and music.
 
 ### **3. Interrupt Vector Table**
 
