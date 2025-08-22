@@ -8,7 +8,7 @@
 
 ### **16-bit General Purpose Registers**
 
-- **R0, R1, R2, R3, R4, R5:** General Purpose Registers - Can be used for data manipulation and as address pointers.
+- **R0, R1, R2, R3, R4, R5:** General Purpose Registers - Can be used for data manipulation and as address pointers. For register-to-register arithmetic instructions (ADD, SUB, etc.), R0 serves as the accumulator.
 - **R6:** General Purpose / Frame Pointer (FP) - Can be used as a general register, but is often used by compilers to manage stack frames.
 - **R7:** Stack Pointer (SP) - Points to the top of the stack in WRAM. PUSH and POP operations implicitly use this register.
 
@@ -47,10 +47,10 @@
 | :------------ | :----------- | :---- | :----- | :---------------------------------------------------------------------------------------- |
 | LD r, r       | R1, R2       | 1     | 4      | Copies the 16-bit value of R2 into R1.                                                    |
 | LD r, n16     | R0, 0x8000   | 3     | 8      | Loads the immediate 16-bit value 0x8000 into R0.                                          |
-| LD.w rd, (rs) | R2, (R3)     | 1     | 8      | Loads the 16-bit word from the address in R3 into R2.                                     |
-| LD.b rd, (rs) | R2, (R3)     | 1     | 8      | Loads the 8-bit byte from the address in R3 into the low byte of R2, and zero-extends it. |
-| ST.w (rd), rs | (R4), R5     | 1     | 8      | Stores the 16-bit word from R5 into the memory address pointed to by R4.                  |
-| ST.b (rd), rs | (R4), R5     | 1     | 8      | Stores the low 8-bit byte from R5 into the memory address pointed to by R4.               |
+| LD.w rd, (rs) | R2, (R3)     | 2     | 12     | Loads the 16-bit word from the address in R3 into R2. (Prefixed)                          |
+| LD.b rd, (rs) | R2, (R3)     | 2     | 12     | Loads the 8-bit byte from the address in R3 into the low byte of R2, and zero-extends it. (Prefixed) |
+| ST.w (rd), rs | (R4), R5     | 2     | 12     | Stores the 16-bit word from R5 into the memory address pointed to by R4. (Prefixed)       |
+| ST.b (rd), rs | (R4), R5     | 2     | 12     | Stores the low 8-bit byte from R5 into the memory address pointed to by R4. (Prefixed)    |
 | LD.w r, (n16) | R0, (0xC000) | 3     | 12     | Loads a 16-bit word from the absolute address 0xC000 into R0.                             |
 | ST.w (n16), r | (0xC000), R0 | 3     | 12     | Stores the 16-bit word in R0 to the absolute address 0xC000.                              |
 | PUSH r        | R0           | 1     | 12     | Pushes the value of a register onto the stack. Decrements SP by 2.                        |
@@ -58,40 +58,40 @@
 
 ### **16-Bit Arithmetic/Logic Instructions**
 
-**These instructions perform operations on 16-bit data. rd is the destination register, rs is the source.**
+**These instructions perform operations on 16-bit data. For register-to-register operations, R0 is the implicit destination (accumulator).**
 
 | Mnemonic    | Operands   | Bytes | Cycles | Description                                                                      |
 | :---------- | :--------- | :---- | :----- | :------------------------------------------------------------------------------- |
-| ADD rd, rs  | R0, R1     | 1     | 4      | R0 = R0 + R1. Affects Z, N, C, V flags.                                          |
-| ADD rd, n16 | R0, 0x0100 | 3     | 8      | R0 = R0 + 0x0100. Affects Z, N, C, V flags.                                      |
-| SUB rd, rs  | R0, R1     | 1     | 4      | R0 = R0 - R1. Affects Z, N, C, V flags.                                          |
-| SUB rd, n16 | R0, 0x0100 | 3     | 8      | R0 = R0 - 0x0100. Affects Z, N, C, V flags.                                      |
-| AND rd, rs  | R0, R1     | 1     | 4      | R0 = R0 & R1. Affects Z, N flags.                                                |
-| AND rd, n16 | R0, 0x00FF | 3     | 8      | R0 = R0 & 0x00FF. Affects Z, N flags.                                            |
-| OR rd, rs   | R0, R1     | 1     | 4      | `R0 = R0                                                                         |
-| OR rd, n16  | R0, 0xF0F0 | 3     | 8      | `R0 = R0                                                                         |
-| XOR rd, rs  | R0, R1     | 1     | 4      | R0 = R0 ^ R1. Affects Z, N flags.                                                |
-| XOR rd, n16 | R0, 0xFFFF | 3     | 8      | R0 = R0 ^ 0xFFFF. Affects Z, N flags.                                            |
+| ADD rs      | R1         | 1     | 4      | R0 = R0 + R1. Affects Z, N, C, V flags.                                          |
+| ADD r, n16 | R0, 0x0100 | 3     | 8      | R0 = R0 + 0x0100. Affects Z, N, C, V flags.                                      |
+| SUB rs      | R1         | 1     | 4      | R0 = R0 - R1. Affects Z, N, C, V flags.                                          |
+| SUB r, n16 | R0, 0x0100 | 3     | 8      | R0 = R0 - 0x0100. Affects Z, N, C, V flags.                                      |
+| AND rs      | R1         | 1     | 4      | R0 = R0 & R1. Affects Z, N flags.                                                |
+| AND r, n16 | R0, 0x00FF | 3     | 8      | R0 = R0 & 0x00FF. Affects Z, N flags.                                            |
+| OR rs       | R1         | 1     | 4      | R0 = R0 | R1. Affects Z, N flags.                                                |
+| OR r, n16  | R0, 0xF0F0 | 3     | 8      | R0 = R0 | 0xF0F0. Affects Z, N flags.                                            |
+| XOR rs      | R1         | 1     | 4      | R0 = R0 ^ R1. Affects Z, N flags.                                                |
+| XOR r, n16 | R0, 0xFFFF | 3     | 8      | R0 = R0 ^ 0xFFFF. Affects Z, N flags.                                            |
 | INC r       | R2         | 1     | 4      | R2 = R2 + 1. Affects Z, N, V flags.                                              |
 | DEC r       | R2         | 1     | 4      | R2 = R2 - 1. Affects Z, N, V flags.                                              |
-| CMP r, r    | R0, R1     | 1     | 4      | Compares R0 and R1 (calculates R0 - R1) and sets flags, but discards the result. |
+| CMP rs      | R1         | 1     | 4      | Compares R0 and R1 (calculates R0 - R1) and sets flags, but discards the result. |
 | CMP r, n16  | R0, 0x4000 | 3     | 8      | Compares R0 with an immediate value and sets flags, discarding the result.       |
 
 ### **8-Bit Arithmetic/Logic Instructions**
 
-**These operate on the lower 8 bits of the specified registers. The upper 8 bits of the destination register are unaffected.**
+**These operate on the lower 8 bits of the specified registers. The upper 8 bits of the destination register are unaffected. R0.b is the implicit accumulator.**
 
 | Mnemonic     | Operands | Bytes | Cycles | Description                                          |
 | :----------- | :------- | :---- | :----- | :--------------------------------------------------- |
-| ADD.b rd, rs | R0, R1   | 1     | 4      | R0.b = R0.b + R1.b.                                  |
-| ADD.b rd, n8 | R0, 0x10 | 2     | 8      | R0.b = R0.b + 0x10.                                  |
-| SUB.b rd, rs | R0, R1   | 1     | 4      | R0.b = R0.b - R1.b.                                  |
-| AND.b rd, rs | R0, R1   | 1     | 4      | R0.b = R0.b & R1.b.                                  |
-| OR.b rd, rs  | R0, R1   | 1     | 4      | `R0.b = R0.b                                         |
-| XOR.b rd, rs | R0, R1   | 1     | 4      | R0.b = R0.b ^ R1.b.                                  |
+| ADD.b rs     | R1       | 1     | 4      | R0.b = R0.b + R1.b.                                  |
+| ADD.b r, n8 | R0, 0x10 | 2     | 8      | R0.b = R0.b + 0x10.                                  |
+| SUB.b rs     | R1       | 1     | 4      | R0.b = R0.b - R1.b.                                  |
+| AND.b rs     | R1       | 1     | 4      | R0.b = R0.b & R1.b.                                  |
+| OR.b rs      | R1       | 1     | 4      | R0.b = R0.b | R1.b.                                  |
+| XOR.b rs     | R1       | 1     | 4      | R0.b = R0.b ^ R1.b.                                  |
 | INC.b r      | R2       | 1     | 4      | R2.b = R2.b + 1.                                     |
 | DEC.b r      | R2       | 1     | 4      | R2.b = R2.b - 1.                                     |
-| CMP.b r, r   | R0, R1   | 1     | 4      | Compares the low bytes of R0 and R1.                 |
+| CMP.b rs     | R1       | 1     | 4      | Compares the low bytes of R0 and R1.                 |
 | CMP.b r, n8  | R0, 0x40 | 2     | 8      | Compares the low byte of R0 with an immediate value. |
 
 ### **Rotate, Shift, and Bit Instructions**
