@@ -4,7 +4,7 @@
 
 ---
 
-## Idea: switch the sizes of ROM0 and ROM1
+## idea: increase the size of the ROM1 switchable window
 
-Since we have freed up space in the cartridge ROM by dedicating a memory space to the System Library and eliminating the need for boilerplate functions to be stored in ROM0, we can reduce the size of ROM0 and increase the size of the ROM1 switchable window. I'm proposing making ROM0 8KiB and ROM1 16KiB and eliminating the half-select system for ROM1.
+I could increase the size of ROM1 from 8KiB to 16KiB by: 1. reduce the size of the WRAM1 bankable window to 4KiB (increasing the number of banks from 3 banks of 8KiB to 6 banks of 4KiB) 2. removing the dedicated 2KiB of ram space for the system library and instead storing the system library within WRAM0 3. use this newly freed 6KiB of space (4KiB from reducing WRAM1, 2KiB from eliminating dedicated system library ram) along with the existing 2KiB of reserved space at 0x9800 (total of 8KiB free) to increase the size of the ROM1 window from 8KiB to 16KiB (shifting the locations of VRAM, cartridge RAM, WRAM0 and WRAM1) 4. eleminate the half-select system for the ROM1 window
 
