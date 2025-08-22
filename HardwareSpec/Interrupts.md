@@ -6,18 +6,24 @@ Interrupts are a mechanism that allows the CPU to pause its current task to hand
 
 ## **2. The Interrupt Process**
 
-The process for triggering and handling an interrupt is as follows:
+The process for triggering and handling an interrupt or CPU fault is as follows:
 
-1.  A specific hardware event occurs (e.g., the V-Blank period begins).
-2.  The hardware automatically sets the corresponding flag bit in the **`IF` (Interrupt Flag)** register at `F201`.
-3.  At the end of each instruction cycle, the CPU checks for pending interrupts. An interrupt will be serviced if three conditions are met:
-    a. The master interrupt switch is enabled (which is done by the `EI` instruction).
-    b. The specific interrupt's bit is set to `1` in the **`IE` (Interrupt Enable)** register at `F200`.
-    c. The specific interrupt's bit is set to `1` in the **`IF` (Interrupt Flag)** register.
-4.  If these conditions are met, the CPU pushes its current 16-bit Program Counter (PC) to the stack and jumps to the address specified for that interrupt in the **Interrupt Vector Table**.
-5.  The code at that address, the Interrupt Service Routine (ISR), is executed.
-6.  Inside the ISR, the programmer is responsible for manually clearing the interrupt flag in the `IF` register by writing a `1` to its bit. This prevents the interrupt from immediately re-triggering after the ISR is complete.
-7.  The ISR must end with the `RETI` (Return from Interrupt) instruction, which pops the original PC from the stack and re-enables the master interrupt switch.
+1.  A specific hardware event occurs (e.g., the V-Blank period begins) OR a CPU fault condition is detected (e.g., unaligned memory access).
+2.  For hardware interrupts, the hardware automatically sets the corresponding flag bit in the **`IF` (Interrupt Flag)** register at `F201`. For CPU faults, the fault condition is directly detected by the CPU.
+3.  At the end of each instruction cycle, the CPU checks for pending interrupts or faults.
+    *   **For Hardware Interrupts:** An interrupt will be serviced if three conditions are met:
+        a. The master interrupt switch is enabled (which is done by the `EI` instruction).
+        b. The specific interrupt's bit is set to `1` in the **`IE` (Interrupt Enable)** register at `F200`.
+        c. The specific interrupt's bit is set to `1` in the **`IF` (Interrupt Flag)** register.
+    *   **For CPU Faults:** Faults are generally non-maskable and will be serviced immediately, regardless of the master interrupt switch or `IE`/`IF` registers.
+4.  If conditions are met, the CPU performs the following actions:
+    a. Disables further interrupts (master interrupt switch is cleared).
+    b. Pushes the current 16-bit Program Counter (PC) to the stack.
+    c. Pushes the current 16-bit Flags register (F) to the stack.
+    d. Jumps to the address specified for that interrupt or fault in the **Interrupt Vector Table**.
+5.  The code at that address, the Interrupt Service Routine (ISR) or Fault Handler, is executed.
+6.  Inside the ISR, the programmer is responsible for manually clearing the interrupt flag in the `IF` register by writing a `1` to its bit. This prevents the interrupt from immediately re-triggering after the ISR is complete. (This step is not applicable for CPU Faults, as they are not tied to `IF` bits).
+7.  The ISR/Fault Handler must end with the `RETI` (Return from Interrupt) instruction, which pops the original F register, then the PC from the stack, and re-enables the master interrupt switch.
 
 ## **3. Interrupt Sources**
 
@@ -33,17 +39,17 @@ The Cricket-16 has five hardware interrupt sources, controlled via the `IE` and 
 
 ## **4. Interrupt Vector Table**
 
-The Interrupt Vector Table is a 16-byte block of memory containing the 16-bit addresses for each ISR. The layout below is defined by its offset from the table's base address. The order also determines priority if multiple interrupts occur simultaneously.
+The Interrupt Vector Table is a 16-byte block of memory containing the 16-bit addresses for each ISR or Fault Handler. The layout below is defined by its offset from the table's base address. The order also determines priority if multiple interrupts or faults occur simultaneously.
 
-| Vector Address Offset | Interrupt Source | Priority | 
-| :-------------------- | :--------------- | :------- | 
-| `+0x0` (`xxF0-xxF1`)  | `RESET`          | Highest  | 
-| `+0x2` (`xxF2-xxF3`)  | `V-Blank`        | 1        | 
-| `+0x4` (`xxF4-xxF5`)  | `H-Blank`        | 2        | 
-| `+0x6` (`xxF6-xxF7`)  | `Timer`          | 3        | 
-| `+0x8` (`xxF8-xxF9`)  | `Serial`         | 4        | 
-| `+0xA` (`xxFA-xxFB`)  | `Joypad`         | 5        | 
-| `+0xC` (`xxFC-xxFD`)  | `(Reserved)`     | -        | 
+| Vector Address Offset | Interrupt Source | Priority |
+| :-------------------- | :--------------- | :------- |
+| `+0x0` (`xxF0-xxF1`)  | `RESET`          | Highest  |
+| `+0x2` (`xxF2-xxF3`)  | **Bus Error**    | **Fault**|
+| `+0x4` (`xxF4-xxF5`)  | `V-Blank`        | 1        |
+| `+0x6` (`xxF6-xxF7`)  | `H-Blank`        | 2        |
+| `+0x8` (`xxF8-xxF9`)  | `Timer`          | 3        |
+| `+0xA` (`xxFA-xxFB`)  | `Serial`         | 4        |
+| `+0xC` (`xxFC-xxFD`)  | `Joypad`         | 5        |
 | `+0xE` (`xxFE-xxFF`)  | `(Reserved)`     | -        | 
 
 ## **5. Vector Table Location Modes**
