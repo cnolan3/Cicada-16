@@ -42,7 +42,7 @@ To produce the note A-4 (440 Hz), a programmer would need to calculate the requi
 5.  `FREQ_REG = 65536 - 149` (rounding to the nearest integer)
 6.  `FREQ_REG = 65387`
 
-A value of **65387** in the frequency register will produce a tone very close to 440 Hz. Game developers would typically use a pre-calculated lookup table for note frequencies.
+A value of **65387** in the frequency register will produce a tone very close to 440 Hz. Game developers would typically use a pre-calculated lookup table for note frequencies. The official System Library provides a standardized lookup table for this purpose. See the `System_Library.md` document for more details.
 
 ## **3. Channel 2: Wave Channel**
 
