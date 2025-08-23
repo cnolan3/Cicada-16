@@ -37,22 +37,34 @@ The Cricket-16 has five hardware interrupt sources, controlled via the `IE` and 
 | 3   | **Serial**  | Occurs when a serial data transfer is complete.   |
 | 4   | **Joypad**  | Occurs when a joypad button is pressed **(on the 1-to-0 transition only)**. |
 
-## **4. Interrupt Vector Table**
+## **4. CPU Faults**
 
-The Interrupt Vector Table is a 16-byte block of memory containing the 16-bit addresses for each ISR or Fault Handler. The layout below is defined by its offset from the table's base address. The order also determines priority if multiple interrupts or faults occur simultaneously.
+CPU Faults are critical, non-maskable events triggered by illegal or dangerous operations detected by the processor. Unlike hardware interrupts, they are not controlled by the `IE` and `IF` registers and will always be serviced immediately. When a fault occurs, the CPU pushes the PC and Flags register to the stack and jumps to the corresponding fault handler in the Interrupt Vector Table.
 
-| Vector Address Offset | Interrupt Source | Priority |
-| :-------------------- | :--------------- | :------- |
-| `+0x0` (`xxF0-xxF1`)  | `RESET`          | Highest  |
-| `+0x2` (`xxF2-xxF3`)  | **Bus Error**    | **Fault**|
-| `+0x4` (`xxF4-xxF5`)  | `V-Blank`        | 1        |
-| `+0x6` (`xxF6-xxF7`)  | `H-Blank`        | 2        |
-| `+0x8` (`xxF8-xxF9`)  | `Timer`          | 3        |
-| `+0xA` (`xxFA-xxFB`)  | `Serial`         | 4        |
-| `+0xC` (`xxFC-xxFD`)  | `Joypad`         | 5        |
-| `+0xE` (`xxFE-xxFF`)  | `(Reserved)`     | -        | 
+- **Bus Error:** Triggered when a 16-bit word (e.g., from an `LD.w` instruction) is accessed from an odd memory address. All 16-bit memory accesses must be aligned to an even address.
+- **Illegal Instruction:** Triggered when the CPU attempts to execute an opcode that is not defined in the instruction set, including any reserved or unused opcode values.
+- **Protected Memory:** Triggered when a write operation is attempted on a memory region that is designated as read-only. This includes the cartridge ROM space (`0x0000-0x7FFF`) and the PPU/APU register space (`0xF000-0xF1FF`) under normal operation.
+- **Stack Overflow:** Triggered if the Stack Pointer (SP) register decrements below the base of the stack memory region (`0xC000` for WRAM0 or `0xD000` for WRAM1). This helps catch runaway recursive calls or stack corruption before it overwrites other critical memory.
 
-## **5. Vector Table Location Modes**
+## **5. Interrupt Vector Table**
+
+The Interrupt Vector Table is a 32-byte block of memory containing the 16-bit addresses for each ISR or Fault Handler. The layout below is defined by its offset from the table's base address. The order also determines priority if multiple interrupts or faults occur simultaneously.
+
+| Vector Address Offset | Interrupt Source        | Priority  |
+| :-------------------- | :---------------------- | :-------- |
+| `+0x0` (`xxE0-xxE1`)  | `RESET`                 | Highest   |
+| `+0x2` (`xxE2-xxE3`)  | **Bus Error**           | **Fault** |
+| `+0x4` (`xxE4-xxE5`)  | **Illegal Instruction** | **Fault** |
+| `+0x6` (`xxE6-xxE7`)  | **Protected Memory**    | **Fault** |
+| `+0x8` (`xxE8-xxE9`)  | **Stack Overflow**      | **Fault** |
+| `+0xA` (`xxEA-xxEB`)  | `V-Blank`               | 1         |
+| `+0xC` (`xxEC-xxED`)  | `H-Blank`               | 2         |
+| `+0xE` (`xxEE-xxEF`)  | `Timer`                 | 3         |
+| `+0x10` (`xxF0-xxF1`) | `Serial`                | 4         |
+| `+0x12` (`xxF2-xxF3`) | `Joypad`                | 5         |
+| `+0x14` (`xxF4-xxFF`) | `(Reserved)`            | -         |
+
+## **6. Vector Table Location Modes**
 
 The Cricket-16 supports two modes for the location of the interrupt vector table, determined by a flag in the cartridge header. This provides a choice between simplicity and advanced functionality.
 
@@ -60,7 +72,7 @@ The Cricket-16 supports two modes for the location of the interrupt vector table
 This is the default and simplest mode.
 
 -   **Cartridge Header Flag**: The "Interrupt Mode" bit (Bit 7 of byte `0x002C`) is set to `0`.
--   **CPU Behavior**: The CPU is hardwired to look for the interrupt vector table at a fixed location within the cartridge ROM: **`0x00F0 - 0x00FF`**.
+-   **CPU Behavior**: The CPU is hardwired to look for the interrupt vector table at a fixed location within the cartridge ROM: **`0x00E0 - 0x00FF`**.
 -   **Implementation**: The game developers place a static list of 16-bit addresses at this location in their ROM file. The interrupt handlers are fixed for the lifetime of the game.
 
 ### **Enhanced Mode (RAM-Based)**
@@ -68,6 +80,6 @@ This mode enables advanced programming techniques by allowing the game to modify
 
 -   **Cartridge Header Flag**: The "Interrupt Mode" bit is set to `1`.
 -   **Console Boot Behavior**: The boot ROM reads this flag and performs two actions:
-    1.  It sets a hardware latch that re-routes the CPU's interrupt vector lookups to a fixed location in Work RAM Bank 0 (WRAM0): **`0xC000 - 0xC00F`**.
-    2.  It uses the DMA controller to automatically copy the 16-byte vector table from the cartridge ROM (`0x00F0`) to WRAM (`0xC000`) as a default starting point.
+    1.  It sets a hardware latch that re-routes the CPU's interrupt vector lookups to a fixed location in Work RAM Bank 0 (WRAM0): **`0xC000 - 0xC01F`**.
+    2.  It uses the DMA controller to automatically copy the 32-byte vector table from the cartridge ROM (`0x00E0`) to WRAM (`0xC000`) as a default starting point.
 -   **Flexibility**: Because the interrupt table is in RAM, the game can overwrite any of these vector addresses at any time to point to different handler routines, allowing for dynamic, state-based interrupt handling.
