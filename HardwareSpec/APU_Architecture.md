@@ -67,27 +67,27 @@ The wave channel offers the most sonic flexibility by playing back a small, user
 
 ### 3.1. Waveform Frequency
 
-The frequency of the `CH2_FREQ` register determines how quickly the APU steps through the 64 samples of the selected waveform. The resulting audible pitch is determined by this playback rate.
+The frequency of the `CH2_FREQ` register determines how quickly the APU steps through the 64 samples of the selected waveform. The resulting audible pitch is determined by this playback rate. The formula is intentionally aligned with the pulse channels, allowing them to share the same frequency lookup table.
 
-**`Sample Rate (Hz) = 4,194,304 / (32 * (65536 - FREQ_REG))`**
+**`Sample Rate (Hz) = 4,194,304 / (65536 - FREQ_REG)`**
 
 **`Output Pitch (Hz) = Sample Rate / 64`**
 
+This simplifies to the final formula:
+
+**`Output Pitch (Hz) = 4,194,304 / (64 * (65536 - FREQ_REG))`**
+
 Where `FREQ_REG` is the 16-bit value from the `F524-F525` register.
+
+**Note:** Because this formula is identical to the one for the pulse channels, the same note frequency values from the System Library's lookup table can be used for Channel 2.
 
 **Example Calculation:**
 
-To play back the waveform at a rate that produces a pitch of A-4 (440 Hz):
+To produce the note A-4 (440 Hz), the `FREQ_REG` value is the same as for the pulse channels:
 
-1.  `Target Sample Rate = 440 * 64 = 28,160` samples per second.
-2.  `28160 = 4,194,304 / (32 * (65536 - FREQ_REG))`
-3.  `32 * (65536 - FREQ_REG) = 4,194,304 / 28160`
-4.  `65536 - FREQ_REG = 148.945... / 32`
-5.  `65536 - FREQ_REG = 4.65...`
-6.  `FREQ_REG = 65536 - 5` (rounding to the nearest integer)
-7.  `FREQ_REG = 65531`
+`FREQ_REG = 65387`
 
-A value of **65531** in the frequency register will produce a tone very close to 440 Hz.
+This value will cause the 64 samples of the waveform to be played back at a rate that produces a fundamental pitch of 440 Hz.
 
 ## **4. Channel 3: Noise Channel**
 
