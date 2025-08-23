@@ -91,10 +91,12 @@
 
 ## FE Prefix Map (Bit, Byte, and Shift Operations)
 
-| Opcode (Hex) | Mnemonic | Bytes | Description                                             |
-| :----------- | :------- | :---- | :------------------------------------------------------ |
-| 00           | HALT     | 2     | `FE 00`. Halt CPU.                                      |
-| 18-1F        | SRA r    | 2     | `FE 18+r`. Shift Right Arithmetic.                      |
+| Opcode (Hex) | Mnemonic      | Bytes | Description                                             |
+| :----------- | :------------ | :---- | :------------------------------------------------------ |
+| 00           | HALT          | 2     | `FE 00`. Halt CPU.                                      |
+| 08-0F        | BIT (n16), b  | 4     | `FE (08+b) n16`. Test bit b of byte at address n16.     |
+| 10-17        | SET (n16), b  | 4     | `FE (10+b) n16`. Set bit b of byte at address n16.      |
+| 18-1F        | SRA r         | 2     | `FE 18+r`. Shift Right Arithmetic.                      |
 | 20-27        | SHL r    | 2     | `FE 20+r`. Shift Left Logical.                          |
 | 28-2F        | SHR r    | 2     | `FE 28+r`. Shift Right Logical.                         |
 | 30-37        | ROL r    | 2     | `FE 30+r`. Rotate Left through Carry.                   |
@@ -106,8 +108,9 @@
 | 98-9F        | OR.b rs  | 2     | `FE 10011 sss`. R0.b = R0.b or rs.b.                    |
 | A0-A7        | XOR.b rs | 2     | `FE 10100 sss`. R0.b = R0.b ^ rs.b.                     |
 | A8-AF        | CMP.b rs | 2     | `FE 10101 sss`. Compares R0.b with rs.b.                |
-| B0           | PUSH F   | 2     | `FE B0`. Push Flags register onto stack.                |
-| B1           | POP F    | 2     | `FE B1`. Pop Flags register from stack.                 |
+| B0           | PUSH F        | 2     | `FE B0`. Push Flags register onto stack.                |
+| B1           | POP F         | 2     | `FE B1`. Pop Flags register from stack.                 |
+| B8-BF        | RES (n16), b  | 4     | `FE (B8+b) n16`. Reset bit b of byte at address n16.    |
 | C0-DF        | SET r, b | 2     | `FE 110 bbb rrr`. Set bit b of register r's low byte.   |
 | E0-FF        | RES r, b | 2     | `FE 111 bbb rrr`. Reset bit b of register r's low byte. |
 

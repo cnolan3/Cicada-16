@@ -140,6 +140,9 @@
 | BIT r, b  | R0, 7    | 2     | 8      | Test bit b (0-7) of register r's low byte. Sets Z flag if bit is 0. (Prefixed) |
 | SET r, b  | R0, 7    | 2     | 8      | Set bit b (0-7) of register r's low byte to 1. (Prefixed)           |
 | RES r, b  | R0, 7    | 2     | 8      | Reset bit b (0-7) of register r's low byte to 0. (Prefixed)         |
+| BIT (n16), b | (0xC000), 7 | 4     | 16     | Test bit b (0-7) of the byte at memory address n16. Sets Z flag if bit is 0. (Prefixed) |
+| SET (n16), b | (0xC000), 7 | 4     | 20     | Set bit b (0-7) of the byte at memory address n16 to 1. (Prefixed)           |
+| RES (n16), b | (0xC000), 7 | 4     | 20     | Reset bit b (0-7) of the byte at memory address n16 to 0. (Prefixed)         |
 
 ### **Control Flow Instructions (Jumps, Calls, Returns)**
 
