@@ -168,7 +168,7 @@ This section details the memory-mapped registers used to control all APU functio
 | F580      | MIX_CTRL  | Master APU enable, individual channel enables              |
 | F581      | MIX_VOL_L | Master volume Left (0-15)                                  |
 | F582      | MIX_VOL_R | Master volume Right (0-15)                                 |
-| F584-F587 | PAN0-PAN3 | Per-channel stereo panning control                         |
+| F584-F587 | CH0_OUT..CH3_OUT | Per-channel stereo volume/panning control                |
 | F5A0      | DSP_CTRL  | DSP Control Register                                       |
 | F5A1      | DSP_DELAY | Delay time/length (controls read offset into delay buffer) |
 | F5A2      | DSP_FBACK | Feedback level (0-15). Controls echo decay.                |
@@ -266,17 +266,14 @@ These two registers are identical for each channel (CH0, CH1, CH2, CH3).
 | 1   | CH1_EN | 1: Channel 1 (Pulse B) is enabled.                  |
 | 0   | CH0_EN | 1: Channel 0 (Pulse A) is enabled.                  |
 
-#### **F584 - F587: PAN0 - PAN3**
+#### **F584 - F587: CHx_OUT (Channel Output Level)**
 
-Each panning register is one byte and controls a single channel (F584 for CH0, F585 for CH1, etc.).
+These registers control the final output volume and stereo panning for each channel (F584 for CH0, F585 for CH1, etc.). This provides a final "fader" for each channel before the audio is sent to the master volume controls.
 
-| Bit | Name  | Description                                         |
-| :-- | :---- | :-------------------------------------------------- |
-| 7-2 | -     | Unused.                                             |
-| 1   | PAN_R | 1: Send this channel's output to the Right speaker. |
-| 0   | PAN_L | 1: Send this channel's output to the Left speaker.  |
-
-_(Note: Setting both PAN_L and PAN_R to 1 results in a centered mono signal for that channel.)_
+| Bit   | Name    | Type | Description                           |
+| :---- | :------ | :--- | :------------------------------------ |
+| 7-4   | VOL_L   | R/W  | Volume for the Left Speaker (0-15)    |
+| 3-0   | VOL_R   | R/W  | Volume for the Right Speaker (0-15)   |
 
 #### **F5A0: DSP_CTRL**
 
@@ -306,3 +303,68 @@ A 4-bit value (0-15) that controls the wet/dry mix. This is the volume of the de
 - `0`: No echo is heard (fully dry signal).
 - `15`: Echo is at its loudest (wet signal).
 - **Formula:** `Output = DrySignal + (DelayedSignal * (DSP_WET / 16))`
+
+
+## 8. APU Signal and Clock Flow
+
+This section provides a detailed, step-by-step overview of the entire APU signal path, from individual channel generation to the final mixed output.
+
+### 8.1. The Clock Tree
+
+The APU uses several different clocks, all derived from the master APU clock, to control different aspects of sound generation.
+
+-   **Master APU Clock (4.194304 MHz):** The high-speed master clock that drives all APU operations. It is divided down to create the other, slower clocks.
+-   **Generator Clocks (Variable):** This is the clock that drives the core sound generators (the pulse wave, wave table, and LFSR). Its speed is controlled by the `FREQ` or `CLK_DIV` registers for each channel and determines the fundamental pitch or character of the raw sound.
+-   **Envelope Clock (256 Hz):** A slow, fixed-rate clock. 256 times per second, it tells the ADSR unit on each channel whether it should increment or decrement its volume according to its current phase (Attack, Decay, or Release).
+-   **Sweep Clock (128 Hz):** A slow, fixed-rate clock. 128 times per second, it tells the sweep unit on Channel 0 to perform its frequency recalculation.
+-   **Mixer Sample Rate (32,768 Hz):** This is the "heartbeat" of the entire mixing system. At every one of these 32,768 ticks per second, the APU performs the full mixing process described below.
+
+### 8.2. The Signal Flow: A Sample's Journey
+
+The following sequence of events happens 32,768 times per second to produce one final audio sample for the left and right speakers.
+
+#### **Step 1: Raw Signal Generation**
+
+For each of the four channels, the APU determines its raw output for the current cycle.
+-   The channel's core generator (pulse, wave, or noise) produces its signal (e.g., a high/low state, a 4-bit sample from RAM, or a 1/0 from the LFSR).
+-   The channel's ADSR unit provides its current 4-bit volume level (0-15).
+-   The raw signal is scaled by this envelope volume. This produces the channel's "pre-mix" output signal.
+
+#### **Step 2: DSP Send (The "Dry" Signal)**
+
+The APU determines what to send to the DSP's echo/delay effect.
+-   It checks the `DSP_CTRL` register.
+-   It takes the "pre-mix" output from every channel whose corresponding `CHx_IN` bit is set to `1`.
+-   These signals are summed together. This combined signal is the "dry" input for the DSP.
+
+#### **Step 3: The DSP Delay Line**
+
+The echo effect is processed.
+1.  **Read:** The DSP reads an old sample from its 1KB circular delay buffer. The read position is determined by the `DSP_DELAY` register. This retrieved sample is the "wet" signal (the echo).
+2.  **Feedback:** This "wet" signal is scaled down by the `DSP_FBACK` value.
+3.  **Write:** The scaled-down feedback signal is added to the "dry" signal from Step 2, and the result is written back into the delay buffer at the current write position.
+
+#### **Step 4: Final Channel Mixing (Volume & Panning)**
+
+This is where the `CHx_OUT` registers are used. The APU calculates the final mix for the left and right speakers, starting with two empty accumulators, `FinalLeft` and `FinalRight`.
+
+For each of the four channels:
+1.  It takes the channel's "pre-mix" output from Step 1.
+2.  It looks at the channel's `CHx_OUT` register (`F584` - `F587`).
+3.  The pre-mix signal is scaled by the `VOL_L` nibble (0-15) and added to the `FinalLeft` accumulator.
+4.  The pre-mix signal is scaled by the `VOL_R` nibble (0-15) and added to the `FinalRight` accumulator.
+
+After this process is complete for all four channels, `FinalLeft` and `FinalRight` contain the complete "dry" mix, perfectly panned and with individual channel volumes applied.
+
+#### **Step 5: DSP Return (The "Wet" Signal)**
+
+The "wet" signal (the echo read from the delay buffer in Step 3) is now added to the final mix.
+-   The wet signal is scaled by the `DSP_WET` register value.
+-   This scaled echo is added to *both* the `FinalLeft` and `FinalRight` accumulators.
+
+#### **Step 6: Master Volume & Output**
+
+This is the final stage before the sound is sent to the speakers.
+-   The `FinalLeft` signal is scaled by the master left volume (`MIX_VOL_L`).
+-   The `FinalRight` signal is scaled by the master right volume (`MIX_VOL_R`).
+-   These two resulting values are the final samples sent to the digital-to-analog converter (DAC).
