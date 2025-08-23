@@ -44,13 +44,50 @@ To produce the note A-4 (440 Hz), a programmer would need to calculate the requi
 
 A value of **65387** in the frequency register will produce a tone very close to 440 Hz. Game developers would typically use a pre-calculated lookup table for note frequencies. The official System Library provides a standardized lookup table for this purpose. See the `System_Library.md` document for more details.
 
+### 2.2. Hardware Frequency Sweep (Channel 0)
+
+Channel 0 includes a hardware frequency sweep unit that can be used to create sliding pitch effects, such as arpeggios, explosions, and risers. The sweep unit periodically recalculates the channel's frequency based on its current frequency and the settings in the `CH0_SWP` register.
+
+The sweep unit is clocked at **128Hz**. The timing of the sweep is controlled by the `SWP_TIME` setting. When the sweep is enabled, the following calculation is performed at each step:
+
+**`New Frequency = Current Frequency +/- (Current Frequency >> SWP_SHIFT)`**
+
+The direction of the sweep (addition or subtraction) is controlled by the `SWP_DIR` bit. If the new calculated frequency goes out of the valid range (0-65535), the channel is disabled.
+
+The sweep unit is controlled by the `CH0_SWP` register.
+
 ## **3. Channel 2: Wave Channel**
 
-The wave channel offers the most sonic flexibility by playing back a small, user-defined sample.
+The wave channel offers the most sonic flexibility by playing back a small, user-defined waveform. This is ideal for creating unique instrument tones or simple speech/sound effects.
 
-- **Wave RAM**: A 4-Kilobyte area of memory at E000-EFFF stores waveform data.
-- **Sample Playback**: The APU reads a 32-byte sample from Wave RAM and plays it back at a specified frequency.
-- **Volume Envelope**: This channel includes the same hardware ADSR envelope found on the Pulse and Noise channels.
+- **Wave RAM:** A 4-Kilobyte area of memory at `E000-EFFF` is dedicated to waveform data. This RAM is organized as a bank of 128 unique waveforms, indexed from 0 to 127.
+- **Waveform Format:** Each waveform is 32 bytes long and contains 64 sequential 4-bit samples. The samples are packed two per byte, with the high nibble (bits 7-4) being the first sample and the low nibble (bits 3-0) being the second. The 4-bit sample values represent amplitude, from 0 (lowest point) to 15 (highest point).
+- **Playback:** When the channel is triggered via `KEY_ON`, the APU begins reading the 64 samples of the selected waveform sequentially. The playback speed is controlled by the `CH2_FREQ` register. When the 64th sample is played, the playback loops back to the first sample. The output of the wave channel is the current sample's 4-bit value, scaled by the channel's current 4-bit ADSR envelope volume.
+- **Volume Envelope:** This channel includes the same hardware ADSR envelope found on the Pulse and Noise channels.
+
+### 3.1. Waveform Frequency
+
+The frequency of the `CH2_FREQ` register determines how quickly the APU steps through the 64 samples of the selected waveform. The resulting audible pitch is determined by this playback rate.
+
+**`Sample Rate (Hz) = 4,194,304 / (32 * (65536 - FREQ_REG))`**
+
+**`Output Pitch (Hz) = Sample Rate / 64`**
+
+Where `FREQ_REG` is the 16-bit value from the `F524-F525` register.
+
+**Example Calculation:**
+
+To play back the waveform at a rate that produces a pitch of A-4 (440 Hz):
+
+1.  `Target Sample Rate = 440 * 64 = 28,160` samples per second.
+2.  `28160 = 4,194,304 / (32 * (65536 - FREQ_REG))`
+3.  `32 * (65536 - FREQ_REG) = 4,194,304 / 28160`
+4.  `65536 - FREQ_REG = 148.945... / 32`
+5.  `65536 - FREQ_REG = 4.65...`
+6.  `FREQ_REG = 65536 - 5` (rounding to the nearest integer)
+7.  `FREQ_REG = 65531`
+
+A value of **65531** in the frequency register will produce a tone very close to 440 Hz.
 
 ## **4. Channel 3: Noise Channel**
 
@@ -84,6 +121,7 @@ This section details the memory-mapped registers used to control all APU functio
 | :-------- | :-------- | :--------------------------------------------------------- |
 | F500      | CH0_CTRL  | Pulse A: Control Register                                  |
 | F501-F502 | CH0_ADSR  | ADSR settings for Channel 0                                |
+| F503      | CH0_SWP   | Sweep settings for Channel 0                               |
 | F504-F505 | CH0_FREQ  | 16-bit frequency for Channel 0                             |
 | F510      | CH1_CTRL  | Pulse B: Control Register                                  |
 | F511-F512 | CH1_ADSR  | ADSR settings for Channel 1                                |
@@ -106,12 +144,20 @@ This section details the memory-mapped registers used to control all APU functio
 
 #### **F500: CH0_CTRL (Pulse A)**
 
-| Bit | Name     | Description                                                                                             |
-| :-- | :------- | :------------------------------------------------------------------------------------------------------ |
-| 7   | KEY_ON   | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
-| 6-5 | DUTY     | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
-| 4   | SWP_EN   | 1: Enable frequency sweep unit for this channel.                                                        |
-| 3-0 | SWP_RATE | Sweep rate/speed.                                                                                       |
+| Bit | Name   | Description                                                                                             |
+| :-- | :----- | :------------------------------------------------------------------------------------------------------ |
+| 7   | KEY_ON | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
+| 6-5 | DUTY   | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
+| 4-0 | -      | Unused.                                                                                                 |
+
+#### **F503: CH0_SWP (Pulse A Sweep)**
+
+| Bit | Name      | Description                                                                                             |
+| :-- | :-------- | :------------------------------------------------------------------------------------------------------ |
+| 7   | SWP_EN    | 1 = Enable the frequency sweep unit. The sweep is triggered when a note is keyed on.                  |
+| 6-4 | SWP_TIME  | Time between sweep steps, in units of 7.8ms (1/128s). If 0, sweep is disabled. (Range: 0-7)            |
+| 3   | SWP_DIR   | Sweep direction. 0: Addition (frequency increases), 1: Subtraction (frequency decreases).             |
+| 2-0 | SWP_SHIFT | Sweep magnitude. The new frequency is calculated by shifting the current frequency this many bits to the right and adding/subtracting it. If 0, sweep has no effect. |
 
 #### **F504-F505: CH0_FREQ**
 
@@ -138,7 +184,7 @@ This 16-bit register controls the frequency of the pulse wave for Channel 1. See
 
 #### **F524-F525: CH2_FREQ**
 
-This 16-bit register controls the playback frequency of the selected waveform for Channel 2.
+This 16-bit register controls the playback frequency of the selected waveform for Channel 2. See section "3.1. Waveform Frequency" for the calculation formula.
 
 #### **F530: CH3_CTRL (Noise)**
 
