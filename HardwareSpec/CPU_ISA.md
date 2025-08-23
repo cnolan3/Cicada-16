@@ -54,6 +54,7 @@
 | ST.b (rd), rs     | (R4), R5       | 2     | 12     | Stores the low 8-bit byte from R5 into the memory address pointed to by R4. (Prefixed)                    |
 | LD.w rd, (rs, n8) | R2, (R3, 0x10) | 3     | 16     | Loads the 16-bit word from the address in R3 + signed 8-bit offset into R2. (Prefixed)                    |
 | ST.w (rs, n8), rd | (R4, 0x10), R5 | 3     | 16     | Stores the 16-bit word from R5 into the memory address pointed to by R4 + signed 8-bit offset. (Prefixed) |
+| LEA rd, (rs, n8)  | R1, (R2, 0x10) | 3     | 8      | Calculates the address R2 + signed 8-bit offset and stores it in R1. (Prefixed)                           |
 | LD.w r, (n16)     | R0, (0xC000)   | 3     | 12     | Loads a 16-bit word from the absolute address 0xC000 into R0.                                             |
 | ST.w (n16), r     | (0xC000), R0   | 3     | 12     | Stores the 16-bit word in R0 to the absolute address 0xC000.                                              |
 | PUSH r            | R0             | 1     | 12     | Pushes the value of a register onto the stack. Decrements SP by 2.                                        |

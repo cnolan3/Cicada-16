@@ -2,10 +2,6 @@
 
 **Disclaimer:** This document contains thoughts and potential ideas for the Cricket-16 project. The notes here are **not** part of the official hardware specification unless explicitly integrated into the main `HardwareSpec` documents.
 
-## idea: add LEA (load effective address) instruction
-
-Add the `LEA rd, (rs, n8)` instruction to the ISA and opcode docs, this would calculate the address `rs + n8` and store it in `rd` without accessing the data at the address, making pointer math easier.
-
 ## Missing pieces and next steps
 
 You're in a fantastic position. Here's what I'd focus on next:

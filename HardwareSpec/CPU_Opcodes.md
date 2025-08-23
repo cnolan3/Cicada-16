@@ -82,10 +82,11 @@
 
 ## FD Prefix Map (Advanced Addressing 1)
 
-| Opcode (Hex) | Mnemonic          | Bytes | Description                                   |
-| :----------- | :---------------- | :---- | :-------------------------------------------- |
-| 00-3F        | LD.w rd, (rs, n8) | 3     | `FD 00dddsss n8`. Load word from rs + offset. |
-| 40-7F        | ST.w (rs, n8), rd | 3     | `FD 01dddsss n8`. Store word to rs + offset.  |
+| Opcode (Hex) | Mnemonic          | Bytes | Description                                                        |
+| :----------- | :---------------- | :---- | :----------------------------------------------------------------- |
+| 00-3F        | LD.w rd, (rs, n8) | 3     | `FD 00dddsss n8`. Load word from rs + offset.                      |
+| 40-7F        | ST.w (rs, n8), rd | 3     | `FD 01dddsss n8`. Store word to rs + offset.                       |
+| 80-BF        | LEA rd, (rs, n8)  | 3     | `FD 10dddsss n8`. Load effective address rs + offset into rd.      |
 
 ---
 
