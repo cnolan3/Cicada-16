@@ -125,11 +125,25 @@ When a channel's `KEY_ON` bit is set to 1, the envelope enters the **Attack** ph
 
 ## **6. DSP (Digital Signal Processor)**
 
-The APU includes a simple DSP unit for a configurable echo/delay effect.
+The APU includes a simple DSP unit that applies a single echo/delay effect to the audio. This effect is also often called a "delay line".
 
-- **Functionality**: The DSP captures the final mixed audio output, delays it, and then mixes it back into the main output.
-- **Delay Buffer**: Uses a dedicated 1 KiB of RAM at F800-FBFF.
-- **Control**: Controlled via registers starting at F5A0 for delay time, feedback, and wet/dry mix.
+### 6.1. DSP Signal Flow
+
+The DSP operates on the final mixed audio signal just before it is sent to the speakers. The process works as follows:
+
+1.  **Input Mix:** The audio from any channel with its corresponding `CHx_IN` bit set in `DSP_CTRL` is summed together. This becomes the "dry" input signal for the DSP.
+2.  **Delay Line:** The dry signal is written to a circular buffer in the **Delay Buffer RAM** (`F800-FBFF`). A "read head" retrieves a sample from an earlier point in the buffer. The distance between the read and write heads is the delay time.
+3.  **Feedback:** A portion of the retrieved (delayed) signal, scaled by the `DSP_FBACK` register, is added back into the dry input signal before it's written to the delay buffer. This creates repeating, decaying echoes.
+4.  **Final Mix:** The retrieved (delayed) signal is scaled by the `DSP_WET` register and added to the original, unprocessed dry signal. This final mix is what is sent to the main stereo panning and volume controls.
+
+### 6.2. Delay Buffer and Timing
+
+-   **Sample Rate:** The DSP, and the entire APU output mixer, operates at a fixed sample rate of **32,768 Hz**.
+-   **Delay Buffer:** The buffer is 1024 bytes long, allowing for 1024 8-bit signed audio samples.
+-   **Delay Time:** The `DSP_DELAY` register controls the delay time. The delay is measured in steps of 4 samples.
+    -   **`Delay (samples) = (DSP_DELAY + 1) * 4`**
+    -   **`Delay (seconds) = Delay (samples) / 32768`**
+    -   This allows for a delay time ranging from ~0.12ms to ~31.25ms. This is short, but useful for creating chorus, flange, or simple reverb-like spatial effects.
 
 ## **7. APU Registers (F500–F5FF)**
 
@@ -239,17 +253,6 @@ These two registers are identical for each channel (CH0, CH1, CH2, CH3).
   - The value `R` specifies the number of Envelope Clock ticks to wait before the volume is decremented by 1.
   - **Time per step:** `(R + 1) * (1/256 seconds)`
 
-Here is a table showing the approximate time it takes for the volume to change by one step for different rate values:
-
-| Rate Value (A, D, or R) | Ticks per Step | Time per Step (ms) | Total Attack Time (0->15) (ms) |
-| :---------------------- | :------------- | :----------------- | :----------------------------- |
-| 0                       | 1              | ~3.9               | ~59                            |
-| 1                       | 2              | ~7.8               | ~117                           |
-| ...                     | ...            | ...                | ...                            |
-| 7                       | 8              | ~31.3              | ~469                           |
-| ...                     | ...            | ...                | ...                            |
-| 15                      | 16             | ~62.5              | ~938                           |
-
 ### **Mixer & DSP Register Details**
 
 #### **F580: MIX_CTRL**
@@ -285,3 +288,21 @@ _(Note: Setting both PAN_L and PAN_R to 1 results in a centered mono signal for 
 | 2   | CH2_IN | 1: Send Channel 2's output into the DSP echo buffer. |
 | 1   | CH1_IN | 1: Send Channel 1's output into the DSP echo buffer. |
 | 0   | CH0_IN | 1: Send Channel 0's output into the DSP echo buffer. |
+
+#### **F5A1: DSP_DELAY**
+
+An 8-bit register that controls the delay time by setting the read offset into the delay buffer. The delay is `(value + 1) * 4` samples. See section 6.2 for details.
+
+#### **F5A2: DSP_FBACK**
+
+A 4-bit value (0-15) that controls the feedback level (how much of the delayed signal is mixed back into the delay line input).
+- `0`: No feedback, only a single echo is produced.
+- `15`: Maximum feedback, creating long, repeating echoes.
+- **Formula:** `Feedback = DelayedSample * (DSP_FBACK / 16)`
+
+#### **F5A3: DSP_WET**
+
+A 4-bit value (0-15) that controls the wet/dry mix. This is the volume of the delayed signal in the final output.
+- `0`: No echo is heard (fully dry signal).
+- `15`: Echo is at its loudest (wet signal).
+- **Formula:** `Output = DrySignal + (DelayedSignal * (DSP_WET / 16))`
