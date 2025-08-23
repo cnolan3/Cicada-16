@@ -23,6 +23,27 @@ The two pulse channels generate simple square waves. They are controlled by a se
 - **Duty Cycle**: The "width" of the square wave can be changed (12.5%, 25%, 50%, 75%) to alter the timbre.
 - **Frequency Sweep (Channel 0 Only)**: A hardware unit that can automatically slide the frequency of Channel 0 up or down over time.
 
+### 2.1. Frequency and Pitch
+
+The pitch of the two pulse channels is determined by the 16-bit value in their respective `CHx_FREQ` registers. The APU uses a master clock of **4.194304 MHz**. The output frequency is calculated with the following formula:
+
+**`Output Frequency (Hz) = 4,194,304 / (64 * (65536 - FREQ_REG))`**
+
+Where `FREQ_REG` is the 16-bit value from the `F5x4-F5x5` register. This formula allows for fine-grained control over the pitch, covering a wide range of musical notes.
+
+**Example Calculation:**
+
+To produce the note A-4 (440 Hz), a programmer would need to calculate the required `FREQ_REG` value:
+
+1.  `440 = 4,194,304 / (64 * (65536 - FREQ_REG))`
+2.  `64 * (65536 - FREQ_REG) = 4,194,304 / 440`
+3.  `65536 - FREQ_REG = 9532.5 / 64`
+4.  `65536 - FREQ_REG = 148.945...`
+5.  `FREQ_REG = 65536 - 149` (rounding to the nearest integer)
+6.  `FREQ_REG = 65387`
+
+A value of **65387** in the frequency register will produce a tone very close to 440 Hz. Game developers would typically use a pre-calculated lookup table for note frequencies.
+
 ## **3. Channel 2: Wave Channel**
 
 The wave channel offers the most sonic flexibility by playing back a small, user-defined sample.
@@ -41,12 +62,9 @@ The noise channel generates pseudo-random noise for percussion and sound effects
 
 ## **5. ADSR Volume Envelopes**
 
-The APU uses a traditional 4-stage ADSR (Attack, Decay, Sustain, Release) envelope. When a channel is triggered, its volume progresses through these stages:
+The APU uses a traditional 4-stage ADSR (Attack, Decay, Sustain, Release) envelope to control channel volume. The envelope's volume level is a 4-bit value (0-15), which modulates the channel's output. The envelope's state machine is updated by a global **Envelope Clock** running at **256Hz**.
 
-- **Attack**: The rate at which the volume rises from zero to its peak level.
-- **Decay**: The rate at which the volume falls from the peak to the sustain level.
-- **Sustain**: The volume level that is held as long as the note is "on".
-- **Release**: The rate at which the volume falls from the sustain level to zero after the note is turned "off".
+When a channel's `KEY_ON` bit is set to 1, the envelope enters the **Attack** phase, where the volume rises from 0 to its peak (15). When it reaches the peak, it moves to the **Decay** phase, where it falls to the specified **Sustain** level. It then remains in the **Sustain** phase as long as `KEY_ON` is 1. When `KEY_ON` is cleared to 0, it immediately enters the **Release** phase, where the volume falls from the current level to 0.
 
 ## **6. DSP (Digital Signal Processor)**
 
@@ -97,7 +115,7 @@ This section details the memory-mapped registers used to control all APU functio
 
 #### **F504-F505: CH0_FREQ**
 
-This 16-bit register controls the period/frequency of the pulse wave for Channel 0.
+This 16-bit register controls the frequency of the pulse wave for Channel 0. See section "2.1. Frequency and Pitch" for the calculation formula.
 
 #### **F510: CH1_CTRL (Pulse B)**
 
@@ -109,7 +127,7 @@ This 16-bit register controls the period/frequency of the pulse wave for Channel
 
 #### **F514-F515: CH1_FREQ**
 
-This 16-bit register controls the period/frequency of the pulse wave for Channel 1.
+This 16-bit register controls the frequency of the pulse wave for Channel 1. See section "2.1. Frequency and Pitch" for the calculation formula.
 
 #### **F520: CH2_CTRL (Wave)**
 
@@ -134,8 +152,37 @@ This 16-bit register controls the playback frequency of the selected waveform fo
 
 These two registers are identical for each channel (CH0, CH1, CH2, CH3).
 
-- **F5x1**: Bits 7-4 control **Attack Rate**, Bits 3-0 control **Decay Rate**.
-- **F5x2**: Bits 7-4 control **Sustain Level**, Bits 3-0 control **Release Rate**.
+- **F5x1, Bits 7-4: Attack Rate (A)**
+  - This 4-bit value (0-15) determines how quickly the volume rises from 0 to its peak of 15.
+  - The value `A` specifies the number of Envelope Clock ticks to wait before the volume is incremented by 1.
+  - **Time per step:** `(A + 1) * (1/256 seconds)`
+  - **Total Attack Time (0 to 15):** `15 * (A + 1) * ~3.9ms`
+
+- **F5x1, Bits 3-0: Decay Rate (D)**
+  - This 4-bit value (0-15) determines how quickly the volume falls from its peak of 15 to the Sustain Level.
+  - The value `D` specifies the number of Envelope Clock ticks to wait before the volume is decremented by 1.
+  - **Time per step:** `(D + 1) * (1/256 seconds)`
+
+- **F5x2, Bits 7-4: Sustain Level (S)**
+  - This 4-bit value (0-15) sets the target volume level for the sustain phase.
+  - `0000` (0) is silent, `1111` (15) is maximum volume.
+  - The envelope holds at this volume as long as the `KEY_ON` bit is active.
+
+- **F5x2, Bits 3-0: Release Rate (R)**
+  - This 4-bit value (0-15) determines how quickly the volume falls from the Sustain Level to 0 after `KEY_ON` is cleared.
+  - The value `R` specifies the number of Envelope Clock ticks to wait before the volume is decremented by 1.
+  - **Time per step:** `(R + 1) * (1/256 seconds)`
+
+Here is a table showing the approximate time it takes for the volume to change by one step for different rate values:
+
+| Rate Value (A, D, or R) | Ticks per Step | Time per Step (ms) | Total Attack Time (0->15) (ms) |
+| :---------------------- | :------------- | :----------------- | :----------------------------- |
+| 0                       | 1              | ~3.9               | ~59                            |
+| 1                       | 2              | ~7.8               | ~117                           |
+| ...                     | ...            | ...                | ...                            |
+| 7                       | 8              | ~31.3              | ~469                           |
+| ...                     | ...            | ...                | ...                            |
+| 15                      | 16             | ~62.5              | ~938                           |
 
 ### **Mixer & DSP Register Details**
 
