@@ -70,6 +70,8 @@ Not all RAM is equal in speed.
 | Address | Name          | Description                                                       |
 | :------ | :------------ | :---------------------------------------------------------------- |
 | F000    | **JOYP**      | **Joypad: read buttons, write column select**                     |
+| F002    | **SB**        | **Serial Buffer (R/W)**                                           |
+| F003    | **SC**        | **Serial Control (R/W)**                                          |
 | F004    | **DIV0**      | **32-bit free-running divider (byte 0, LSB)**                     |
 | F005    | **DIV1**      | **32-bit free-running divider (byte 1)**                          |
 | F006    | **DIV2**      | **32-bit free-running divider (byte 2)**                          |
@@ -273,14 +275,15 @@ The interrupt system is controlled by two main registers: **IE (Interrupt Enable
 
 This register determines which types of interrupts are allowed to trigger an interrupt service routine. Writing a 1 to a bit enables that interrupt source.
 
-| Bit   | Name        | Description                                       |
-| :---- | :---------- | :------------------------------------------------ |
-| **0** | **V-Blank** | **Enable Vertical Blank interrupt**               |
-| **1** | **H-Blank** | **Enable Horizontal Blank interrupt (from STAT)** |
-| **2** | **Timer**   | **Enable Timer Overflow interrupt**               |
-| **3** | **Serial**  | **Enable Serial Transfer Complete interrupt**     |
-| **4** | **Joypad**  | **Enable Joypad button press interrupt**          |
-| 5-7   | -           | Unused                                            |
+| Bit   | Name          | Description                                       |
+| :---- | :------------ | :------------------------------------------------ |
+| 7-6   | -             | Unused                                            |
+| **5** | **Link Status** | **Enable Link Status change interrupt**           |
+| **4** | **Joypad**    | **Enable Joypad button press interrupt**          |
+| **3** | **Serial**    | **Enable Serial Transfer Complete interrupt**     |
+| **2** | **Timer**     | **Enable Timer Overflow interrupt**               |
+| **1** | **H-Blank**   | **Enable Horizontal Blank interrupt (from STAT)** |
+| **0** | **V-Blank**   | **Enable Vertical Blank interrupt**               |
 
 ### **IF: Interrupt Flag (F201)**
 
@@ -288,14 +291,15 @@ This register indicates that an interrupt-triggering event has occurred. The har
 
 - **Clearing Flags:** To clear a flag, the program must write a 1 to that bit's position. This is a common "write-1-to-clear" mechanism.
 
-| Bit   | Name        | Description                                     |
-| :---- | :---------- | :---------------------------------------------- |
-| **0** | **V-Blank** | **Set when the PPU enters the V-Blank period**  |
-| **1** | **H-Blank** | **Set when the PPU enters the H-Blank period**  |
-| **2** | **Timer**   | **Set when the TIMA timer overflows**           |
-| **3** | **Serial**  | **Set when a serial data transfer is complete** |
-| **4** | **Joypad**  | **Set when a joypad button is pressed**         |
-| 5-7   | -           | Unused                                          |
+| Bit   | Name          | Description                                       |
+| :---- | :------------ | :------------------------------------------------ |
+| 7-6   | -             | Unused                                            |
+| **5** | **Link Status** | **Set when the serial port CONNECTED bit changes**  |
+| **4** | **Joypad**    | **Set when a joypad button is pressed**           |
+| **3** | **Serial**    | **Set when a serial data transfer is complete**   |
+| **2** | **Timer**     | **Set when the TIMA timer overflows**             |
+| **1** | **H-Blank**   | **Set when the PPU enters the H-Blank period**    |
+| **0** | **V-Blank**   | **Set when the PPU enters the V-Blank period**    |
 
 ## **Cartridge Mapper and Bank Switching**
 

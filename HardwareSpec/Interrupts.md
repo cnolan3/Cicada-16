@@ -27,15 +27,16 @@ The process for triggering and handling an interrupt or CPU fault is as follows:
 
 ## **3. Interrupt Sources**
 
-The Cricket-16 has five hardware interrupt sources, controlled via the `IE` and `IF` registers.
+The Cricket-16 has six hardware interrupt sources, controlled via the `IE` and `IF` registers.
 
-| Bit | Name        | Description                                                                 |
-| :-- | :---------- | :-------------------------------------------------------------------------- |
-| 0   | **V-Blank** | Occurs when the PPU enters the V-Blank period.                              |
-| 1   | **H-Blank** | Occurs when the PPU enters the H-Blank period.                              |
-| 2   | **Timer**   | Occurs when the TIMA timer overflows.                                       |
-| 3   | **Serial**  | Occurs when a serial data transfer is complete.                             |
-| 4   | **Joypad**  | Occurs when a joypad button is pressed **(on the 1-to-0 transition only)**. |
+| Bit | Name          | Description                                                                 |
+| :-- | :------------ | :-------------------------------------------------------------------------- |
+| 5   | **Link Status** | Occurs when the serial port `CONNECTED` bit changes state.                  |
+| 4   | **Joypad**    | Occurs when a joypad button is pressed **(on the 1-to-0 transition only)**. |
+| 3   | **Serial**    | Occurs when a serial data transfer is complete.                             |
+| 2   | **Timer**     | Occurs when the TIMA timer overflows.                                       |
+| 1   | **H-Blank**   | Occurs when the PPU enters the H-Blank period.                              |
+| 0   | **V-Blank**   | Occurs when the PPU enters the V-Blank period.                              |
 
 ## **4. CPU Faults**
 
@@ -61,8 +62,9 @@ The Interrupt Vector Table is a 32-byte block of memory containing the 16-bit ad
 | `+0xC`                | `H-Blank`               | 2         |
 | `+0xE`                | `Timer`                 | 3         |
 | `+0x10`               | `Serial`                | 4         |
-| `+0x12`               | `Joypad`                | 5         |
-| `+0x14`               | `(Reserved)`            | -         |
+| `+0x12`               | `Link Status`           | 5         |
+| `+0x14`               | `Joypad`                | 6         |
+| `+0x16`               | `(Reserved)`            | -         |
 
 ## **6. Vector Table Location Modes**
 
