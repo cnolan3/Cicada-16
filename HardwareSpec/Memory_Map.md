@@ -2,26 +2,26 @@
 
 ## **Memory Map**
 
-| Start Addr | End Addr | Size       | Description                                                |
-| :--------- | :------- | :--------- | :--------------------------------------------------------- |
-| 0000       | 3FFF     | **16 KiB** | **ROM Bank 0 (fixed)**                                     |
-| 4000       | 7FFF     | **16 KiB** | **ROM Bank N (switchable)**                                |
-| 8000       | 9FFF     | **8 KiB**  | **VRAM Window (banked, 1 of 4 banks, 32 KiB total)**       |
-| A000       | AFFF     | **4 KiB**  | **Cartridge RAM Window (banked)**                          |
-| B000       | CFFF     | **8 KiB**  | **Work RAM Bank 0 (WRAM0, fixed, 32 KiB total)**           |
+| Start Addr | End Addr | Size       | Description                                                  |
+| :--------- | :------- | :--------- | :----------------------------------------------------------- |
+| 0000       | 3FFF     | **16 KiB** | **ROM Bank 0 (fixed)**                                       |
+| 4000       | 7FFF     | **16 KiB** | **ROM Bank N (switchable)**                                  |
+| 8000       | 9FFF     | **8 KiB**  | **VRAM Window (banked, 1 of 4 banks, 32 KiB total)**         |
+| A000       | AFFF     | **4 KiB**  | **Cartridge RAM Window (banked)**                            |
+| B000       | CFFF     | **8 KiB**  | **Work RAM Bank 0 (WRAM0, fixed, 32 KiB total)**             |
 | D000       | DFFF     | **4 KiB**  | **Work RAM Window (WRAM1, banked, 1 of 6 switchable banks)** |
-| E000       | E7FF     | **2 KiB**  | **Wave RAM (user wave tables)**                            |
-| E800       | EFFF     | **2 KiB**  | **System Library RAM (Read-Only after boot)**              |
-| F000       | F0FF     | **256 B**  | **IO Registers (joypad, timers/div, RTC, DMA, mapper)**    |
-| F100       | F1FF     | **256 B**  | **PPU Registers (LCDC, STAT, SCX, SCY, LY/LYC, palettes)** |
-| F200       | F200     | **1 B**    | **IE (Interrupt Enable)**                                  |
-| F201       | F201     | **1 B**    | **IF (Interrupt Flag) (write-1-to-clear bits)**            |
-| F202       | F2FF     | **254 B**  | **Reserved**                                               |
-| F300       | F4FF     | **512 B**  | **CRAM (color pallete entries)**                           |
-| F500       | F5FF     | **256 B**  | **APU Registers (Core, Mixer, DSP)**                       |
-| F600       | F7FF     | **512 B**  | **OAM (sprite attribute table)**                           |
-| F800       | FBFF     | **1 KiB**  | **DSP Delay Buffer**                                       |
-| FC00       | FFFF     | **1 KiB**  | **HRAM (high speed ram)**                                  |
+| E000       | E7FF     | **2 KiB**  | **Wave RAM (user wave tables)**                              |
+| E800       | EFFF     | **2 KiB**  | **System Library RAM (Read-Only after boot)**                |
+| F000       | F0FF     | **256 B**  | **IO Registers (joypad, timers/div, RTC, DMA, mapper)**      |
+| F100       | F1FF     | **256 B**  | **PPU Registers (LCDC, STAT, SCX, SCY, LY/LYC, palettes)**   |
+| F200       | F200     | **1 B**    | **IE (Interrupt Enable)**                                    |
+| F201       | F201     | **1 B**    | **IF (Interrupt Flag) (write-1-to-clear bits)**              |
+| F202       | F2FF     | **254 B**  | **Reserved**                                                 |
+| F300       | F4FF     | **512 B**  | **CRAM (color pallete entries)**                             |
+| F500       | F5FF     | **256 B**  | **APU Registers (Core, Mixer, DSP)**                         |
+| F600       | F7FF     | **512 B**  | **OAM (sprite attribute table)**                             |
+| F800       | FBFF     | **1 KiB**  | **DSP Delay Buffer**                                         |
+| FC00       | FFFF     | **1 KiB**  | **HRAM (high speed ram)**                                    |
 
 ## **MMU Behavior and Rules**
 
@@ -31,57 +31,63 @@ The Memory Management Unit (MMU) is the hardware component responsible for inter
 
 To expand the amount of available RAM beyond the limits of the 16-bit address space, the system uses bank switching for several memory regions. This is controlled by writing to specific I/O registers.
 
--   **VRAM (`8000-9FFF`):** This 8 KiB window can be mapped to one of four 8 KiB banks within the PPU's 32 KiB of VRAM. The active bank is selected by the **`VRAM_BANK`** register at `F013`.
--   **WRAM (`D000-DFFF`):** This 4 KiB window can be mapped to one of six 4 KiB banks of switchable Work RAM (WRAM1-6). The active bank is selected by the **`WRAM_BANK`** register at `F014`.
--   **Cartridge ROM (`4000-7FFF`):** This 16 KiB window can be mapped to any 16 KiB bank in the cartridge's ROM. The active bank is selected by the **`MPR_BANK`** register at `F010`.
--   **Cartridge RAM (`A000-AFFF`):** This 4 KiB window can be mapped to different banks of RAM on the cartridge, if present. The active bank is selected by the **`RAM_BANK`** register at `F011`.
+- **VRAM (`8000-9FFF`):** This 8 KiB window can be mapped to one of four 8 KiB banks within the PPU's 32 KiB of VRAM. The active bank is selected by the **`VRAM_BANK`** register at `F013`.
+- **WRAM (`D000-DFFF`):** This 4 KiB window can be mapped to one of six 4 KiB banks of switchable Work RAM (WRAM1-6). The active bank is selected by the **`WRAM_BANK`** register at `F014`.
+- **Cartridge ROM (`4000-7FFF`):** This 16 KiB window can be mapped to any 16 KiB bank in the cartridge's ROM. The active bank is selected by the **`MPR_BANK`** register at `F010`.
+- **Cartridge RAM (`A000-AFFF`):** This 4 KiB window can be mapped to different banks of RAM on the cartridge, if present. The active bank is selected by the **`RAM_BANK`** register at `F011`.
 
 ### **Boot-time Mapping**
 
 At power-on, the MMU starts in a special state to execute the internal Boot ROM.
--   The Boot ROM is mapped to addresses `0x0000-0x3FFF`, temporarily overlaying the game cartridge.
--   After the boot sequence finishes its hardware setup and verification, it commands the MMU to unmap the Boot ROM.
--   The MMU then maps the game cartridge into the `0x0000-7FFF` range, and the CPU jumps to the game's entry point.
+
+- The Boot ROM is mapped to addresses `0x0000-0x3FFF`, temporarily overlaying the game cartridge.
+- After the boot sequence finishes its hardware setup and verification, it commands the MMU to unmap the Boot ROM.
+- The MMU then maps the game cartridge into the `0x0000-7FFF` range, and the CPU jumps to the game's entry point.
 
 ### **Memory Protection**
 
 The MMU enforces access rules on certain memory regions.
--   **Read-Only Memory:** The Cartridge ROM (`0000-7FFF`) and the System Library RAM (`E800-EFFF`, after boot) are read-only. Any attempt by the CPU to write to these regions will be blocked by the MMU and will trigger a **Protected Memory Fault**.
--   **PPU Access Restrictions:** The PPU's internal RAM (VRAM, OAM, CRAM) is shared between the CPU and the PPU. While the CPU can access it at any time, writing to it while the PPU is actively drawing (`STAT` mode 3) can lead to visual glitches. Safe access is guaranteed during H-Blank (Mode 0) and V-Blank (Mode 1).
+
+- **Read-Only Memory:** The Cartridge ROM (`0000-7FFF`) and the System Library RAM (`E800-EFFF`, after boot) are read-only. Any attempt by the CPU to write to these regions will be blocked by the MMU and will trigger a **Protected Memory Fault**.
+- **PPU Access Restrictions:** The PPU's internal RAM (VRAM, OAM, CRAM) is shared between the CPU and the PPU. While the CPU can access it at any time, writing to it while the PPU is actively drawing (`STAT` mode 3) can lead to visual glitches. Safe access is guaranteed during H-Blank (Mode 0) and V-Blank (Mode 1).
 
 ### **Memory Access Alignment**
 
 The CPU requires 16-bit data to be aligned to an even memory address.
--   Any `LD.w` or `ST.w` instruction that attempts to read or write a 16-bit word from an odd address will be blocked by the MMU and will trigger a **Bus Error Fault**.
--   8-bit operations (`LD.b`, `ST.b`) can access any address without issue.
+
+- Any `LD.w` or `ST.w` instruction that attempts to read or write a 16-bit word from an odd address will be blocked by the MMU and will trigger a **Bus Error Fault**.
+- 8-bit operations (`LD.b`, `ST.b`) can access any address without issue.
 
 ### **HRAM vs. WRAM Access Speed**
 
 Not all RAM is equal in speed.
--   **HRAM (High RAM, `FC00-FFFF`):** This small 1 KiB region is internal to the main processor chip. It can be accessed without any extra wait states, making it the fastest RAM in the system. It is ideal for storing frequently accessed variables, temporary "scratchpad" data, or time-critical interrupt handler code.
--   **WRAM (Work RAM, `B000-DFFF`):** This is a larger pool of general-purpose external RAM. Accessing it incurs a small number of wait states, making it slightly slower than HRAM. The cycle counts listed in the CPU ISA documentation assume WRAM access times. Accesses to HRAM using the same instructions will be faster.
+
+- **HRAM (High RAM, `FC00-FFFF`):** This small 1 KiB region is internal to the main processor chip. It can be accessed without any extra wait states, making it the fastest RAM in the system. It is ideal for storing frequently accessed variables, temporary "scratchpad" data, or time-critical interrupt handler code.
+- **WRAM (Work RAM, `B000-DFFF`):** This is a larger pool of general-purpose external RAM. Accessing it incurs a small number of wait states, making it slightly slower than HRAM. The cycle counts listed in the CPU ISA documentation assume WRAM access times. Accesses to HRAM using the same instructions will be faster.
 
 ## **IO Registers (F000–F0FF)**
 
 | Address | Name          | Description                                                       |
 | :------ | :------------ | :---------------------------------------------------------------- |
 | F000    | **JOYP**      | **Joypad: read buttons, write column select**                     |
-| F004    | **DIVL**      | **16-bit free-running divider (low)**                             |
-| F005    | **DIVH**      | **16-bit free-running divider (high)**                            |
-| F006    | **TIMA**      | **8-bit timer counter (IRQ on overflow → IF.TMR)**                |
-| F007    | **TMA**       | **8-bit timer modulo (reload value on overflow)**                 |
-| F008    | **TAC**       | **Timer control: bit2=EN, bits1..0=clock sel**                    |
-| F00A    | **DMA_SRC_L** | **DMA source address low**                                        |
-| F00B    | **DMA_SRC_H** | **DMA source address high**                                       |
-| F00C    | **DMA_DST_L** | **DMA destination low**                                           |
-| F00D    | **DMA_DST_H** | **DMA destination high**                                          |
-| F00E    | **DMA_LEN**   | **DMA length in bytes (0 => special 256/512 default)**            |
-| F00F    | **DMA_CTL**   | **DMA control: bit0=START, bit1=DIR, bit2=VRAM_ONLY, etc.**       |
-| F010    | **MPR_BANK**  | **ROM bank select for 4000-7FFF window**                          |
-| F011    | **RAM_BANK**  | **Bank select for banked Cart RAM (if enabled)**                  |
-| F012    | **WE_LATCH**  | **Write-enable latch for battery RAM (write key)**                |
-| F013    | **VRAM_BANK** | **VRAM Bank Select (0-3 for 8000-9FFF window)**                   |
-| F014    | **WRAM_BANK** | **WRAM Bank Select (0-5 for D000-DFFF window -> maps banks 1-6)** |
+| F004    | **DIV0**      | **32-bit free-running divider (byte 0, LSB)**                     |
+| F005    | **DIV1**      | **32-bit free-running divider (byte 1)**                          |
+| F006    | **DIV2**      | **32-bit free-running divider (byte 2)**                          |
+| F007    | **DIV3**      | **32-bit free-running divider (byte 3, MSB)**                     |
+| F008    | **TIMA**      | **8-bit timer counter (IRQ on overflow → IF.TMR)**                |
+| F009    | **TMA**       | **8-bit timer modulo (reload value on overflow)**                 |
+| F00A    | **TAC**       | **Timer control: bit2=EN, bits1..0=clock sel**                    |
+| F00B    | **DMA_SRC_L** | **DMA source address low**                                        |
+| F00C    | **DMA_SRC_H** | **DMA source address high**                                       |
+| F00D    | **DMA_DST_L** | **DMA destination low**                                           |
+| F00E    | **DMA_DST_H** | **DMA destination high**                                          |
+| F00F    | **DMA_LEN**   | **DMA length in bytes (0 => special 256/512 default)**            |
+| F010    | **DMA_CTL**   | **DMA control: bit0=START, bit1=DIR, bit2=VRAM_ONLY, etc.**       |
+| F011    | **MPR_BANK**  | **ROM bank select for 4000-7FFF window**                          |
+| F012    | **RAM_BANK**  | **Bank select for banked Cart RAM (if enabled)**                  |
+| F013    | **WE_LATCH**  | **Write-enable latch for battery RAM (write key)**                |
+| F014    | **VRAM_BANK** | **VRAM Bank Select (0-3 for 8000-9FFF window)**                   |
+| F015    | **WRAM_BANK** | **WRAM Bank Select (0-5 for D000-DFFF window -> maps banks 1-6)** |
 | F018    | **RTC_SEC**   | **0..59 (latched)**                                               |
 | F019    | **RTC_MIN**   | **0..59 (latched)**                                               |
 | F01A    | **RTC_HOUR**  | **0..23 (latched)**                                               |
@@ -123,39 +129,84 @@ The 2-bit value written to GRP_SEL determines which set of physical buttons is m
    - To read the Utility Buttons (Start, Select, L, R), write `0x30`.
 2. **Read the Button State:** Read from F000. The lower 4 bits will reflect the state of the selected buttons. For example, if the Action group was selected and the player is pressing **A** and **X**, reading the register will return a value where bits 0 and 2 are 0.
 
-## **Divider Registers (DIVL & DIVH)**
+## **Divider Registers (DIV0-DIV3)**
 
-The DIVL (F004) and DIVH (F005) registers together form a single, 16-bit, free-running counter that increments at a fixed rate of **System Clock / 16**. This counter is read-only and cannot be stopped or reset by the game software. Writing to these registers has no effect.
+The DIV0-DIV3 registers (F004-F007) together form a single, 32-bit, free-running counter that increments on every system clock cycle (T-cycle). This counter is read-only and cannot be stopped or reset by the game software. Writing to these registers has no effect.
 
--   **DIVL (F004):** Contains the lower 8 bits of the 16-bit counter.
--   **DIVH (F005):** Contains the upper 8 bits of the 16-bit counter.
+- **DIV0 (F004):** Byte 0 (LSB)
+- **DIV1 (F005):** Byte 1
+- **DIV2 (F006):** Byte 2
+- **DIV3 (F007):** Byte 3 (MSB)
 
 Because the counter is constantly running, it provides a simple, persistent time reference. The programmable timer (TIMA) uses specific bits from this divider as its clock source.
 
 ### **Use-Cases**
 
 1.  **Basic Timing:** While the main timer (TIMA) is better for precise, interrupt-driven timing, the DIV registers can be used for simple, low-resolution time measurements. A game could read the value at the start and end of an operation to get a rough estimate of elapsed time.
-2.  **Pseudo-Random Number Generation:** The ever-changing value of the DIV registers makes them a common and effective source of entropy for generating pseudo-random numbers. By reading DIVL or DIVH at an unpredictable time (e.g., when the player presses a button), the game can get a seed value for a random number algorithm.
+2.  **Pseudo-Random Number Generation:** The ever-changing value of the DIV registers makes them a common and effective source of entropy for generating pseudo-random numbers. By reading any of the DIV registers at an unpredictable time (e.g., when the player presses a button), the game can get a seed value for a random number algorithm.
 
 ## **Programmable Timer (TIMA, TMA, TAC)**
 
-The console provides one 8-bit programmable timer that can be configured to fire an interrupt when it overflows. This system is controlled by three registers: TIMA, TMA, and TAC.
+The console provides one 8-bit programmable timer that can be configured to fire an interrupt when it overflows. This system is controlled by three registers: TIMA, TMA, and TAC, now located at F008-F00A.
 
--   **TIMA (F006 - Timer Counter):** This is the main 8-bit counter. It increments at a frequency selected by the TAC register. When TIMA overflows (increments past 255), it is automatically reloaded with the value from TMA and requests a Timer Interrupt by setting bit 2 of the IF register.
--   **TMA (F007 - Timer Modulo):** This 8-bit register holds the value that TIMA will be reset to after it overflows. This allows the game to control the starting point of the count, and thus the period of the timer interrupt. For example, if TMA is set to 200, the timer will count from 200 to 255 (56 ticks) before overflowing and firing an interrupt.
--   **TAC (F008 - Timer Control):** This register controls the timer's operation.
-    -   **Bit 2 (Enable):** Setting this bit to 1 starts the timer. Clearing it to 0 stops it.
-    -   **Bits 1-0 (Clock Select):** These bits select the clock source for TIMA, which determines how fast it increments. The clock is derived by tapping into specific bits of the 16-bit DIV counter.
+- **TIMA (F008 - Timer Counter):** This is the main 8-bit counter. It increments at a frequency selected by the TAC register. When TIMA overflows (increments past 255), it is automatically reloaded with the value from TMA and requests a Timer Interrupt by setting bit 2 of the IF register.
+- **TMA (F009 - Timer Modulo):** This 8-bit register holds the value that TIMA will be reset to after it overflows. This allows the game to control the starting point of the count, and thus the period of the timer interrupt. For example, if TMA is set to 200, the timer will count from 200 to 255 (56 ticks) before overflowing and firing an interrupt.
+- **TAC (F00A - Timer Control):** This register controls the timer's operation. It has been expanded to allow for a much wider range of timer frequencies.
+
+| Bit     | Name        | Type    | Description                                  |
+| :------ | :---------- | :------ | :------------------------------------------- |
+| 7-6     | -           | R/W     | Unused                                       |
+| **5**   | **TMR_EN**  | **R/W** | **Timer Enable (0 = Stop, 1 = Start)**       |
+| **4-0** | **CLK_SEL** | **R/W** | **Clock Select (determines TIMA frequency)** |
+
+### **Clock Selection (CLK_SEL)**
+
+The 5-bit value in CLK_SEL selects the clock source for the timer by directly mapping to a bit in the 32-bit DIV counter. The selected CLK_SEL value directly corresponds to the index of the DIV bit that is "tapped into", ie. CLK_SEL = 0 selects bit 0 of the DIV, CLK_SEL = 1 selects bit 1 of the DIV, and so on.
+
+| CLK_SEL | Frequency Calculation (System Clock / Divisor = Result) | Period (Time for one 0→1→0 cycle) |
+| :------ | :------------------------------------------------------ | :-------------------------------- |
+| 0       | System Clock / 2 = 4,194,304 Hz                         | ~0.238 microseconds               |
+| 1       | System Clock / 4 = 2,097,152 Hz                         | ~0.477 microseconds               |
+| 2       | System Clock / 8 = 1,048,576 Hz                         | ~0.954 microseconds               |
+| 3       | System Clock / 16 = 524,288 Hz                          | ~1.907 microseconds               |
+| 4       | System Clock / 32 = 262,144 Hz                          | ~3.815 microseconds               |
+| 5       | System Clock / 64 = 131,072 Hz                          | ~7.629 microseconds               |
+| 6       | System Clock / 128 = 65,536 Hz                          | ~15.26 microseconds               |
+| 7       | System Clock / 256 = 32,768 Hz                          | ~30.52 microseconds               |
+| 8       | System Clock / 512 = 16,384 Hz                          | ~61.04 microseconds               |
+| 9       | System Clock / 1,024 = 8,192 Hz                         | ~122.1 microseconds               |
+| 10      | System Clock / 2,048 = 4,096 Hz                         | ~244.1 microseconds               |
+| 11      | System Clock / 4,096 = 2,048 Hz                         | ~488.3 microseconds               |
+| 12      | System Clock / 8,192 = 1,024 Hz                         | ~0.977 milliseconds               |
+| 13      | System Clock / 16,384 = 512 Hz                          | ~1.953 milliseconds               |
+| 14      | System Clock / 32,768 = 256 Hz                          | ~3.906 milliseconds               |
+| 15      | System Clock / 65,536 = 128 Hz                          | ~7.813 milliseconds               |
+| 16      | System Clock / 131,072 = 64 Hz                          | ~15.63 milliseconds               |
+| 17      | System Clock / 262,144 = 32 Hz                          | ~31.25 milliseconds               |
+| 18      | System Clock / 524,288 = 16 Hz                          | 62.5 milliseconds                 |
+| 19      | System Clock / 1,048,576 = 8 Hz                         | 125 milliseconds                  |
+| 20      | System Clock / 2,097,152 = 4 Hz                         | 250 milliseconds                  |
+| 21      | System Clock / 4,194,304 = 2 Hz                         | 0.5 seconds                       |
+| 22      | System Clock / 8,388,608 = 1 Hz                         | 1 second                          |
+| 23      | System Clock / 16,777,216 = 0.5 Hz                      | 2 seconds                         |
+| 24      | System Clock / 33,554,432 = 0.25 Hz                     | 4 seconds                         |
+| 25      | System Clock / 67,108,864 = 0.125 Hz                    | 8 seconds                         |
+| 26      | System Clock / 134,217,728 = 0.0625 Hz                  | 16 seconds                        |
+| 27      | System Clock / 268,435,456 = 0.03125 Hz                 | 32 seconds                        |
+| 28      | System Clock / 536,870,912 = 0.015625 Hz                | 64 seconds                        |
+| 29      | System Clock / 1,073,741,824 = ~0.0078 Hz               | 128 seconds (~2.13 minutes)       |
+| 30      | System Clock / 2,147,483,648 = ~0.0039 Hz               | 256 seconds (~4.27 minutes)       |
+| 31      | System Clock / 4,294,967,296 = ~0.0020 Hz               | 512 seconds (~8.53 minutes)       |
 
 ### **Timer Operation Flow**
 
 1.  **Configure:** Set the desired reload value in **TMA** and the clock frequency in **TAC**.
-2.  **Enable:** Set bit 2 of **TAC** to start the timer.
+2.  **Enable:** Set bit 5 of **TAC** to start the timer.
 3.  **Counting:** **TIMA** increments at the selected frequency.
 4.  **Overflow:** When **TIMA** counts past 255, it overflows.
 5.  **Interrupt & Reload:** On overflow, two things happen simultaneously:
-    -   The Timer Interrupt Flag (bit 2 in **IF**) is set to 1.
-    -   **TIMA** is reloaded with the value from **TMA**.
+    - The Timer Interrupt Flag (bit 2 in **IF**) is set to 1.
+    - **TIMA** is reloaded with the value from **TMA**.
 
 ### **Use-Cases**
 
@@ -167,13 +218,31 @@ The console provides one 8-bit programmable timer that can be configured to fire
 
 The console includes a battery-backed Real-Time Clock (RTC) that keeps track of time even when the console is powered off. This feature is available on cartridges that include the necessary RTC hardware and a battery. The RTC is controlled by a set of I/O registers from F018 to F01E.
 
--   **RTC_SEC (F018):** Seconds (0-59)
--   **RTC_MIN (F019):** Minutes (0-59)
--   **RTC_HOUR (F01A):** Hours (0-23)
--   **RTC_DAY_L (F01B):** Lower 8 bits of a 16-bit day counter.
--   **RTC_DAY_H (F01C):** Upper 8 bits of a 16-bit day counter.
--   **RTC_CTL (F01D):** Control register for the RTC.
--   **RTC_STS (F01E):** Status register for the RTC.
+| Address | Name          | Description                           |
+| :------ | :------------ | :------------------------------------ |
+| F018    | **RTC_SEC**   | Seconds (0-59)                        |
+| F019    | **RTC_MIN**   | Minutes (0-59)                        |
+| F01A    | **RTC_HOUR**  | Hours (0-23)                          |
+| F01B    | **RTC_DAY_L** | Lower 8 bits of a 16-bit day counter. |
+| F01C    | **RTC_DAY_H** | Upper 8 bits of a 16-bit day counter. |
+| F01D    | **RTC_CTL**   | Control register for the RTC.         |
+| F01E    | **RTC_STS**   | Status register for the RTC.          |
+
+### **RTC_CTL (F01D) Bit Assignments**
+
+| Bit   | Name      | Type    | Description                                 |
+| :---- | :-------- | :------ | :------------------------------------------ |
+| 7-2   | -         | R/W     | Unused                                      |
+| **1** | **LATCH** | **R/W** | **Latch RTC Snapshot (1=latch, 0=release)** |
+| **0** | **HALT**  | **R/W** | **Halt Clock (1=Stop, 0=Run)**              |
+
+### **RTC_STS (F01E) Bit Assignments**
+
+| Bit   | Name        | Type  | Description                                     |
+| :---- | :---------- | :---- | :---------------------------------------------- |
+| 7-2   | -           | R     | Unused                                          |
+| **1** | **BAT_OK**  | **R** | **Battery Status (1=OK, 0=Fail, optional)**     |
+| **0** | **LATCHED** | **R** | **Snapshot Latched (1=Latched, 0=Not Latched)** |
 
 ### **Reading the RTC Registers (Latching)**
 
@@ -187,8 +256,8 @@ The **LATCHED bit (bit 0)** in the **RTC_STS** register (F01E) will be set to 1 
 
 ### **Controlling the RTC**
 
--   **Halting the Clock:** Setting the **HALT bit (bit 0)** in **RTC_CTL** will stop the RTC from incrementing. This is typically only done when the game needs to set the time.
--   **Battery Status:** The optional **BAT_OK bit (bit 1)** in **RTC_STS** can be checked to see if the cartridge battery is still good. A value of 1 indicates the battery is okay.
+- **Halting the Clock:** Setting the **HALT bit (bit 0)** in **RTC_CTL** will stop the RTC from incrementing. This is typically only done when the game needs to set the time.
+- **Battery Status:** The optional **BAT_OK bit (bit 1)** in **RTC_STS** can be checked to see if the cartridge battery is still good. A value of 1 indicates the battery is okay.
 
 ### **Use-Cases**
 

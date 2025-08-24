@@ -27,6 +27,19 @@
 - **V (Bit 12):** Overflow Flag - Set if a signed arithmetic operation resulted in an overflow.
 - **Bits 11-0:** Unused/Reserved
 
+### **1.1. Execution and Timing**
+
+The master system clock frequency is **8.388608 MHz** (2^23 Hz).
+
+The Cricket-16 CPU features a simple, **non-pipelined** architecture. Each instruction is fetched, decoded, and executed completely before the next one begins. This design choice prioritizes simplicity and predictable timing over high performance.
+
+The core timing of the system is measured in two units:
+
+-   **T-cycles (Clock Cycles):** This is the fundamental clock rate of the system, driven by the main crystal oscillator.
+-   **M-cycles (Machine Cycles):** One M-cycle consists of **4 T-cycles**. M-cycles are the basic unit of time used for instruction execution. A simple operation, like a register-to-register move, might take one M-cycle (4 T-cycles), while a more complex instruction that requires multiple memory accesses will take several M-cycles.
+
+All instruction cycle counts in this document are given in **T-cycles**.
+
 ## **2. Instruction Notation**
 
 - **r, rs, rd:** Any 16-bit general purpose register (R0-R7)
