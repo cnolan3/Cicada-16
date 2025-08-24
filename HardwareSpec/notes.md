@@ -29,3 +29,16 @@ Start with the CPU instruction decoder and execution loop.
 Implement the memory map and basic I/O register reads/writes.
 
 Create a simple "stub" PPU that can at least render a basic tilemap to a window to test your CPU and memory code.
+
+## Possible Sequel Console
+
+The following ideas are things that I think may be appropriate to add to a possible sequel console ("Cricket-16 pro"?).
+
+- Double buffered OAM/CRAM/VRAM
+  - Double buffering all of the RAM areas shared between the CPU and the PPU, removes the need to "race the beam", no need to try to fit all visual update logic into the V-blank timing of each frame.
+- Additional background layer
+- Additional APU channels
+- Enhanced WAV channel
+  - increase wave sample size from 4 bits to 8, increase wave ram
+- Advanced DSP effects
+- Hardware multiplication/division
