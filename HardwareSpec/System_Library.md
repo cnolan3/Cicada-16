@@ -1,8 +1,8 @@
 # **Cricket-16 System Library**
 
-This document describes the functions that are available in the permanent System Library, which is located in its own dedicated, read-only RAM region at **`E800-EFFF`**.
+This document describes the functions that are available in the permanent System Library, which is located in a dedicated, 2 KiB internal ROM at **`E800-EFFF`**.
 
-These functions are copied from the internal Boot ROM to the System Library RAM by the boot process and are available for any game to use. They provide standardized, optimized routines for common tasks. After the boot sequence completes, this memory region is made read-only to protect the library's integrity.
+This library is a permanent part of the console's hardware and is always available for any game to use. It provides standardized, optimized routines for common tasks.
 
 _This document will be updated with a full list of available functions, their addresses, and their usage instructions as they are defined._
 
