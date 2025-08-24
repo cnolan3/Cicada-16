@@ -123,28 +123,78 @@ The 2-bit value written to GRP_SEL determines which set of physical buttons is m
    - To read the Utility Buttons (Start, Select, L, R), write `0x30`.
 2. **Read the Button State:** Read from F000. The lower 4 bits will reflect the state of the selected buttons. For example, if the Action group was selected and the player is pressing **A** and **X**, reading the register will return a value where bits 0 and 2 are 0.
 
-## **Timer Control Register (TAC)**
+## **Divider Registers (DIVL & DIVH)**
 
-The TAC register at F008 controls the operation of the 8-bit timer (TIMA). It allows the game to enable or disable the timer and select its clock frequency. The frequency is derived from the main system clock by tapping into specific bits of the free-running 16-bit DIV register.
+The DIVL (F004) and DIVH (F005) registers together form a single, 16-bit, free-running counter that increments at a fixed rate of **System Clock / 16**. This counter is read-only and cannot be stopped or reset by the game software. Writing to these registers has no effect.
 
-### **TAC (F008) Bit Assignments**
+-   **DIVL (F004):** Contains the lower 8 bits of the 16-bit counter.
+-   **DIVH (F005):** Contains the upper 8 bits of the 16-bit counter.
 
-| Bit     | Name        | Type    | Description                                  |
-| :------ | :---------- | :------ | :------------------------------------------- |
-| 7-3     | -           | R/W     | Unused                                       |
-| **2**   | **TMR_EN**  | **R/W** | **Timer Enable (0 = Stop, 1 = Start)**       |
-| **1-0** | **CLK_SEL** | **R/W** | **Clock Select (determines TIMA frequency)** |
+Because the counter is constantly running, it provides a simple, persistent time reference. The programmable timer (TIMA) uses specific bits from this divider as its clock source.
 
-### **Clock Selection (CLK_SEL)**
+### **Use-Cases**
 
-The lower two bits of TAC select how often the TIMA register increments.
+1.  **Basic Timing:** While the main timer (TIMA) is better for precise, interrupt-driven timing, the DIV registers can be used for simple, low-resolution time measurements. A game could read the value at the start and end of an operation to get a rough estimate of elapsed time.
+2.  **Pseudo-Random Number Generation:** The ever-changing value of the DIV registers makes them a common and effective source of entropy for generating pseudo-random numbers. By reading DIVL or DIVH at an unpredictable time (e.g., when the player presses a button), the game can get a seed value for a random number algorithm.
 
-| CLK_SEL Value | Frequency (Taps DIV bit)            |
-| :------------ | :---------------------------------- |
-| 00            | **System Clock / 1024 (DIV bit 9)** |
-| 01            | **System Clock / 16 (DIV bit 3)**   |
-| 10            | **System Clock / 64 (DIV bit 5)**   |
-| 11            | **System Clock / 256 (DIV bit 7)**  |
+## **Programmable Timer (TIMA, TMA, TAC)**
+
+The console provides one 8-bit programmable timer that can be configured to fire an interrupt when it overflows. This system is controlled by three registers: TIMA, TMA, and TAC.
+
+-   **TIMA (F006 - Timer Counter):** This is the main 8-bit counter. It increments at a frequency selected by the TAC register. When TIMA overflows (increments past 255), it is automatically reloaded with the value from TMA and requests a Timer Interrupt by setting bit 2 of the IF register.
+-   **TMA (F007 - Timer Modulo):** This 8-bit register holds the value that TIMA will be reset to after it overflows. This allows the game to control the starting point of the count, and thus the period of the timer interrupt. For example, if TMA is set to 200, the timer will count from 200 to 255 (56 ticks) before overflowing and firing an interrupt.
+-   **TAC (F008 - Timer Control):** This register controls the timer's operation.
+    -   **Bit 2 (Enable):** Setting this bit to 1 starts the timer. Clearing it to 0 stops it.
+    -   **Bits 1-0 (Clock Select):** These bits select the clock source for TIMA, which determines how fast it increments. The clock is derived by tapping into specific bits of the 16-bit DIV counter.
+
+### **Timer Operation Flow**
+
+1.  **Configure:** Set the desired reload value in **TMA** and the clock frequency in **TAC**.
+2.  **Enable:** Set bit 2 of **TAC** to start the timer.
+3.  **Counting:** **TIMA** increments at the selected frequency.
+4.  **Overflow:** When **TIMA** counts past 255, it overflows.
+5.  **Interrupt & Reload:** On overflow, two things happen simultaneously:
+    -   The Timer Interrupt Flag (bit 2 in **IF**) is set to 1.
+    -   **TIMA** is reloaded with the value from **TMA**.
+
+### **Use-Cases**
+
+1.  **Scheduled Game Events:** The timer interrupt can be used to drive regularly scheduled game logic, such as updating animations, moving non-player characters, or checking for game state changes at a fixed interval.
+2.  **Controlling Music/Sound Tempo:** The timer can provide a steady beat for a software-driven music engine.
+3.  **Implementing Time-based Mechanics:** A countdown timer for a level, a temporary power-up that wears off, or a day/night cycle can all be implemented using the timer interrupt.
+
+## **Real-Time Clock (RTC)**
+
+The console includes a battery-backed Real-Time Clock (RTC) that keeps track of time even when the console is powered off. This feature is available on cartridges that include the necessary RTC hardware and a battery. The RTC is controlled by a set of I/O registers from F018 to F01E.
+
+-   **RTC_SEC (F018):** Seconds (0-59)
+-   **RTC_MIN (F019):** Minutes (0-59)
+-   **RTC_HOUR (F01A):** Hours (0-23)
+-   **RTC_DAY_L (F01B):** Lower 8 bits of a 16-bit day counter.
+-   **RTC_DAY_H (F01C):** Upper 8 bits of a 16-bit day counter.
+-   **RTC_CTL (F01D):** Control register for the RTC.
+-   **RTC_STS (F01E):** Status register for the RTC.
+
+### **Reading the RTC Registers (Latching)**
+
+To prevent reading inconsistent time values (e.g., reading the minutes just as the seconds roll over to 0), the RTC uses a latching mechanism. To safely read the time, the game must perform the following sequence:
+
+1.  Write a `1` to the **LATCH bit (bit 1)** of the **RTC_CTL** register (F01D). This copies the current state of all RTC counter registers into a separate, stable set of latched registers.
+2.  Read the time values from the RTC registers (F018-F01C). These reads will access the latched snapshot, not the live counters.
+3.  Write a `0` to the **LATCH bit** to release the latch and allow the snapshot to be updated again on the next latch request.
+
+The **LATCHED bit (bit 0)** in the **RTC_STS** register (F01E) will be set to 1 by the hardware after a successful latch, confirming the data is ready to be read.
+
+### **Controlling the RTC**
+
+-   **Halting the Clock:** Setting the **HALT bit (bit 0)** in **RTC_CTL** will stop the RTC from incrementing. This is typically only done when the game needs to set the time.
+-   **Battery Status:** The optional **BAT_OK bit (bit 1)** in **RTC_STS** can be checked to see if the cartridge battery is still good. A value of 1 indicates the battery is okay.
+
+### **Use-Cases**
+
+1.  **Persistent In-Game Time:** The most common use is for games where in-game events are tied to the real-world passage of time, such as animal-crossing-style life simulation games or farming games where crops grow over several real days.
+2.  **Time-Locked Events:** A game could unlock special content or characters only on certain dates or at certain times of day.
+3.  **Player Progress Tracking:** The RTC can be used to log when a player last played or to track how much real time has been spent in the game.
 
 ## **Interrupt Registers (IE & IF)**
 
