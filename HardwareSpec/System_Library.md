@@ -141,3 +141,27 @@ Divides a 16-bit unsigned integer by an 8-bit unsigned integer.
     -   `R0.l`: 8-bit quotient (low byte of R0).
 -   **Error Handling:** If the divisor in `R1.b` is zero, the function will immediately return, setting the **Carry Flag (F.C)** to 1. The contents of `R0` will be undefined in this case.
 -   **Clobbered Registers:** `R1`, `R2`.
+
+## **Data Decompression Functions**
+
+### `decompressRLE`
+
+Decompresses data that was compressed using a Run-Length Encoding (RLE) scheme. The function processes control bytes to expand runs of repeated data and copy raw data blocks.
+
+-   **RLE Format Definition:**
+    -   **Run Packet (Bit 7 = 1):** A control byte with the high bit set indicates a run of repeated data.
+        -   `1NNNNNNN`: The lower 7 bits (`N`) specify the number of times (`N+1`) to repeat the data byte that immediately follows.
+        -   Example: `0x83 0xAA` would decompress to `0xAA 0xAA 0xAA 0xAA` (4 bytes).
+    -   **Raw Packet (Bit 7 = 0):** A control byte with the high bit clear indicates a block of raw, uncompressed data.
+        -   `0NNNNNNN`: The lower 7 bits (`N`) specify the number of raw bytes (`N+1`) to copy directly from the source to the destination.
+        -   Example: `0x02 0x11 0x22 0x33` would decompress to `0x11 0x22 0x33` (3 bytes).
+    -   **End of Stream:** A control byte of `0xFF` (or -1) marks the end of the compressed data stream.
+
+-   **Inputs:**
+    -   `R0`: Source address (pointer to the compressed RLE data).
+    -   `R1`: Destination address (pointer to the RAM where data will be decompressed).
+-   **Output:**
+    -   `R0`: Address of the byte following the end-of-stream marker.
+    -   `R1`: Address of the byte following the last written destination byte.
+-   **Clobbered Registers:** `R2`, `R3`.
+-   **Important Note:** The developer is responsible for ensuring the destination buffer in RAM is large enough to hold the fully decompressed data. This function does not perform any bounds checking.
