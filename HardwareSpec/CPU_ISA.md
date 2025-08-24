@@ -42,7 +42,7 @@
 
 ### **Load/Store Instructions**
 
-**These instructions move data between registers and memory. Memory is byte-addressable. 16-bit word accesses must be aligned to an even address. Attempting an unaligned 16-bit access will trigger a Bus Error fault.**
+**These instructions move data between registers and memory. Memory is byte-addressable. 16-bit word accesses must be aligned to an even address. Attempting an unaligned 16-bit access will trigger a Bus Error fault. Note that the cycle counts below assume access to standard WRAM; accesses to HRAM (`FC00-FFFF`) are faster.**
 
 | Mnemonic          | Operands       | Bytes | Cycles | Description                                                                                               |
 | :---------------- | :------------- | :---- | :----- | :-------------------------------------------------------------------------------------------------------- |

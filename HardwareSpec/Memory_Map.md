@@ -23,12 +23,43 @@
 | F800       | FBFF     | **1 KiB**  | **DSP Delay Buffer**                                       |
 | FC00       | FFFF     | **1 KiB**  | **HRAM (high speed ram)**                                  |
 
-### Memory Access Rules
+## **MMU Behavior and Rules**
 
-The Cricket-16 architecture uses several techniques to manage memory access and expand its capabilities.
+The Memory Management Unit (MMU) is the hardware component responsible for interpreting the CPU's memory accesses and mapping them to the appropriate physical memory device.
 
--   **Bank Switching:** To expand the amount of available WRAM and VRAM beyond the limits of the 16-bit address space, the system uses bank switching. The `WRAM_BANK` and `VRAM_BANK` registers control which memory bank is currently accessible to the CPU in the upper memory windows.
--   **Shared Memory (CRAM):** The Color Palette RAM (CRAM) at `F300-F4FF` is shared between the CPU and the PPU. To prevent conflicts, the CPU should only write to this area during non-rendering periods (V-Blank or H-Blank). Reading from CRAM is safe at any time.
+### **Bank Switching**
+
+To expand the amount of available RAM beyond the limits of the 16-bit address space, the system uses bank switching for several memory regions. This is controlled by writing to specific I/O registers.
+
+-   **VRAM (`8000-9FFF`):** This 8 KiB window can be mapped to one of four 8 KiB banks within the PPU's 32 KiB of VRAM. The active bank is selected by the **`VRAM_BANK`** register at `F013`.
+-   **WRAM (`D000-DFFF`):** This 4 KiB window can be mapped to one of six 4 KiB banks of switchable Work RAM (WRAM1-6). The active bank is selected by the **`WRAM_BANK`** register at `F014`.
+-   **Cartridge ROM (`4000-7FFF`):** This 16 KiB window can be mapped to any 16 KiB bank in the cartridge's ROM. The active bank is selected by the **`MPR_BANK`** register at `F010`.
+-   **Cartridge RAM (`A000-AFFF`):** This 4 KiB window can be mapped to different banks of RAM on the cartridge, if present. The active bank is selected by the **`RAM_BANK`** register at `F011`.
+
+### **Boot-time Mapping**
+
+At power-on, the MMU starts in a special state to execute the internal Boot ROM.
+-   The Boot ROM is mapped to addresses `0x0000-0x3FFF`, temporarily overlaying the game cartridge.
+-   After the boot sequence finishes its hardware setup and verification, it commands the MMU to unmap the Boot ROM.
+-   The MMU then maps the game cartridge into the `0x0000-7FFF` range, and the CPU jumps to the game's entry point.
+
+### **Memory Protection**
+
+The MMU enforces access rules on certain memory regions.
+-   **Read-Only Memory:** The Cartridge ROM (`0000-7FFF`) and the System Library RAM (`E800-EFFF`, after boot) are read-only. Any attempt by the CPU to write to these regions will be blocked by the MMU and will trigger a **Protected Memory Fault**.
+-   **PPU Access Restrictions:** The PPU's internal RAM (VRAM, OAM, CRAM) is shared between the CPU and the PPU. While the CPU can access it at any time, writing to it while the PPU is actively drawing (`STAT` mode 3) can lead to visual glitches. Safe access is guaranteed during H-Blank (Mode 0) and V-Blank (Mode 1).
+
+### **Memory Access Alignment**
+
+The CPU requires 16-bit data to be aligned to an even memory address.
+-   Any `LD.w` or `ST.w` instruction that attempts to read or write a 16-bit word from an odd address will be blocked by the MMU and will trigger a **Bus Error Fault**.
+-   8-bit operations (`LD.b`, `ST.b`) can access any address without issue.
+
+### **HRAM vs. WRAM Access Speed**
+
+Not all RAM is equal in speed.
+-   **HRAM (High RAM, `FC00-FFFF`):** This small 1 KiB region is internal to the main processor chip. It can be accessed without any extra wait states, making it the fastest RAM in the system. It is ideal for storing frequently accessed variables, temporary "scratchpad" data, or time-critical interrupt handler code.
+-   **WRAM (Work RAM, `B000-DFFF`):** This is a larger pool of general-purpose external RAM. Accessing it incurs a small number of wait states, making it slightly slower than HRAM. The cycle counts listed in the CPU ISA documentation assume WRAM access times. Accesses to HRAM using the same instructions will be faster.
 
 ## **IO Registers (F000–F0FF)**
 
