@@ -42,21 +42,21 @@
 
 ### **Load/Store Instructions**
 
-**These instructions move data between registers and memory. Memory is byte-addressable. 16-bit word accesses must be aligned to an even address. Attempting an unaligned 16-bit access will trigger a Bus Error fault. Note that the cycle counts below assume access to standard WRAM; accesses to HRAM (`FC00-FFFF`) are faster.**
+**These instructions move data between registers and memory. Memory is byte-addressable. 16-bit word accesses must be aligned to an even address. Attempting an unaligned 16-bit access will trigger a Bus Error fault. Cycle counts are listed as `HRAM/Other` for instructions that can target memory (HRAM = `FC00-FFFF`; Other = all non-HRAM regions). If only one value is shown, the instruction does not access HRAM-addressable memory.**
 
 | Mnemonic          | Operands       | Bytes | Cycles | Description                                                                                               |
 | :---------------- | :------------- | :---- | :----- | :-------------------------------------------------------------------------------------------------------- |
 | LD rd, rs         | R1, R2         | 1     | 4      | Copies the 16-bit value of R2 into R1.                                                                    |
 | LDI r, n16        | R0, 0x8000     | 3     | 8      | Loads the immediate 16-bit value 0x8000 into R0.                                                          |
-| LD.w rd, (rs)     | R2, (R3)       | 2     | 12     | Loads the 16-bit word from the address in R3 into R2. (Prefixed)                                          |
-| LD.b rd, (rs)     | R2, (R3)       | 2     | 12     | Loads the 8-bit byte from the address in R3 into the low byte of R2, and zero-extends it. (Prefixed)      |
-| ST.w (rd), rs     | (R4), R5       | 2     | 12     | Stores the 16-bit word from R5 into the memory address pointed to by R4. (Prefixed)                       |
-| ST.b (rd), rs     | (R4), R5       | 2     | 12     | Stores the low 8-bit byte from R5 into the memory address pointed to by R4. (Prefixed)                    |
-| LD.w rd, (rs, n8) | R2, (R3, 0x10) | 3     | 16     | Loads the 16-bit word from the address in R3 + signed 8-bit offset into R2. (Prefixed)                    |
-| ST.w (rs, n8), rd | (R4, 0x10), R5 | 3     | 16     | Stores the 16-bit word from R5 into the memory address pointed to by R4 + signed 8-bit offset. (Prefixed) |
+| LD.w rd, (rs)     | R2, (R3)       | 2     | 8/12   | Loads the 16-bit word from the address in R3 into R2. (Prefixed)                                          |
+| LD.b rd, (rs)     | R2, (R3)       | 2     | 8/12   | Loads the 8-bit byte from the address in R3 into the low byte of R2, and zero-extends it. (Prefixed)      |
+| ST.w (rd), rs     | (R4), R5       | 2     | 8/12   | Stores the 16-bit word from R5 into the memory address pointed to by R4. (Prefixed)                       |
+| ST.b (rd), rs     | (R4), R5       | 2     | 8/12   | Stores the low 8-bit byte from R5 into the memory address pointed to by R4. (Prefixed)                    |
+| LD.w rd, (rs, n8) | R2, (R3, 0x10) | 3     | 12/16  | Loads the 16-bit word from the address in R3 + signed 8-bit offset into R2. (Prefixed)                    |
+| ST.w (rs, n8), rd | (R4, 0x10), R5 | 3     | 12/16  | Stores the 16-bit word from R5 into the memory address pointed to by R4 + signed 8-bit offset. (Prefixed) |
 | LEA rd, (rs, n8)  | R1, (R2, 0x10) | 3     | 8      | Calculates the address R2 + signed 8-bit offset and stores it in R1. (Prefixed)                           |
-| LD.w r, (n16)     | R0, (0xC000)   | 3     | 12     | Loads a 16-bit word from the absolute address 0xC000 into R0.                                             |
-| ST.w (n16), r     | (0xC000), R0   | 3     | 12     | Stores the 16-bit word in R0 to the absolute address 0xC000.                                              |
+| LD.w r, (n16)     | R0, (0xC000)   | 3     | 8/12   | Loads a 16-bit word from the absolute address 0xC000 into R0.                                             |
+| ST.w (n16), r     | (0xC000), R0   | 3     | 8/12   | Stores the 16-bit word in R0 to the absolute address 0xC000.                                              |
 | PUSH r            | R0             | 1     | 12     | Pushes the value of a register onto the stack. Decrements SP by 2.                                        |
 | POP r             | R0             | 1     | 12     | Pops a value from the stack into a register. Increments SP by 2.                                          |
 | PUSH F            |                | 2     | 12     | Pushes the Flags register (F) onto the stack. Decrements SP by 2. (Prefixed)                              |
@@ -141,9 +141,9 @@
 | BIT r, b  | R0, 7    | 2     | 8      | Test bit b (0-7) of register r's low byte. Sets Z flag if bit is 0. (Prefixed) |
 | SET r, b  | R0, 7    | 2     | 8      | Set bit b (0-7) of register r's low byte to 1. (Prefixed)           |
 | RES r, b  | R0, 7    | 2     | 8      | Reset bit b (0-7) of register r's low byte to 0. (Prefixed)         |
-| BIT (n16), b | (0xC000), 7 | 4     | 16     | Test bit b (0-7) of the byte at memory address n16. Sets Z flag if bit is 0. (Prefixed) |
-| SET (n16), b | (0xC000), 7 | 4     | 20     | Set bit b (0-7) of the byte at memory address n16 to 1. (Prefixed)           |
-| RES (n16), b | (0xC000), 7 | 4     | 20     | Reset bit b (0-7) of the byte at memory address n16 to 0. (Prefixed)         |
+| BIT (n16), b | (0xC000), 7 | 4     | 12/16  | Test bit b (0-7) of the byte at memory address n16. Sets Z flag if bit is 0. (Prefixed) |
+| SET (n16), b | (0xC000), 7 | 4     | 16/20  | Set bit b (0-7) of the byte at memory address n16 to 1. (Prefixed)           |
+| RES (n16), b | (0xC000), 7 | 4     | 16/20  | Reset bit b (0-7) of the byte at memory address n16 to 0. (Prefixed)         |
 
 ### **Control Flow Instructions (Jumps, Calls, Returns)**
 
