@@ -6,8 +6,8 @@ This document specifies the internal memory layout of a Cricket-16 game cartridg
 
 | Address Range   | Size      | Description                             |
 | :-------------- | :-------- | :-------------------------------------- |
-| 0x0000 - 0x00EF | 240 Bytes | Cartridge Header (metadata, mode flags) |
-| 0x00F0 - 0x00FF | 16 Bytes  | Interrupt Vector Table Template         |
+| 0x0000 - 0x00DF | 240 Bytes | Cartridge Header (metadata, mode flags) |
+| 0x00E0 - 0x00FF | 32 Bytes  | Interrupt Vector Table Template         |
 | 0x0100          | -         | Game Code Entry Point                   |
 | 0x0101 - 0x3FFF | ~16 KiB   | Remainder of Fixed ROM Bank 0           |
 
@@ -39,7 +39,7 @@ The rest of the cartridge ROM is dedicated to the game's program code, graphics 
 
 ### **3. Interrupt Vector Table**
 
-The 16-byte block from `0x00F0` to `0x00FF` is reserved for the Interrupt Vector Table. This table contains the starting addresses for the game's interrupt service routines.
+The 32-byte block from `0x00E0` to `0x00FF` is reserved for the Interrupt Vector Table. This table contains the starting addresses for the game's interrupt service routines.
 
 The Cricket-16 supports two different modes for handling interrupts ("Standard" and "Enhanced"), which control whether this table is used directly from ROM or copied to RAM for dynamic modification. The desired mode is selected via a flag in the cartridge header (Bit 7 of byte `0x002C`).
 

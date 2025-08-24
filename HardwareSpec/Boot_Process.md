@@ -8,8 +8,8 @@ This table describes the memory map from the CPU's perspective while the interna
 
 | Address Range   | Description                     | Access     | Notes                                                                                |
 | :-------------- | :------------------------------ | :--------- | :----------------------------------------------------------------------------------- |
-| 0x0000 - 0x3FFF | Internal Boot ROM               | Read-Only  | Mapped only during boot. Overlays Cartridge ROM Bank 0. Inaccessible after handover. |
-| 0x3FE0 - 0x3FFF | Internal Interrupt Vector Table | Hardwired  | Points to ISRs within the Boot ROM. See `Interrupts.md` for the table layout.      |
+| 0x0000 - 0x3FDF | Internal Boot ROM               | Read-Only  | Mapped only during boot. Overlays Cartridge ROM Bank 0. Inaccessible after handover. |
+| 0x3FE0 - 0x3FFF | Internal Interrupt Vector Table | Hardwired  | Points to ISRs within the Boot ROM. See `Interrupts.md` for the table layout.        |
 | 0x6000 - 0x7FFF | VRAM Window                     | Read/Write | Locked to VRAM Bank 0 during boot. The `VRAM_BANK` register is ignored.              |
 | 0xA000 - 0xBFFF | Work RAM (WRAM0)                | Read/Write | The WRAM1 window (`D000-DFFF`) is unmapped during boot.                              |
 | 0xE000 - 0xEFFF | Wave RAM                        | Read/Write | Available for boot sound data.                                                       |
@@ -48,3 +48,4 @@ The code on the Boot ROM executes the following steps in order:
    - **Enable read-only protection** on the System Library RAM (`E800-EFFF`).
    - **Map the game cartridge** to the main memory map, starting at address 0x0000.
 9. **Jump to Game Code**: The very last act of the Boot ROM is to execute a JMP 0x0100 instruction. This transfers control to the game's official entry point. The game is now responsible for enabling its own interrupts when it is ready.
+
