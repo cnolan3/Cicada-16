@@ -6,12 +6,12 @@ This document specifies the internal memory layout of a Cricket-16 game cartridg
 
 | Address Range   | Size      | Description                             |
 | :-------------- | :-------- | :-------------------------------------- |
-| 0x0000 - 0x00DF | 240 Bytes | Cartridge Header (metadata, mode flags) |
+| 0x0000 - 0x00DF | 223 Bytes | Cartridge Header (metadata, mode flags) |
 | 0x00E0 - 0x00FF | 32 Bytes  | Interrupt Vector Table Template         |
 | 0x0100          | -         | Game Code Entry Point                   |
 | 0x0101 - 0x3FFF | ~16 KiB   | Remainder of Fixed ROM Bank 0           |
 
-### **1. Cartridge Header (0x0000 - 0x00EF)**
+### **1. Cartridge Header (0x0000 - 0x00DF)**
 
 Every Cricket-16 cartridge must begin with a header. The console's internal boot ROM reads this header on startup to verify the cartridge's integrity and configure the hardware.
 
@@ -27,7 +27,7 @@ Every Cricket-16 cartridge must begin with a header. The console's internal boot
 | 0x002C        | 1B   | **Feature Flags**       | A bitfield for hardware features. Bit 0: Has Battery. Bit 7: Interrupt Mode (0=Standard, 1=Enhanced).                             |
 | 0x002D        | 1B   | **Header Checksum**     | An 8-bit checksum of bytes 0x0000 to 0x002C. Used by the boot ROM to verify header integrity.                                     |
 | 0x002E-0x002F | 2B   | **Global ROM Checksum** | A 16-bit checksum of the entire cartridge ROM. Can be used for a full integrity check.                                            |
-| 0x0030-0x00EF | 192B | **Reserved**            | Reserved for future expansion. Must be filled with 0x00.                                                                          |
+| 0x0030-0x00DF | 192B | **Reserved**            | Reserved for future expansion. Must be filled with 0x00.                                                                          |
 
 ### **2. Game Code and Data (0x0100 onwards)**
 
