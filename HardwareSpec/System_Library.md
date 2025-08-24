@@ -87,3 +87,57 @@ Serial_ISR:
 
     RETI ; Return from interrupt
 ```
+
+## **Advanced Arithmetic Functions**
+
+Since the Cricket-16 CPU does not have hardware support for multiplication or division, the System Library provides highly optimized routines for these common operations.
+
+### `fastMultiply16`
+
+Multiplies two 16-bit unsigned integers and returns a 32-bit result.
+
+-   **Inputs:**
+    -   `R0`: Multiplicand (16-bit)
+    -   `R1`: Multiplier (16-bit)
+-   **Output:**
+    -   `R0`: High word of the 32-bit result.
+    -   `R1`: Low word of the 32-bit result.
+-   **Clobbered Registers:** `R2`, `R3` (These registers are used internally by the function and their previous values will be lost).
+
+### `fastDivide32`
+
+Divides a 32-bit unsigned integer by a 16-bit unsigned integer.
+
+-   **Inputs:**
+    -   `R0`: High word of the 32-bit dividend.
+    -   `R1`: Low word of the 32-bit dividend.
+    -   `R2`: 16-bit divisor.
+-   **Output:**
+    -   `R0`: 16-bit quotient.
+    -   `R1`: 16-bit remainder.
+-   **Error Handling:** If the divisor in `R2` is zero, the function will immediately return, setting the **Carry Flag (F.C)** to 1. The contents of `R0` and `R1` will be undefined in this case.
+-   **Clobbered Registers:** `R3`.
+
+### `fastMultiply8`
+
+Multiplies two 8-bit unsigned integers and returns a 16-bit result. This is the fastest multiplication routine.
+
+-   **Inputs:**
+    -   `R0.b`: Multiplicand (low byte of R0).
+    -   `R1.b`: Multiplier (low byte of R1).
+-   **Output:**
+    -   `R0`: 16-bit result.
+-   **Clobbered Registers:** `R1`.
+
+### `fastDivide16`
+
+Divides a 16-bit unsigned integer by an 8-bit unsigned integer.
+
+-   **Inputs:**
+    -   `R0`: 16-bit dividend.
+    -   `R1.b`: 8-bit divisor (low byte of R1).
+-   **Output:**
+    -   `R0.h`: 8-bit remainder (high byte of R0).
+    -   `R0.l`: 8-bit quotient (low byte of R0).
+-   **Error Handling:** If the divisor in `R1.b` is zero, the function will immediately return, setting the **Carry Flag (F.C)** to 1. The contents of `R0` will be undefined in this case.
+-   **Clobbered Registers:** `R1`, `R2`.
