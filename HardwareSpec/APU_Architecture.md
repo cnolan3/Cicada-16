@@ -314,7 +314,7 @@ This section provides a detailed, step-by-step overview of the entire APU signal
 
 The APU uses several different clocks, all derived from the master APU clock, to control different aspects of sound generation.
 
--   **Master APU Clock (4.194304 MHz):** The high-speed master clock that drives all APU operations. It is divided down to create the other, slower clocks.
+-   **Master APU Clock (4.194304 MHz):** The high-speed master clock that drives all APU operations. Its frequency is exactly half of the main system clock (8.388608 MHz / 2). It is divided down to create the other, slower clocks.
 -   **Generator Clocks (Variable):** This is the clock that drives the core sound generators (the pulse wave, wave table, and LFSR). Its speed is controlled by the `FREQ` or `CLK_DIV` registers for each channel and determines the fundamental pitch or character of the raw sound.
 -   **Envelope Clock (256 Hz):** A slow, fixed-rate clock. 256 times per second, it tells the ADSR unit on each channel whether it should increment or decrement its volume according to its current phase (Attack, Decay, or Release).
 -   **Sweep Clock (128 Hz):** A slow, fixed-rate clock. 128 times per second, it tells the sweep unit on Channel 0 to perform its frequency recalculation.
