@@ -37,7 +37,7 @@ During the boot sequence, the CPU operates in a special "Boot Mode" for interrup
 The code on the Boot ROM executes the following steps in order:
 
 1. **Hardware Initialization**: From power-on, the Boot ROM has full access to WRAM, VRAM, CRAM, OAM, and all I/O registers. It performs basic hardware setup, which includes clearing WRAM and initializing the Stack Pointer (SP) to the top of WRAM0 (e.g., 0xCFFF).
-2. **System Library Copy**: The Boot ROM uses the DMA controller to copy the first 2 KiB of its own address space (which contains the System Library functions) to the start of WRAM0 at `0xB000 - 0xB7FF`. After this, it sets the PPU and APU registers to a known-default, disabled state.
+2. **System Library Copy**: The Boot ROM uses the DMA controller to copy the first 2 KiB of its own address space (which contains the System Library functions) to the dedicated System Library RAM at `E800-EFFF`. After this, it sets the PPU and APU registers to a known-default, disabled state.
 3. **Display Boot Animation**: The Boot ROM displays the console logo, enables interrupts (EI), and uses its internal V-Blank ISR to perform a brief startup animation. It may read the **Boot Animation ID** from the cartridge header to select a specific visual effect.
 4. **Cartridge Detection & Verification**: While the animation is playing, the Boot ROM checks for a cartridge and verifies its header.
 5. **Configure Game Interrupt Mode**: It reads the "Interrupt Mode" flag from the cartridge header and sets an internal hardware latch that determines where the CPU will look for interrupt vectors once the game starts (either the cartridge ROM or WRAM).
@@ -45,5 +45,6 @@ The code on the Boot ROM executes the following steps in order:
 7. **Finalize and Disable Interrupts**: Once the animation is complete and the cartridge is ready, the Boot ROM executes a DI instruction to disable interrupts, ensuring a clean handover.
 8. **Memory Map Handover**: The Boot ROM writes to a special I/O register that commands the memory controller to:
    - **Disable and unmap** the internal Boot ROM and its vector table.
+   - **Enable read-only protection** on the System Library RAM (`E800-EFFF`).
    - **Map the game cartridge** to the main memory map, starting at address 0x0000.
 9. **Jump to Game Code**: The very last act of the Boot ROM is to execute a JMP 0x0100 instruction. This transfers control to the game's official entry point. The game is now responsible for enabling its own interrupts when it is ready.

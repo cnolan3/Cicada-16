@@ -60,7 +60,7 @@ The sweep unit is controlled by the `CH0_SWP` register.
 
 The wave channel offers the most sonic flexibility by playing back a small, user-defined waveform. This is ideal for creating unique instrument tones or simple speech/sound effects.
 
-- **Wave RAM:** A 4-Kilobyte area of memory at `E000-EFFF` is dedicated to waveform data. This RAM is organized as a bank of 128 unique waveforms, indexed from 0 to 127.
+- **Wave RAM:** A 2-Kilobyte area of memory at `E000-E7FF` is dedicated to waveform data. This RAM is organized as a bank of 64 unique waveforms, indexed from 0 to 63.
 - **Waveform Format:** Each waveform is 32 bytes long and contains 64 sequential 4-bit samples. The samples are packed two per byte, with the high nibble (bits 7-4) being the first sample and the low nibble (bits 3-0) being the second. The 4-bit sample values represent amplitude, from 0 (lowest point) to 15 (highest point).
 - **Playback:** When the channel is triggered via `KEY_ON`, the APU begins reading the 64 samples of the selected waveform sequentially. The playback speed is controlled by the `CH2_FREQ` register. When the 64th sample is played, the playback loops back to the first sample. The output of the wave channel is the current sample's 4-bit value, scaled by the channel's current 4-bit ADSR envelope volume.
 - **Volume Envelope:** This channel includes the same hardware ADSR envelope found on the Pulse and Noise channels.
@@ -214,7 +214,8 @@ This 16-bit register controls the frequency of the pulse wave for Channel 1. See
 | Bit | Name     | Description                                                                                             |
 | :-- | :------- | :------------------------------------------------------------------------------------------------------ |
 | 7   | KEY_ON   | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
-| 6-0 | WAVE_IDX | Selects which 32-byte waveform to play from Wave RAM (0-127).                                           |
+| 6   | -        | Unused.                                                                                                 |
+| 5-0 | WAVE_IDX | Selects which 32-byte waveform to play from Wave RAM (0-63).                                            |
 
 #### **F524-F525: CH2_FREQ**
 

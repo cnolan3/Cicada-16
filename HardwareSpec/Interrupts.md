@@ -43,7 +43,7 @@ CPU Faults are critical, non-maskable events triggered by illegal or dangerous o
 
 - **Bus Error:** Triggered when a 16-bit word (e.g., from an `LD.w` instruction) is accessed from an odd memory address. All 16-bit memory accesses must be aligned to an even address.
 - **Illegal Instruction:** Triggered when the CPU attempts to execute an opcode that is not defined in the instruction set, including any reserved or unused opcode values.
-- **Protected Memory:** Triggered when a write operation is attempted on a memory region that is designated as read-only. This includes the cartridge ROM space (`0x0000-0x7FFF`) and the PPU/APU register space (`0xF000-0xF1FF`) under normal operation.
+- **Protected Memory:** Triggered when a write operation is attempted on a memory region that is designated as read-only. This includes the cartridge ROM space (`0x0000-0x7FFF`), the System Library RAM (`E800-EFFF`) after boot, and the PPU/APU register space (`0xF000-0xF1FF`) under normal operation.
 - **Stack Overflow:** Triggered if the Stack Pointer (SP) register decrements below the base of the stack memory region (`0xC000` for WRAM0 or `0xD000` for WRAM1). This helps catch runaway recursive calls or stack corruption before it overwrites other critical memory.
 
 ## **5. Interrupt Vector Table**

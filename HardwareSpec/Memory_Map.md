@@ -10,7 +10,8 @@
 | A000       | AFFF     | **4 KiB**  | **Cartridge RAM Window (banked)**                          |
 | B000       | CFFF     | **8 KiB**  | **Work RAM Bank 0 (WRAM0, fixed, 32 KiB total)**           |
 | D000       | DFFF     | **4 KiB**  | **Work RAM Window (WRAM1, banked, 1 of 6 switchable banks)** |
-| E000       | EFFF     | **4 KiB**  | **Wave RAM (user wave tables)**                            |
+| E000       | E7FF     | **2 KiB**  | **Wave RAM (user wave tables)**                            |
+| E800       | EFFF     | **2 KiB**  | **System Library RAM (Read-Only after boot)**              |
 | F000       | F0FF     | **256 B**  | **IO Registers (joypad, timers/div, RTC, DMA, mapper)**    |
 | F100       | F1FF     | **256 B**  | **PPU Registers (LCDC, STAT, SCX, SCY, LY/LYC, palettes)** |
 | F200       | F200     | **1 B**    | **IE (Interrupt Enable)**                                  |
