@@ -192,17 +192,57 @@ This 8-bit register provides information about the PPU's current state and allow
 | **2**   | LYC_FLAG    | **(Read-only)** 1 if LY == LYC. 0 otherwise.                                                                                  |
 | **1-0** | MODE_FLAG   | **(Read-only)** Indicates the PPU's current mode: <br> 00: H-Blank <br> 01: V-Blank <br> 10: OAM Scan <br> 11: Drawing Pixels |
 
-## **10. PPU Timing**
+## **10. PPU Frame Rendering Cycle**
 
-The PPU operates synchronously with the CPU clock. Precise timing is critical for accurate emulation and for developers to implement cycle-accurate effects.
+The PPU renders the 240x160 screen one horizontal line (or scanline) at a time. The entire process is driven by a master clock and is meticulously timed. A full frame consists of 222 scanlines (LY 0-221) and takes 144,300 CPU cycles to complete, resulting in a refresh rate of approximately 58.13 Hz.
 
-- **CPU Clock Speed:** 8.388608 MHz (2^23 Hz).
-- **Total Scanlines per Frame:** 222 (LY 0-221).
-  - Visible Scanlines: 160 (LY 0-159).
-  - V-Blank Scanlines: 62 (LY 160-221).
-- **Cycles per Scanline:** 650 CPU cycles.
-  - **Mode 2 (OAM Scan):** 80 cycles.
-  - **Mode 3 (Drawing Pixels):** 480 cycles (2 cycles per pixel for 240 pixels).
-  - **Mode 0 (H-Blank):** 90 cycles.
-- **Total Cycles per Frame:** 144300 CPU cycles.
-- **Refresh Rate:** Approximately 58.13 Hz.
+The rendering process is divided into two main phases: the period when pixels are drawn to the screen, and the Vertical Blank (V-Blank) period, which is the idle time between frames.
+
+### **10.1. Phase 1: Visible Scanline Rendering (LY 0-159)**
+
+For each of the 160 visible scanlines, the PPU performs the exact same sequence of operations, which takes a total of 650 CPU cycles. This sequence is divided into three modes, which correspond to the `MODE_FLAG` in the `STAT` register.
+
+#### **Mode 2: OAM Scan (80 Cycles)**
+
+At the beginning of a scanline, the PPU determines which sprites need to be drawn on this specific line.
+
+-   **Action:** The PPU iterates through all 64 sprite entries in OAM (Object Attribute Memory, `F600-F7FF`).
+-   **Condition:** It checks if the current scanline (`LY` register) falls within the vertical range of each sprite (i.e., `sprite.y <= LY < sprite.y + sprite.height`).
+-   **Result:** The PPU builds a temporary internal list of up to 16 sprites that are visible on this line. If more than 16 sprites are on the line, the additional ones are ignored for this frame. This list contains the sprite's X-position, tile index, attributes, and OAM index (for priority).
+-   **Status:** The `STAT` register's mode flag (bits 1-0) is set to `10`. An OAM Scan interrupt can be triggered if enabled.
+
+#### **Mode 3: Drawing Pixels (480 Cycles)**
+
+This is the core of the rendering process, where the PPU composes the final color for each of the 240 horizontal pixels on the scanline. It processes one pixel every two CPU cycles.
+
+-   **Status:** The `STAT` register mode flag is set to `11`. Accessing VRAM, OAM, or CRAM during this mode can cause visual glitches.
+-   **The Pixel Pipeline:** For each pixel X from 0 to 239, the PPU performs the following logic:
+    1.  **Fetch Pixels:** The PPU fetches a single pixel's data (a 4-bit color index) from all relevant layers that are enabled in the `LCDC` register. This includes:
+        -   **BG0 & BG1:** Based on the scroll registers (`SCX0`, `SCY0`, `SCX1`, `SCY1`) plus the current `LY` and `X` coordinates.
+        -   **Window:** If the current (`X`, `LY`) is within the window's rectangle (`WINX`, `WINY`).
+        -   **Sprites:** From the list of 16 sprites generated during the OAM scan.
+    2.  **Layer & Priority Mixing:** The PPU combines these pixels using a fixed priority system to determine the final pixel to be drawn.
+        -   **Step A (Backdrop):** The pixel from BG0 is always the starting point. It is always opaque, even if its color index is 0.
+        -   **Step B (Backgrounds):** The pixel from BG1 is drawn on top of the BG0 pixel, but only if its color index is not 0 (color 0 is transparent).
+        -   **Step C (Window):** If the Window is active for this pixel, its pixel is drawn on top of the backgrounds, again treating color 0 as transparent.
+        -   **Step D (Sprites):** If a sprite pixel is present at this location, its priority is checked against the background pixel beneath it. Sprite-on-background priority is determined by the sprite's Priority flag (OAM Byte 4, Bit 7) and the background tile's Priority flag (Tilemap entry, Bit 15). A sprite with its priority flag set to `0` will be drawn behind a background tile with its priority flag set to `1`. Sprite-on-sprite priority is determined by OAM index: a sprite with a lower index (e.g., sprite #0) is always drawn on top of a sprite with a higher index (e.g., sprite #1).
+    3.  **Final Color Lookup:** The result of the mixing logic is a 4-bit color index and a palette select value. The PPU uses these to look up the final 16-bit RGB555 color value from CRAM (`F300-F4FF`).
+
+#### **Mode 0: Horizontal Blank (H-Blank) (90 Cycles)**
+
+After the last pixel of a scanline is drawn, the PPU enters a short idle period before starting the next line.
+
+-   **Action:** The PPU is idle. This is a safe period for the CPU to write to VRAM, CRAM, and OAM without causing visual artifacts.
+-   **Status:** The `STAT` register mode flag is set to `00`. An H-Blank interrupt can be triggered if enabled.
+
+### **10.2. Phase 2: Vertical Blank (V-Blank) Period (LY 160-221)**
+
+After all 160 visible scanlines have been drawn, the PPU enters the V-Blank period, which lasts for 62 scanlines' worth of time.
+
+#### **Mode 1: V-Blank (62 * 650 Cycles)**
+
+-   **Action:** The PPU is completely idle and does no drawing. This is the main safe period for the CPU to perform lengthy graphics updates, such as updating tilemaps, copying new tile graphics to VRAM, or updating palettes in CRAM.
+-   **Status:** As soon as `LY` becomes 160, the `STAT` register mode flag is set to `01`.
+-   **V-Blank Interrupt:** The PPU sets the V-Blank flag in the `IF` register (`F201`, Bit 0). This is the most important interrupt in the system, as it signals to the game that it is time to prepare all the data for the next frame.
+
+After the V-Blank period ends, the `LY` register wraps back to 0, and the entire frame rendering process begins again.
