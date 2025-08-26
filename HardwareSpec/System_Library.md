@@ -165,3 +165,8 @@ Decompresses data that was compressed using a Run-Length Encoding (RLE) scheme. 
     -   `R1`: Address of the byte following the last written destination byte.
 -   **Clobbered Registers:** `R2`, `R3`.
 -   **Important Note:** The developer is responsible for ensuring the destination buffer in RAM is large enough to hold the fully decompressed data. This function does not perform any bounds checking.
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

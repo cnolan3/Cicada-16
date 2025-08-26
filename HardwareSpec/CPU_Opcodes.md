@@ -126,3 +126,9 @@
 | 40-7F        | ST.w (rd), rs | 2     | `FF 01 ddd sss`. Store word to address in rd.  |
 | 80-BF        | LD.b rd, (rs) | 2     | `FF 10 ddd sss`. Load byte from address in rs. |
 | C0-FF        | ST.b (rd), rs | 2     | `FF 11 ddd sss`. Store byte to address in rd.  |
+
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

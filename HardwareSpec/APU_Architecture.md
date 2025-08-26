@@ -99,12 +99,12 @@ The LFSR is a shift register whose input bit is derived from the exclusive-OR (X
 
 The `LFSR_MODE` bit in the `CH3_CTRL` register selects between two different LFSR configurations, which produce different timbres:
 
--   **Mode 0 (15-bit LFSR):**
-    -   Creates a full, dense "white noise" sound.
-    -   The new input bit is the result of `Bit 14 XOR Bit 15`.
--   **Mode 1 (7-bit LFSR):**
-    -   Creates a metallic, periodic sound because the sequence of pseudo-random numbers is much shorter.
-    -   The new input bit is the result of `Bit 6 XOR Bit 7`.
+- **Mode 0 (15-bit LFSR):**
+  - Creates a full, dense "white noise" sound.
+  - The new input bit is the result of `Bit 14 XOR Bit 15`.
+- **Mode 1 (7-bit LFSR):**
+  - Creates a metallic, periodic sound because the sequence of pseudo-random numbers is much shorter.
+  - The new input bit is the result of `Bit 6 XOR Bit 7`.
 
 The channel's audio output is `1` if the LSB of the LFSR is `0`, and `-1` if the LSB is `1`. This output is then scaled by the channel's current ADSR envelope volume.
 
@@ -114,8 +114,8 @@ The "pitch" of the noise is controlled by the rate at which the LFSR is clocked.
 
 **`LFSR Clock Rate (Hz) = 4,194,304 / (256 * (CLK_DIV + 1))`**
 
--   A lower `CLK_DIV` value results in a higher-pitched, "brighter" noise.
--   A higher `CLK_DIV` value results in a lower-pitched, "rumbling" noise.
+- A lower `CLK_DIV` value results in a higher-pitched, "brighter" noise.
+- A higher `CLK_DIV` value results in a lower-pitched, "rumbling" noise.
 
 ## **5. ADSR Volume Envelopes**
 
@@ -138,12 +138,12 @@ The DSP operates on the final mixed audio signal just before it is sent to the s
 
 ### 6.2. Delay Buffer and Timing
 
--   **Sample Rate:** The DSP, and the entire APU output mixer, operates at a fixed sample rate of **32,768 Hz**.
--   **Delay Buffer:** The buffer is 1024 bytes long, allowing for 1024 8-bit signed audio samples.
--   **Delay Time:** The `DSP_DELAY` register controls the delay time. The delay is measured in steps of 4 samples.
-    -   **`Delay (samples) = (DSP_DELAY + 1) * 4`**
-    -   **`Delay (seconds) = Delay (samples) / 32768`**
-    -   This allows for a delay time ranging from ~0.12ms to ~31.25ms. This is short, but useful for creating chorus, flange, or simple reverb-like spatial effects.
+- **Sample Rate:** The DSP, and the entire APU output mixer, operates at a fixed sample rate of **32,768 Hz**.
+- **Delay Buffer:** The buffer is 1024 bytes long, allowing for 1024 8-bit signed audio samples.
+- **Delay Time:** The `DSP_DELAY` register controls the delay time. The delay is measured in steps of 4 samples.
+  - **`Delay (samples) = (DSP_DELAY + 1) * 4`**
+  - **`Delay (seconds) = Delay (samples) / 32768`**
+  - This allows for a delay time ranging from ~0.12ms to ~31.25ms. This is short, but useful for creating chorus, flange, or simple reverb-like spatial effects.
 
 ## **7. APU Registers (F500–F5FF)**
 
@@ -151,28 +151,28 @@ This section details the memory-mapped registers used to control all APU functio
 
 ### **Register Map Overview**
 
-| Address   | Name      | Description                                                |
-| :-------- | :-------- | :--------------------------------------------------------- |
-| F500      | CH0_CTRL  | Pulse A: Control Register                                  |
-| F501-F502 | CH0_ADSR  | ADSR settings for Channel 0                                |
-| F503      | CH0_SWP   | Sweep settings for Channel 0                               |
-| F504-F505 | CH0_FREQ  | 16-bit frequency for Channel 0                             |
-| F510      | CH1_CTRL  | Pulse B: Control Register                                  |
-| F511-F512 | CH1_ADSR  | ADSR settings for Channel 1                                |
-| F514-F515 | CH1_FREQ  | 16-bit frequency for Channel 1                             |
-| F520      | CH2_CTRL  | Wave channel: Control Register                             |
-| F521-F522 | CH2_ADSR  | ADSR settings for Channel 2                                |
-| F524-F525 | CH2_FREQ  | 16-bit frequency for Channel 2                             |
-| F530      | CH3_CTRL  | Noise channel: Control Register                            |
-| F531-F532 | CH3_ADSR  | ADSR settings for Channel 3                                |
-| F580      | MIX_CTRL  | Master APU enable, individual channel enables              |
-| F581      | MIX_VOL_L | Master volume Left (0-15)                                  |
-| F582      | MIX_VOL_R | Master volume Right (0-15)                                 |
-| F584-F587 | CH0_OUT..CH3_OUT | Per-channel stereo volume/panning control                |
-| F5A0      | DSP_CTRL  | DSP Control Register                                       |
-| F5A1      | DSP_DELAY | Delay time/length (controls read offset into delay buffer) |
-| F5A2      | DSP_FBACK | Feedback level (0-15). Controls echo decay.                |
-| F5A3      | DSP_WET   | Wet signal mix level (0-15). Controls echo volume.         |
+| Address   | Name             | Description                                                |
+| :-------- | :--------------- | :--------------------------------------------------------- |
+| F500      | CH0_CTRL         | Pulse A: Control Register                                  |
+| F501-F502 | CH0_ADSR         | ADSR settings for Channel 0                                |
+| F503      | CH0_SWP          | Sweep settings for Channel 0                               |
+| F504-F505 | CH0_FREQ         | 16-bit frequency for Channel 0                             |
+| F510      | CH1_CTRL         | Pulse B: Control Register                                  |
+| F511-F512 | CH1_ADSR         | ADSR settings for Channel 1                                |
+| F514-F515 | CH1_FREQ         | 16-bit frequency for Channel 1                             |
+| F520      | CH2_CTRL         | Wave channel: Control Register                             |
+| F521-F522 | CH2_ADSR         | ADSR settings for Channel 2                                |
+| F524-F525 | CH2_FREQ         | 16-bit frequency for Channel 2                             |
+| F530      | CH3_CTRL         | Noise channel: Control Register                            |
+| F531-F532 | CH3_ADSR         | ADSR settings for Channel 3                                |
+| F580      | MIX_CTRL         | Master APU enable, individual channel enables              |
+| F581      | MIX_VOL_L        | Master volume Left (0-15)                                  |
+| F582      | MIX_VOL_R        | Master volume Right (0-15)                                 |
+| F584-F587 | CH0_OUT..CH3_OUT | Per-channel stereo volume/panning control                  |
+| F5A0      | DSP_CTRL         | DSP Control Register                                       |
+| F5A1      | DSP_DELAY        | Delay time/length (controls read offset into delay buffer) |
+| F5A2      | DSP_FBACK        | Feedback level (0-15). Controls echo decay.                |
+| F5A3      | DSP_WET          | Wet signal mix level (0-15). Controls echo volume.         |
 
 ### **Channel Register Details**
 
@@ -186,11 +186,11 @@ This section details the memory-mapped registers used to control all APU functio
 
 #### **F503: CH0_SWP (Pulse A Sweep)**
 
-| Bit | Name      | Description                                                                                             |
-| :-- | :-------- | :------------------------------------------------------------------------------------------------------ |
-| 7   | SWP_EN    | 1 = Enable the frequency sweep unit. The sweep is triggered when a note is keyed on.                  |
-| 6-4 | SWP_TIME  | Time between sweep steps, in units of 7.8ms (1/128s). If 0, sweep is disabled. (Range: 0-7)            |
-| 3   | SWP_DIR   | Sweep direction. 0: Addition (frequency increases), 1: Subtraction (frequency decreases).             |
+| Bit | Name      | Description                                                                                                                                                          |
+| :-- | :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7   | SWP_EN    | 1 = Enable the frequency sweep unit. The sweep is triggered when a note is keyed on.                                                                                 |
+| 6-4 | SWP_TIME  | Time between sweep steps, in units of 7.8ms (1/128s). If 0, sweep is disabled. (Range: 0-7)                                                                          |
+| 3   | SWP_DIR   | Sweep direction. 0: Addition (frequency increases), 1: Subtraction (frequency decreases).                                                                            |
 | 2-0 | SWP_SHIFT | Sweep magnitude. The new frequency is calculated by shifting the current frequency this many bits to the right and adding/subtracting it. If 0, sweep has no effect. |
 
 #### **F504-F505: CH0_FREQ**
@@ -234,17 +234,20 @@ This 16-bit register controls the playback frequency of the selected waveform fo
 These two registers are identical for each channel (CH0, CH1, CH2, CH3).
 
 - **F5x1, Bits 7-4: Attack Rate (A)**
+
   - This 4-bit value (0-15) determines how quickly the volume rises from 0 to its peak of 15.
   - The value `A` specifies the number of Envelope Clock ticks to wait before the volume is incremented by 1.
   - **Time per step:** `(A + 1) * (1/256 seconds)`
   - **Total Attack Time (0 to 15):** `15 * (A + 1) * ~3.9ms`
 
 - **F5x1, Bits 3-0: Decay Rate (D)**
+
   - This 4-bit value (0-15) determines how quickly the volume falls from its peak of 15 to the Sustain Level.
   - The value `D` specifies the number of Envelope Clock ticks to wait before the volume is decremented by 1.
   - **Time per step:** `(D + 1) * (1/256 seconds)`
 
 - **F5x2, Bits 7-4: Sustain Level (S)**
+
   - This 4-bit value (0-15) sets the target volume level for the sustain phase.
   - `0000` (0) is silent, `1111` (15) is maximum volume.
   - The envelope holds at this volume as long as the `KEY_ON` bit is active.
@@ -271,10 +274,10 @@ These two registers are identical for each channel (CH0, CH1, CH2, CH3).
 
 These registers control the final output volume and stereo panning for each channel (F584 for CH0, F585 for CH1, etc.). This provides a final "fader" for each channel before the audio is sent to the master volume controls.
 
-| Bit   | Name    | Type | Description                           |
-| :---- | :------ | :--- | :------------------------------------ |
-| 7-4   | VOL_L   | R/W  | Volume for the Left Speaker (0-15)    |
-| 3-0   | VOL_R   | R/W  | Volume for the Right Speaker (0-15)   |
+| Bit | Name  | Type | Description                         |
+| :-- | :---- | :--- | :---------------------------------- |
+| 7-4 | VOL_L | R/W  | Volume for the Left Speaker (0-15)  |
+| 3-0 | VOL_R | R/W  | Volume for the Right Speaker (0-15) |
 
 #### **F5A0: DSP_CTRL**
 
@@ -294,6 +297,7 @@ An 8-bit register that controls the delay time by setting the read offset into t
 #### **F5A2: DSP_FBACK**
 
 A 4-bit value (0-15) that controls the feedback level (how much of the delayed signal is mixed back into the delay line input).
+
 - `0`: No feedback, only a single echo is produced.
 - `15`: Maximum feedback, creating long, repeating echoes.
 - **Formula:** `Feedback = DelayedSample * (DSP_FBACK / 16)`
@@ -301,10 +305,10 @@ A 4-bit value (0-15) that controls the feedback level (how much of the delayed s
 #### **F5A3: DSP_WET**
 
 A 4-bit value (0-15) that controls the wet/dry mix. This is the volume of the delayed signal in the final output.
+
 - `0`: No echo is heard (fully dry signal).
 - `15`: Echo is at its loudest (wet signal).
 - **Formula:** `Output = DrySignal + (DelayedSignal * (DSP_WET / 16))`
-
 
 ## 8. APU Signal and Clock Flow
 
@@ -314,11 +318,11 @@ This section provides a detailed, step-by-step overview of the entire APU signal
 
 The APU uses several different clocks, all derived from the master APU clock, to control different aspects of sound generation.
 
--   **Master APU Clock (4.194304 MHz):** The high-speed master clock that drives all APU operations. Its frequency is exactly half of the main system clock (8.388608 MHz / 2). It is divided down to create the other, slower clocks.
--   **Generator Clocks (Variable):** This is the clock that drives the core sound generators (the pulse wave, wave table, and LFSR). Its speed is controlled by the `FREQ` or `CLK_DIV` registers for each channel and determines the fundamental pitch or character of the raw sound.
--   **Envelope Clock (256 Hz):** A slow, fixed-rate clock. 256 times per second, it tells the ADSR unit on each channel whether it should increment or decrement its volume according to its current phase (Attack, Decay, or Release).
--   **Sweep Clock (128 Hz):** A slow, fixed-rate clock. 128 times per second, it tells the sweep unit on Channel 0 to perform its frequency recalculation.
--   **Mixer Sample Rate (32,768 Hz):** This is the "heartbeat" of the entire mixing system. At every one of these 32,768 ticks per second, the APU performs the full mixing process described below.
+- **Master APU Clock (4.194304 MHz):** The high-speed master clock that drives all APU operations. Its frequency is exactly half of the main system clock (8.388608 MHz / 2). It is divided down to create the other, slower clocks.
+- **Generator Clocks (Variable):** This is the clock that drives the core sound generators (the pulse wave, wave table, and LFSR). Its speed is controlled by the `FREQ` or `CLK_DIV` registers for each channel and determines the fundamental pitch or character of the raw sound.
+- **Envelope Clock (256 Hz):** A slow, fixed-rate clock. 256 times per second, it tells the ADSR unit on each channel whether it should increment or decrement its volume according to its current phase (Attack, Decay, or Release).
+- **Sweep Clock (128 Hz):** A slow, fixed-rate clock. 128 times per second, it tells the sweep unit on Channel 0 to perform its frequency recalculation.
+- **Mixer Sample Rate (32,768 Hz):** This is the "heartbeat" of the entire mixing system. At every one of these 32,768 ticks per second, the APU performs the full mixing process described below.
 
 ### 8.2. The Signal Flow: A Sample's Journey
 
@@ -327,20 +331,23 @@ The following sequence of events happens 32,768 times per second to produce one 
 #### **Step 1: Raw Signal Generation**
 
 For each of the four channels, the APU determines its raw output for the current cycle.
--   The channel's core generator (pulse, wave, or noise) produces its signal (e.g., a high/low state, a 4-bit sample from RAM, or a 1/0 from the LFSR).
--   The channel's ADSR unit provides its current 4-bit volume level (0-15).
--   The raw signal is scaled by this envelope volume. This produces the channel's "pre-mix" output signal.
+
+- The channel's core generator (pulse, wave, or noise) produces its signal (e.g., a high/low state, a 4-bit sample from RAM, or a 1/0 from the LFSR).
+- The channel's ADSR unit provides its current 4-bit volume level (0-15).
+- The raw signal is scaled by this envelope volume. This produces the channel's "pre-mix" output signal.
 
 #### **Step 2: DSP Send (The "Dry" Signal)**
 
 The APU determines what to send to the DSP's echo/delay effect.
--   It checks the `DSP_CTRL` register.
--   It takes the "pre-mix" output from every channel whose corresponding `CHx_IN` bit is set to `1`.
--   These signals are summed together. This combined signal is the "dry" input for the DSP.
+
+- It checks the `DSP_CTRL` register.
+- It takes the "pre-mix" output from every channel whose corresponding `CHx_IN` bit is set to `1`.
+- These signals are summed together. This combined signal is the "dry" input for the DSP.
 
 #### **Step 3: The DSP Delay Line**
 
 The echo effect is processed.
+
 1.  **Read:** The DSP reads an old sample from its 1KB circular delay buffer. The read position is determined by the `DSP_DELAY` register. This retrieved sample is the "wet" signal (the echo).
 2.  **Feedback:** This "wet" signal is scaled down by the `DSP_FBACK` value.
 3.  **Write:** The scaled-down feedback signal is added to the "dry" signal from Step 2, and the result is written back into the delay buffer at the current write position.
@@ -350,6 +357,7 @@ The echo effect is processed.
 This is where the `CHx_OUT` registers are used. The APU calculates the final mix for the left and right speakers, starting with two empty accumulators, `FinalLeft` and `FinalRight`.
 
 For each of the four channels:
+
 1.  It takes the channel's "pre-mix" output from Step 1.
 2.  It looks at the channel's `CHx_OUT` register (`F584` - `F587`).
 3.  The pre-mix signal is scaled by the `VOL_L` nibble (0-15) and added to the `FinalLeft` accumulator.
@@ -360,12 +368,19 @@ After this process is complete for all four channels, `FinalLeft` and `FinalRigh
 #### **Step 5: DSP Return (The "Wet" Signal)**
 
 The "wet" signal (the echo read from the delay buffer in Step 3) is now added to the final mix.
--   The wet signal is scaled by the `DSP_WET` register value.
--   This scaled echo is added to *both* the `FinalLeft` and `FinalRight` accumulators.
+
+- The wet signal is scaled by the `DSP_WET` register value.
+- This scaled echo is added to _both_ the `FinalLeft` and `FinalRight` accumulators.
 
 #### **Step 6: Master Volume & Output**
 
 This is the final stage before the sound is sent to the speakers.
--   The `FinalLeft` signal is scaled by the master left volume (`MIX_VOL_L`).
--   The `FinalRight` signal is scaled by the master right volume (`MIX_VOL_R`).
--   These two resulting values are the final samples sent to the digital-to-analog converter (DAC).
+
+- The `FinalLeft` signal is scaled by the master left volume (`MIX_VOL_L`).
+- The `FinalRight` signal is scaled by the master right volume (`MIX_VOL_R`).
+- These two resulting values are the final samples sent to the digital-to-analog converter (DAC).
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

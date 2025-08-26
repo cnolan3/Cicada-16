@@ -312,3 +312,9 @@ To support games larger than the CPU's addressable ROM space, the console uses a
 | F500-F57F     | **APU Core**  | **Registers for the 4 sound channels (Pulse, Wave, Noise)** |
 | F580-F59F     | **APU Mixer** | **Master volume, panning, and mixing controls**             |
 | F5A0-F5FF     | **APU DSP**   | **Control registers for the DSP (echo/delay)**              |
+
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

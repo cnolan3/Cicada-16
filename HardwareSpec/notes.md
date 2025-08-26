@@ -42,3 +42,9 @@ The following ideas are things that I think may be appropriate to add to a possi
   - increase wave sample size from 4 bits to 8, increase wave ram
 - Advanced DSP effects
 - Hardware multiplication/division
+
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

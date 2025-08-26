@@ -87,3 +87,9 @@ This mode enables advanced programming techniques by allowing the game to modify
   1.  It sets a hardware latch that re-routes the CPU's interrupt vector lookups to a fixed location in Work RAM Bank 0 (WRAM0): **`0xC000 - 0xC01F`**.
   2.  It uses the DMA controller to automatically copy the 32-byte vector table from the cartridge ROM (`0x00E0`) to WRAM (`0xC000`) as a default starting point.
 - **Flexibility**: Because the interrupt table is in RAM, the game can overwrite any of these vector addresses at any time to point to different handler routines, allowing for dynamic, state-based interrupt handling.
+
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

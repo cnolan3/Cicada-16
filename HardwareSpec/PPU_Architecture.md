@@ -246,3 +246,8 @@ After all 160 visible scanlines have been drawn, the PPU enters the V-Blank peri
 -   **V-Blank Interrupt:** The PPU sets the V-Blank flag in the `IF` register (`F201`, Bit 0). This is the most important interrupt in the system, as it signals to the game that it is time to prepare all the data for the next frame.
 
 After the V-Blank period ends, the `LY` register wraps back to 0, and the entire frame rendering process begins again.
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

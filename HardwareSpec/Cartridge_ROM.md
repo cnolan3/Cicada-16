@@ -44,3 +44,9 @@ The 32-byte block from `0x00E0` to `0x00FF` is reserved for the Interrupt Vector
 The Cicada-16 supports two different modes for handling interrupts ("Standard" and "Enhanced"), which control whether this table is used directly from ROM or copied to RAM for dynamic modification. The desired mode is selected via a flag in the cartridge header (Bit 7 of byte `0x002C`).
 
 For a complete explanation of the interrupt system, vector table layout, and handling modes, see the **`Interrupts.md`** document.
+
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

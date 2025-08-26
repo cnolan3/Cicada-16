@@ -185,3 +185,9 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | HALT     |          | 2     | 8      | Halts CPU until an interrupt occurs. Low power mode. (Prefixed) |
 | ID       |          | 1     | 4      | Disable interrupts.                                  |
 | IE       |          | 1     | 4      | Enable interrupts.                                   |
+
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

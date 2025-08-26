@@ -72,3 +72,9 @@ Once roles are established, the Master console initiates all data transfers by s
 2.  The hardware will immediately and automatically set the `SC.CONNECTED` bit back to 0.
 3.  This change triggers the **Link Status Interrupt**.
 4.  The game's interrupt handler can then gracefully exit the multiplayer session (e.g., "Your friend has disconnected.") instead of crashing or hanging while waiting for a transfer that will never complete.
+
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

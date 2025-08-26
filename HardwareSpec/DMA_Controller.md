@@ -50,3 +50,9 @@ The `DMA_LEN` register at `F00E` typically holds the number of bytes (1-255) for
 -   **OAM DMA:** If `DMA_LEN` is set to `0`, this triggers a special, high-speed **OAM DMA**. This is the primary way to update sprite data. In this mode:
     -   The DMA controller will automatically copy **512 bytes** from the `DMA_SRC` address.
     -   The destination is fixed to the start of OAM memory (`F600`). The `DMA_DST` register is ignored.
+
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

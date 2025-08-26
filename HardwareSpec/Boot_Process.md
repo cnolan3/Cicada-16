@@ -49,3 +49,9 @@ The code on the Boot ROM executes the following steps in order:
    - **Map the game cartridge** to the main memory map, starting at address 0x0000.
 9. **Jump to Game Code**: The very last act of the Boot ROM is to execute a JMP 0x0100 instruction. This transfers control to the game's official entry point. The game is now responsible for enabling its own interrupts when it is ready.
 
+
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
