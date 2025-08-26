@@ -1,6 +1,6 @@
-# **Cricket-16 CPU - Instruction Set Architecture (ISA)**
+# **Cicada-16 CPU - Instruction Set Architecture (ISA)**
 
-**This document outlines the instruction set for the "Cricket-16" fantasy console's main processor. The architecture is a 16-bit design, intended to be reminiscent of late 80s / early 90s home consoles. It features a clean register set and instructions that operate on 16-bit words by default, with support for 8-bit byte manipulation.**
+**This document outlines the instruction set for the "Cicada-16" fantasy console's main processor. The architecture is a 16-bit design, intended to be reminiscent of late 80s / early 90s home consoles. It features a clean register set and instructions that operate on 16-bit words by default, with support for 8-bit byte manipulation.**
 
 ## **1. CPU Registers**
 
@@ -31,7 +31,7 @@
 
 The master system clock frequency is **8.388608 MHz** (2^23 Hz).
 
-The Cricket-16 CPU features a simple, **non-pipelined** architecture. Each instruction is fetched, decoded, and executed completely before the next one begins. This design choice prioritizes simplicity and predictable timing over high performance.
+The Cicada-16 CPU features a simple, **non-pipelined** architecture. Each instruction is fetched, decoded, and executed completely before the next one begins. This design choice prioritizes simplicity and predictable timing over high performance.
 
 The core timing of the system is measured in two units:
 

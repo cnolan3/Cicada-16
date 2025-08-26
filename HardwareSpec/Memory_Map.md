@@ -1,4 +1,4 @@
-# **Cricket-16 Memory Map**
+# **Cicada-16 Memory Map**
 
 ## **Memory Map**
 

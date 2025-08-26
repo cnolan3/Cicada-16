@@ -1,8 +1,8 @@
-# **Cricket-16 Interrupt System**
+# **Cicada-16 Interrupt System**
 
 ## **1. Introduction**
 
-Interrupts are a mechanism that allows the CPU to pause its current task to handle a high-priority hardware event, such as the PPU finishing a frame (V-Blank). This allows for efficient, event-driven programming and is the primary way that games on the Cricket-16 handle graphical updates, sound, and other timed events.
+Interrupts are a mechanism that allows the CPU to pause its current task to handle a high-priority hardware event, such as the PPU finishing a frame (V-Blank). This allows for efficient, event-driven programming and is the primary way that games on the Cicada-16 handle graphical updates, sound, and other timed events.
 
 ## **2. The Interrupt Process**
 
@@ -27,7 +27,7 @@ The process for triggering and handling an interrupt or CPU fault is as follows:
 
 ## **3. Interrupt Sources**
 
-The Cricket-16 has six hardware interrupt sources, controlled via the `IE` and `IF` registers.
+The Cicada-16 has six hardware interrupt sources, controlled via the `IE` and `IF` registers.
 
 | Bit | Name          | Description                                                                 |
 | :-- | :------------ | :-------------------------------------------------------------------------- |
@@ -68,7 +68,7 @@ The Interrupt Vector Table is a 32-byte block of memory containing the 16-bit ad
 
 ## **6. Vector Table Location Modes**
 
-The Cricket-16 supports two modes for the location of the interrupt vector table, determined by a flag in the cartridge header. This provides a choice between simplicity and advanced functionality.
+The Cicada-16 supports two modes for the location of the interrupt vector table, determined by a flag in the cartridge header. This provides a choice between simplicity and advanced functionality.
 
 ### **Standard Mode (ROM-Based)**
 

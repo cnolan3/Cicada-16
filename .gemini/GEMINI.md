@@ -1,4 +1,4 @@
-# Project: Cricket-16 fantasy console and emulator
+# Project: Cicada-16 fantasy console and emulator
 
 ## Context Overview:
 

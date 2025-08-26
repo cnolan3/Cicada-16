@@ -1,6 +1,6 @@
-# **Cricket-16 Serial Communication**
+# **Cicada-16 Serial Communication**
 
-The Cricket-16 features a serial communication interface that allows two consoles to be linked together for multiplayer gameplay. The system is designed to be hot-swappable, with a protocol that handles connection, role negotiation, and disconnection gracefully.
+The Cicada-16 features a serial communication interface that allows two consoles to be linked together for multiplayer gameplay. The system is designed to be hot-swappable, with a protocol that handles connection, role negotiation, and disconnection gracefully.
 
 ## **1. Hardware Registers**
 

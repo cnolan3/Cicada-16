@@ -1,6 +1,6 @@
 # Project Notes & Future Ideas
 
-**Disclaimer:** This document contains thoughts and potential ideas for the Cricket-16 project. The notes here are **not** part of the official hardware specification unless explicitly integrated into the main `HardwareSpec` documents.
+**Disclaimer:** This document contains thoughts and potential ideas for the Cicada-16 project. The notes here are **not** part of the official hardware specification unless explicitly integrated into the main `HardwareSpec` documents.
 
 ## Missing pieces and next steps
 
@@ -16,7 +16,7 @@ Memory Routines: Optimized block copy (memcpy) or block set (memset) that might 
 
 Decompression: A simple decompression routine (like RLE) would be a fantastic feature, allowing devs to pack more graphics into their ROMs.
 
-Plan the Toolchain: How will developers create games for the Cricket-16?
+Plan the Toolchain: How will developers create games for the Cicada-16?
 
 Assembler: You'll need to define the syntax for an assembler that can translate your mnemonics into the opcodes you've designed.
 
@@ -32,7 +32,7 @@ Create a simple "stub" PPU that can at least render a basic tilemap to a window 
 
 ## Possible Sequel Console
 
-The following ideas are things that I think may be appropriate to add to a possible sequel console ("Cricket-16 pro"?).
+The following ideas are things that I think may be appropriate to add to a possible sequel console ("Cicada-16 pro"?).
 
 - Double buffered OAM/CRAM/VRAM
   - Double buffering all of the RAM areas shared between the CPU and the PPU, removes the need to "race the beam", no need to try to fit all visual update logic into the V-blank timing of each frame.

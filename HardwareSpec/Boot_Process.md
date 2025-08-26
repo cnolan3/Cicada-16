@@ -1,6 +1,6 @@
 ## **Boot Process and Memory Mapping**
 
-This document outlines the sequence of events that occurs when the Cricket-16 console is powered on, from the initial execution of internal code to the final handover to the game cartridge.
+This document outlines the sequence of events that occurs when the Cicada-16 console is powered on, from the initial execution of internal code to the final handover to the game cartridge.
 
 ### **Boot ROM Memory Map Overview**
 

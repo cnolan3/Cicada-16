@@ -1,6 +1,6 @@
-# **Cricket-16 PPU - Architecture**
+# **Cicada-16 PPU - Architecture**
 
-This document describes the design of the Picture Processing Unit (PPU) for the Cricket-16 fantasy console. The PPU is responsible for rendering all graphics to the screen. The design is inspired by 16-bit era consoles, featuring multiple background layers, sprites, and a palette-based color system.
+This document describes the design of the Picture Processing Unit (PPU) for the Cicada-16 fantasy console. The PPU is responsible for rendering all graphics to the screen. The design is inspired by 16-bit era consoles, featuring multiple background layers, sprites, and a palette-based color system.
 
 ## **1. Core Components**
 

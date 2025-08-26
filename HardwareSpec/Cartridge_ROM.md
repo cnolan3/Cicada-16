@@ -1,6 +1,6 @@
-## **Cricket-16 Cartridge ROM Layout**
+## **Cicada-16 Cartridge ROM Layout**
 
-This document specifies the internal memory layout of a Cricket-16 game cartridge. It details the mandatory header, the structure of the game data, and the implementation of the hybrid interrupt vector table system.
+This document specifies the internal memory layout of a Cicada-16 game cartridge. It details the mandatory header, the structure of the game data, and the implementation of the hybrid interrupt vector table system.
 
 ### **Cartridge Memory Overview**
 
@@ -13,7 +13,7 @@ This document specifies the internal memory layout of a Cricket-16 game cartridg
 
 ### **1. Cartridge Header (0x0000 - 0x00DF)**
 
-Every Cricket-16 cartridge must begin with a header. The console's internal boot ROM reads this header on startup to verify the cartridge's integrity and configure the hardware.
+Every Cicada-16 cartridge must begin with a header. The console's internal boot ROM reads this header on startup to verify the cartridge's integrity and configure the hardware.
 
 | Address Range | Size | Field Name              | Description                                                                                                                       |
 | :------------ | :--- | :---------------------- | :-------------------------------------------------------------------------------------------------------------------------------- |
@@ -41,6 +41,6 @@ The rest of the cartridge ROM is dedicated to the game's program code, graphics 
 
 The 32-byte block from `0x00E0` to `0x00FF` is reserved for the Interrupt Vector Table. This table contains the starting addresses for the game's interrupt service routines.
 
-The Cricket-16 supports two different modes for handling interrupts ("Standard" and "Enhanced"), which control whether this table is used directly from ROM or copied to RAM for dynamic modification. The desired mode is selected via a flag in the cartridge header (Bit 7 of byte `0x002C`).
+The Cicada-16 supports two different modes for handling interrupts ("Standard" and "Enhanced"), which control whether this table is used directly from ROM or copied to RAM for dynamic modification. The desired mode is selected via a flag in the cartridge header (Bit 7 of byte `0x002C`).
 
 For a complete explanation of the interrupt system, vector table layout, and handling modes, see the **`Interrupts.md`** document.

@@ -1,4 +1,4 @@
-# Cricket-16 Emulator Development Roadmap
+# Cicada-16 Emulator Development Roadmap
 
 ## Phase 1: The Core Foundation
 
@@ -36,7 +36,7 @@ This phase focuses on creating a program that can successfully execute machine c
 This phase is about verifying that the core components from Phase 1 are working together correctly.
 
 **5. Create a "Hello, World" Test ROM:**
-*   **Goal:** Create a very simple program in Cricket-16 assembly to test the CPU.
+*   **Goal:** Create a very simple program in Cicada-16 assembly to test the CPU.
 *   **Steps:**
     *   You will need a basic assembler. You can either write a very simple one or, for the first test, **manually assemble the bytes by hand**.
     *   The program should be trivial. For example:

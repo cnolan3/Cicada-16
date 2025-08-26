@@ -1,6 +1,6 @@
-# **Cricket-16 DMA - Architecture**
+# **Cicada-16 DMA - Architecture**
 
-This document describes the design and functionality of the Direct Memory Access (DMA) controller for the Cricket-16 console. The DMA unit is responsible for performing fast memory copy operations, which significantly offloads the CPU and is essential for high-performance graphics.
+This document describes the design and functionality of the Direct Memory Access (DMA) controller for the Cicada-16 console. The DMA unit is responsible for performing fast memory copy operations, which significantly offloads the CPU and is essential for high-performance graphics.
 
 ## **1. DMA Registers (F00A–F00F)**
 

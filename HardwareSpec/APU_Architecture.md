@@ -1,6 +1,6 @@
-# **Cricket-16 APU - Architecture**
+# **Cicada-16 APU - Architecture**
 
-This document describes the design of the Audio Processing Unit (APU) for the Cricket-16 fantasy console. The APU is responsible for generating all sound and music. The design is inspired by classic sound chips from the 8-bit and 16-bit eras, featuring four independent sound channels with ADSR envelope control and a simple DSP for effects.
+This document describes the design of the Audio Processing Unit (APU) for the Cicada-16 fantasy console. The APU is responsible for generating all sound and music. The design is inspired by classic sound chips from the 8-bit and 16-bit eras, featuring four independent sound channels with ADSR envelope control and a simple DSP for effects.
 
 ## **1. Core Features**
 

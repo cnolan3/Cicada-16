@@ -1,4 +1,4 @@
-# **Cricket-16 System Library**
+# **Cicada-16 System Library**
 
 This document describes the functions that are available in the permanent System Library, which is located in its own dedicated, read-only RAM region at **`E800-EFFF`**.
 
@@ -90,7 +90,7 @@ Serial_ISR:
 
 ## **Advanced Arithmetic Functions**
 
-Since the Cricket-16 CPU does not have hardware support for multiplication or division, the System Library provides highly optimized routines for these common operations.
+Since the Cicada-16 CPU does not have hardware support for multiplication or division, the System Library provides highly optimized routines for these common operations.
 
 ### `fastMultiply16`
 

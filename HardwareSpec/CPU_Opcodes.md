@@ -1,6 +1,6 @@
-# **Cricket-16 CPU - Opcode Map**
+# **Cicada-16 CPU - Opcode Map**
 
-**This document defines the machine code (byte code) encoding for the Cricket-16 Instruction Set Architecture. It reflects a hybrid accumulator/general-purpose architecture.**
+**This document defines the machine code (byte code) encoding for the Cicada-16 Instruction Set Architecture. It reflects a hybrid accumulator/general-purpose architecture.**
 
 ## **Opcode Encoding Philosophy**
 
