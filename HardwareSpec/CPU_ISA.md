@@ -55,7 +55,7 @@ All instruction cycle counts in this document are given in **T-cycles**.
 
 ### **Load/Store Instructions**
 
-**These instructions move data between registers and memory. Memory is byte-addressable. 16-bit word accesses must be aligned to an even address. Attempting an unaligned 16-bit access will trigger a Bus Error fault. Cycle counts are listed as `HRAM/Other` for instructions that can target memory (HRAM = `FC00-FFFF`; Other = all non-HRAM regions). If only one value is shown, the instruction does not access HRAM-addressable memory.**
+**These instructions move data between registers and memory. Memory is byte-addressable. 16-bit word accesses must be aligned to an even address. Attempting an unaligned 16-bit access will trigger a Bus Error fault. Cycle counts are listed as `HRAM/Other` for instructions that can target memory (HRAM = `FE00-FFFF`; Other = all non-HRAM regions). If only one value is shown, the instruction does not access HRAM-addressable memory.**
 
 | Mnemonic          | Operands       | Bytes | Cycles | Description                                                                                               |
 | :---------------- | :------------- | :---- | :----- | :-------------------------------------------------------------------------------------------------------- |

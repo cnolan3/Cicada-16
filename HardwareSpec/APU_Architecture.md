@@ -29,7 +29,7 @@ The pitch of the two pulse channels is determined by the 16-bit value in their r
 
 **`Output Frequency (Hz) = 4,194,304 / (64 * (65536 - FREQ_REG))`**
 
-Where `FREQ_REG` is the 16-bit value from the `F5x4-F5x5` register. This formula allows for fine-grained control over the pitch, covering a wide range of musical notes.
+Where `FREQ_REG` is the 16-bit value from the `F1x4-F1x5` register. This formula allows for fine-grained control over the pitch, covering a wide range of musical notes.
 
 **Example Calculation:**
 
@@ -60,7 +60,7 @@ The sweep unit is controlled by the `CH0_SWP` register.
 
 The wave channel offers the most sonic flexibility by playing back a small, user-defined waveform. This is ideal for creating unique instrument tones or simple speech/sound effects.
 
-- **Wave RAM:** A 2-Kilobyte area of memory at `E000-E7FF` is dedicated to waveform data. This RAM is organized as a bank of 64 unique waveforms, indexed from 0 to 63.
+- **Wave RAM:** A 512-byte area of memory at `FC00-FDFF` is dedicated to waveform data. This RAM is organized as a bank of 16 unique waveforms, indexed from 0 to 15.
 - **Waveform Format:** Each waveform is 32 bytes long and contains 64 sequential 4-bit samples. The samples are packed two per byte, with the high nibble (bits 7-4) being the first sample and the low nibble (bits 3-0) being the second. The 4-bit sample values represent amplitude, from 0 (lowest point) to 15 (highest point).
 - **Playback:** When the channel is triggered via `KEY_ON`, the APU begins reading the 64 samples of the selected waveform sequentially. The playback speed is controlled by the `CH2_FREQ` register. When the 64th sample is played, the playback loops back to the first sample. The output of the wave channel is the current sample's 4-bit value, scaled by the channel's current 4-bit ADSR envelope volume.
 - **Volume Envelope:** This channel includes the same hardware ADSR envelope found on the Pulse and Noise channels.
@@ -77,7 +77,7 @@ This simplifies to the final formula:
 
 **`Output Pitch (Hz) = 4,194,304 / (64 * (65536 - FREQ_REG))`**
 
-Where `FREQ_REG` is the 16-bit value from the `F524-F525` register.
+Where `FREQ_REG` is the 16-bit value from the `F124-F125` register.
 
 **Note:** Because this formula is identical to the one for the pulse channels, the same note frequency values from the System Library's lookup table can be used for Channel 2.
 
@@ -145,7 +145,7 @@ The DSP operates on the final mixed audio signal just before it is sent to the s
   - **`Delay (seconds) = Delay (samples) / 32768`**
   - This allows for a delay time ranging from ~0.12ms to ~31.25ms. This is short, but useful for creating chorus, flange, or simple reverb-like spatial effects.
 
-## **7. APU Registers (F500–F5FF)**
+## **7. APU Registers (F100–F17F)**
 
 This section details the memory-mapped registers used to control all APU functions, starting with a high-level overview.
 
@@ -153,30 +153,30 @@ This section details the memory-mapped registers used to control all APU functio
 
 | Address   | Name             | Description                                                |
 | :-------- | :--------------- | :--------------------------------------------------------- |
-| F500      | CH0_CTRL         | Pulse A: Control Register                                  |
-| F501-F502 | CH0_ADSR         | ADSR settings for Channel 0                                |
-| F503      | CH0_SWP          | Sweep settings for Channel 0                               |
-| F504-F505 | CH0_FREQ         | 16-bit frequency for Channel 0                             |
-| F510      | CH1_CTRL         | Pulse B: Control Register                                  |
-| F511-F512 | CH1_ADSR         | ADSR settings for Channel 1                                |
-| F514-F515 | CH1_FREQ         | 16-bit frequency for Channel 1                             |
-| F520      | CH2_CTRL         | Wave channel: Control Register                             |
-| F521-F522 | CH2_ADSR         | ADSR settings for Channel 2                                |
-| F524-F525 | CH2_FREQ         | 16-bit frequency for Channel 2                             |
-| F530      | CH3_CTRL         | Noise channel: Control Register                            |
-| F531-F532 | CH3_ADSR         | ADSR settings for Channel 3                                |
-| F580      | MIX_CTRL         | Master APU enable, individual channel enables              |
-| F581      | MIX_VOL_L        | Master volume Left (0-15)                                  |
-| F582      | MIX_VOL_R        | Master volume Right (0-15)                                 |
-| F584-F587 | CH0_OUT..CH3_OUT | Per-channel stereo volume/panning control                  |
-| F5A0      | DSP_CTRL         | DSP Control Register                                       |
-| F5A1      | DSP_DELAY        | Delay time/length (controls read offset into delay buffer) |
-| F5A2      | DSP_FBACK        | Feedback level (0-15). Controls echo decay.                |
-| F5A3      | DSP_WET          | Wet signal mix level (0-15). Controls echo volume.         |
+| F100      | CH0_CTRL         | Pulse A: Control Register                                  |
+| F101-F102 | CH0_ADSR         | ADSR settings for Channel 0                                |
+| F103      | CH0_SWP          | Sweep settings for Channel 0                               |
+| F104-F105 | CH0_FREQ         | 16-bit frequency for Channel 0                             |
+| F110      | CH1_CTRL         | Pulse B: Control Register                                  |
+| F111-F112 | CH1_ADSR         | ADSR settings for Channel 1                                |
+| F114-F115 | CH1_FREQ         | 16-bit frequency for Channel 1                             |
+| F120      | CH2_CTRL         | Wave channel: Control Register                             |
+| F121-F122 | CH2_ADSR         | ADSR settings for Channel 2                                |
+| F124-F125 | CH2_FREQ         | 16-bit frequency for Channel 2                             |
+| F130      | CH3_CTRL         | Noise channel: Control Register                            |
+| F131-F132 | CH3_ADSR         | ADSR settings for Channel 3                                |
+| F140      | MIX_CTRL         | Master APU enable, individual channel enables              |
+| F141      | MIX_VOL_L        | Master volume Left (0-15)                                  |
+| F142      | MIX_VOL_R        | Master volume Right (0-15)                                 |
+| F144-F147 | CH0_OUT..CH3_OUT | Per-channel stereo volume/panning control                  |
+| F150      | DSP_CTRL         | DSP Control Register                                       |
+| F151      | DSP_DELAY        | Delay time/length (controls read offset into delay buffer) |
+| F152      | DSP_FBACK        | Feedback level (0-15). Controls echo decay.                |
+| F153      | DSP_WET          | Wet signal mix level (0-15). Controls echo volume.         |
 
 ### **Channel Register Details**
 
-#### **F500: CH0_CTRL (Pulse A)**
+#### **F100: CH0_CTRL (Pulse A)**
 
 | Bit | Name   | Description                                                                                             |
 | :-- | :----- | :------------------------------------------------------------------------------------------------------ |
@@ -359,7 +359,7 @@ This is where the `CHx_OUT` registers are used. The APU calculates the final mix
 For each of the four channels:
 
 1.  It takes the channel's "pre-mix" output from Step 1.
-2.  It looks at the channel's `CHx_OUT` register (`F584` - `F587`).
+2.  It looks at the channel's `CHx_OUT` register (`F144` - `F147`).
 3.  The pre-mix signal is scaled by the `VOL_L` nibble (0-15) and added to the `FinalLeft` accumulator.
 4.  The pre-mix signal is scaled by the `VOL_R` nibble (0-15) and added to the `FinalRight` accumulator.
 

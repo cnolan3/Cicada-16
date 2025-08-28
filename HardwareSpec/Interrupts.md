@@ -9,11 +9,11 @@ Interrupts are a mechanism that allows the CPU to pause its current task to hand
 The process for triggering and handling an interrupt or CPU fault is as follows:
 
 1.  A specific hardware event occurs (e.g., the V-Blank period begins) OR a CPU fault condition is detected (e.g., unaligned memory access).
-2.  For hardware interrupts, the hardware automatically sets the corresponding flag bit in the **`IF` (Interrupt Flag)** register at `F201`. For CPU faults, the fault condition is directly detected by the CPU.
+2.  For hardware interrupts, the hardware automatically sets the corresponding flag bit in the **`IF` (Interrupt Flag)** register at `F021`. For CPU faults, the fault condition is directly detected by the CPU.
 3.  At the end of each instruction cycle, the CPU checks for pending interrupts or faults.
     - **For Hardware Interrupts:** An interrupt will be serviced if three conditions are met:
       a. The master interrupt switch is enabled (which is done by the `EI` instruction).
-      b. The specific interrupt's bit is set to `1` in the **`IE` (Interrupt Enable)** register at `F200`.
+      b. The specific interrupt's bit is set to `1` in the **`IE` (Interrupt Enable)** register at `F020`.
       c. The specific interrupt's bit is set to `1` in the **`IF` (Interrupt Flag)** register.
     - **For CPU Faults:** Faults are generally non-maskable and will be serviced immediately, regardless of the master interrupt switch or `IE`/`IF` registers.
 4.  If conditions are met, the CPU performs the following actions:
@@ -25,9 +25,9 @@ The process for triggering and handling an interrupt or CPU fault is as follows:
 6.  Inside the ISR, the programmer is responsible for manually clearing the interrupt flag in the `IF` register by writing a `1` to its bit. This prevents the interrupt from immediately re-triggering after the ISR is complete. (This step is not applicable for CPU Faults, as they are not tied to `IF` bits).
 7.  The ISR/Fault Handler must end with the `RETI` (Return from Interrupt) instruction, which pops the original F register, then the PC from the stack, and re-enables the master interrupt switch.
 
-## **3. Interrupt Sources**
+## **3. Interrupt Sources and Registers**
 
-The Cicada-16 has six hardware interrupt sources, controlled via the `IE` and `IF` registers.
+The Cicada-16 has six hardware interrupt sources, controlled via the `IE` (`F020`) and `IF` (`F021`) registers.
 
 | Bit | Name          | Description                                                                 |
 | :-- | :------------ | :-------------------------------------------------------------------------- |
@@ -38,13 +38,39 @@ The Cicada-16 has six hardware interrupt sources, controlled via the `IE` and `I
 | 1   | **H-Blank**   | Occurs when the PPU enters the H-Blank period.                              |
 | 0   | **V-Blank**   | Occurs when the PPU enters the V-Blank period.                              |
 
+### **IE (F020) - Interrupt Enable Register**
+This register controls whether a specific hardware interrupt is allowed to trigger the CPU's interrupt sequence. Setting a bit to `1` enables the corresponding interrupt.
+
+| Bit | Name          | Type | Function                                  |
+| :-- | :------------ | :--- | :---------------------------------------- |
+| 7-6 | -             | R    | Unused                                    |
+| 5   | **Link Status** | R/W  | Enable Link Status Interrupt              |
+| 4   | **Joypad**    | R/W  | Enable Joypad Interrupt                   |
+| 3   | **Serial**    | R/W  | Enable Serial Transfer Complete Interrupt |
+| 2   | **Timer**     | R/W  | Enable Timer Overflow Interrupt           |
+| 1   | **H-Blank**   | R/W  | Enable PPU H-Blank Interrupt              |
+| 0   | **V-Blank**   | R/W  | Enable PPU V-Blank Interrupt              |
+
+### **IF (F021) - Interrupt Flag Register**
+This register holds the flags for pending hardware interrupts. When a hardware event occurs, the corresponding bit is set to `1` by the hardware. It is the programmer's responsibility to clear the flag by writing a `1` to the bit inside the ISR.
+
+| Bit | Name          | Type | Function                                                                                                                            |
+| :-- | :------------ | :--- | :---------------------------------------------------------------------------------------------------------------------------------- |
+| 7-6 | -             | R    | Unused                                                                                                                              |
+| 5   | **Link Status** | R/W  | Link Status Interrupt Flag. Set when the `CONNECTED` bit in the `SC` register changes state.                                        |
+| 4   | **Joypad**    | R/W  | Joypad Interrupt Flag. Set when a joypad button is pressed.                                                                         |
+| 3   | **Serial**    | R/W  | Serial Transfer Complete Flag. Set when a serial data transfer finishes.                                                            |
+| 2   | **Timer**     | R/W  | Timer Overflow Flag. Set when the `TIMA` register overflows.                                                                        |
+| 1   | **H-Blank**   | R/W  | PPU H-Blank Flag. Set when the PPU enters the H-Blank period.                                                                       |
+| 0   | **V-Blank**   | R/W  | PPU V-Blank Flag. Set when the PPU enters the V-Blank period.                                                                       |
+
 ## **4. CPU Faults**
 
 CPU Faults are critical, non-maskable events triggered by illegal or dangerous operations detected by the processor. Unlike hardware interrupts, they are not controlled by the `IE` and `IF` registers and will always be serviced immediately. When a fault occurs, the CPU pushes the PC and Flags register to the stack and jumps to the corresponding fault handler in the Interrupt Vector Table.
 
 - **Bus Error:** Triggered when a 16-bit word (e.g., from an `LD.w` instruction) is accessed from an odd memory address. All 16-bit memory accesses must be aligned to an even address.
 - **Illegal Instruction:** Triggered when the CPU attempts to execute an opcode that is not defined in the instruction set, including any reserved or unused opcode values.
-- **Protected Memory:** Triggered when a write operation is attempted on a memory region that is designated as read-only. This includes the cartridge ROM space (`0x0000-0x7FFF`), the System Library RAM (`E800-EFFF`) after boot, and the PPU/APU register space (`0xF000-0xF1FF`) under normal operation.
+- **Protected Memory:** Triggered when a write operation is attempted on a memory region that is designated as read-only. This includes the cartridge ROM space (`0x0000-0x7FFF`), the System Library RAM (`E000-EFFF`) after boot, and the PPU/APU register space (`F080-F0FF` and `F100-F17F`) under normal operation.
 - **Stack Overflow:** Triggered if the Stack Pointer (SP) register decrements below the base of the stack memory region (`0xC000` for WRAM0 or `0xD000` for WRAM1). This helps catch runaway recursive calls or stack corruption before it overwrites other critical memory.
 
 ## **5. Interrupt Vector Table**

@@ -12,15 +12,15 @@ This table describes the memory map from the CPU's perspective while the interna
 | 0x3FE0 - 0x3FFF | Internal Interrupt Vector Table | Hardwired  | Points to ISRs within the Boot ROM. See `Interrupts.md` for the table layout.        |
 | 0x6000 - 0x7FFF | VRAM Window                     | Read/Write | Locked to VRAM Bank 0 during boot. The `VRAM_BANK` register is ignored.              |
 | 0xA000 - 0xBFFF | Work RAM (WRAM0)                | Read/Write | The WRAM1 window (`D000-DFFF`) is unmapped during boot.                              |
-| 0xE000 - 0xEFFF | Wave RAM                        | Read/Write | Available for boot sound data.                                                       |
-| 0xF000 - 0xF0FF | I/O Registers                   | Read/Write |                                                                                      |
-| 0xF100 - 0xF1FF | PPU Registers                   | Read/Write |                                                                                      |
-| 0xF200 - 0xF201 | IE & IF Registers               | Read/Write |                                                                                      |
-| 0xF300 - 0xF4FF | CRAM                            | Read/Write | CPU writes should be timed to V-Blank/H-Blank.                                       |
-| 0xF500 - 0xF5FF | APU Registers                   | Read/Write |                                                                                      |
+| 0xE000 - 0xEFFF | System Library RAM              | Read/Write | Copied here during boot. Made Read-Only after handover.                              |
+| 0xF000 - 0xF07F | I/O Registers                   | Read/Write |                                                                                      |
+| 0xF080 - 0xF0FF | PPU Registers                   | Read/Write |                                                                                      |
+| 0xF100 - 0xF17F | APU Registers                   | Read/Write |                                                                                      |
+| 0xF400 - 0xF5FF | CRAM                            | Read/Write | CPU writes should be timed to V-Blank/H-Blank.                                       |
 | 0xF600 - 0xF7FF | OAM (Sprite Attribute Memory)   | Read/Write |                                                                                      |
 | 0xF800 - 0xFBFF | DSP Delay Buffer                | Read/Write |                                                                                      |
-| 0xFC00 - 0xFFFF | (Unmapped)                      | -          | HRAM is not available during the boot sequence.                                      |
+| 0xFC00 - 0xFDFF | Wave RAM                        | Read/Write | Available for boot sound data.                                                       |
+| 0xFE00 - 0xFFFF | (Unmapped)                      | -          | HRAM is not available during the boot sequence.                                      |
 
 ###
 
@@ -37,7 +37,7 @@ During the boot sequence, the CPU operates in a special "Boot Mode" for interrup
 The code on the Boot ROM executes the following steps in order:
 
 1. **Hardware Initialization**: From power-on, the Boot ROM has full access to WRAM, VRAM, CRAM, OAM, and all I/O registers. It performs basic hardware setup, which includes clearing WRAM and initializing the Stack Pointer (SP) to the top of WRAM0 (e.g., 0xCFFF).
-2. **System Library Copy**: The Boot ROM uses the DMA controller to copy the first 2 KiB of its own address space (which contains the System Library functions) to the dedicated System Library RAM at `E800-EFFF`. After this, it sets the PPU and APU registers to a known-default, disabled state.
+2. **System Library Copy**: The Boot ROM uses the DMA controller to copy the 4 KiB System Library from its internal ROM to the dedicated System Library RAM at `E000-EFFF`. After this, it sets the PPU and APU registers to a known-default, disabled state.
 3. **Display Boot Animation**: The Boot ROM displays the console logo, enables interrupts (EI), and uses its internal V-Blank ISR to perform a brief startup animation. It may read the **Boot Animation ID** from the cartridge header to select a specific visual effect.
 4. **Cartridge Detection & Verification**: While the animation is playing, the Boot ROM checks for a cartridge and verifies its header.
 5. **Configure Game Interrupt Mode**: It reads the "Interrupt Mode" flag from the cartridge header and sets an internal hardware latch that determines where the CPU will look for interrupt vectors once the game starts (either the cartridge ROM or WRAM).

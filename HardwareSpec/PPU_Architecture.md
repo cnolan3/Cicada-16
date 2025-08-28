@@ -4,14 +4,14 @@ This document describes the design of the Picture Processing Unit (PPU) for the 
 
 ## **1. Core Components**
 
-- **VRAM (Video RAM):** 32 KiB of dedicated, bank-switched RAM. An 8 KiB window of VRAM is accessible to the CPU at any time at `8000-9FFF` for writing and reading data; the active bank for this window is selected via the `VRAM_BANK` I/O register. For rendering, the PPU has a wider internal address bus and can access the entire 32 KiB of VRAM simultaneously. VRAM holds the tile data (the 8x8 pixel building blocks for graphics) and the tilemaps (the data that arranges tiles into background layers).
+- **VRAM (Video RAM):** 32 KiB of dedicated, bank-switched RAM. An 8 KiB window of VRAM is accessible to the CPU at any time at `9000-AFFF` for writing and reading data; the active bank for this window is selected via the `VRAM_BANK` I/O register. For rendering, the PPU has a wider internal address bus and can access the entire 32 KiB of VRAM simultaneously. VRAM holds the tile data (the 8x8 pixel building blocks for graphics) and the tilemaps (the data that arranges tiles into background layers).
 - **OAM (Object Attribute Memory):** 512 bytes of dedicated RAM at F600-F7FF used to store the attributes for all 64 hardware sprites (position, tile index, palette, etc.).
 
 ### **1.1. Memory Access Conflicts**
 
 Accessing OAM/VRAM/CRAM (reading or writing) by the CPU is generally safe during V-Blank and H-Blank periods. However, if the CPU attempts to write to OAM/VRAM/CRAM while the PPU is in **Mode 2 (OAM Scan)** or **Mode 3 (Drawing Pixels)**, the write will still occur, but the PPU may read corrupted or inconsistent data for the current frame, leading to **graphical glitches** on the screen. This behavior is intentional and requires developers to synchronize OAM updates with the PPU's rendering cycle.
 
-- **CRAM (Color RAM / Palette RAM):** 512 bytes of RAM located at `F300-F4FF` in the main memory map. It holds the 256 16-bit color palette entries.
+- **CRAM (Color RAM / Palette RAM):** 512 bytes of RAM located at `F400-F5FF` in the main memory map. It holds the 256 16-bit color palette entries.
 - **Screen Resolution:** 240x160 pixels.
 - **Refresh Rate:** 60 Hz.
 
@@ -131,39 +131,39 @@ The PPU renders the final image by drawing the graphical layers in a specific or
 
 4.  **Sprites (Objects):** Sprites are the topmost layer, rendered over all background and window layers. Color #0 of a sprite's assigned sub-palette is always **transparent**. The sprite's priority flag (in its OAM data) can cause it to be rendered behind high-priority background tiles, but it is always drawn on top of low-priority tiles.
 
-## **7. PPU Registers (F100-F1FF)**
+## **7. PPU Registers (F080-F0FF)**
 
 These registers, mapped to the CPU's address space, control the PPU's operation.
 
 | Address | Name    | Description                                                                                                                                                                |
 | :------ | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| F100    | LCDC    | **LCD Control:** Master switch for the PPU. Contains bits to enable/disable the screen, background layers, sprites, and the window.                                        |
-| F101    | STAT    | **LCD Status:** Contains flags indicating the PPU's current mode (H-Blank, V-Blank, OAM Scan) and can be configured to trigger interrupts on specific events.              |
-| F104    | SCY0    | Background 0 - Vertical Scroll                                                                                                                                             |
-| F105    | SCX0    | Background 0 - Horizontal Scroll                                                                                                                                           |
-| F106    | SCY1    | Background 1 - Vertical Scroll                                                                                                                                             |
-| F107    | SCX1    | Background 1 - Horizontal Scroll                                                                                                                                           |
-| F108    | WINY    | **Window Y-Position:** The top edge of the Window layer.                                                                                                                   |
-| F109    | WINX    | **Window X-Position:** The left edge of the Window layer.                                                                                                                  |
-| F10A    | LY      | **LCD Y-Coordinate:** Indicates the current vertical scanline being drawn (Read-only). Ranges from 0 to ~180.                                                              |
-| F10B    | LYC     | **LY Compare:** The PPU compares LY with this value. If they match, a flag is set in the STAT register, which can trigger an interrupt. Useful for scanline-based effects. |
-| F112    | BG_MODE | **Background Mode:** Configures the size (dimensions) of the BG0 and BG1 tilemaps.                                                                                         |
-| F118    | BG_TMB  | **Background Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for BG0 (bits 3-0) and BG1 (bits 7-4).                                                            |
+| F080    | LCDC    | **LCD Control:** Master switch for the PPU. Contains bits to enable/disable the screen, background layers, sprites, and the window.                                        |
+| F081    | STAT    | **LCD Status:** Contains flags indicating the PPU's current mode (H-Blank, V-Blank, OAM Scan) and can be configured to trigger interrupts on specific events.              |
+| F082    | SCY0    | Background 0 - Vertical Scroll                                                                                                                                             |
+| F083    | SCX0    | Background 0 - Horizontal Scroll                                                                                                                                           |
+| F084    | SCY1    | Background 1 - Vertical Scroll                                                                                                                                             |
+| F085    | SCX1    | Background 1 - Horizontal Scroll                                                                                                                                           |
+| F086    | WINY    | **Window Y-Position:** The top edge of the Window layer.                                                                                                                   |
+| F087    | WINX    | **Window X-Position:** The left edge of the Window layer.                                                                                                                  |
+| F088    | LY      | **LCD Y-Coordinate:** Indicates the current vertical scanline being drawn (Read-only). Ranges from 0 to ~180.                                                              |
+| F089    | LYC     | **LY Compare:** The PPU compares LY with this value. If they match, a flag is set in the STAT register, which can trigger an interrupt. Useful for scanline-based effects. |
+| F08A    | BG_MODE | **Background Mode:** Configures the size (dimensions) of the BG0 and BG1 tilemaps.                                                                                         |
+| F08B    | BG_TMB  | **Background Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for BG0 (bits 3-0) and BG1 (bits 7-4).                                                            |
 
 ### **7.1. Accessing Color RAM (CRAM)**
 
-Since CRAM is mapped directly to the CPU's address space (`F300-F4FF`), there are no registers for indirect access. This allows for very fast reads and writes. However, to prevent visual artifacts caused by modifying palette data while the PPU is actively drawing, all CPU writes to this memory region should be performed **only during non-rendering periods (V-Blank or H-Blank)**. Reading from CRAM is safe at any time.
+Since CRAM is mapped directly to the CPU's address space (`F400-F5FF`), there are no registers for indirect access. This allows for very fast reads and writes. However, to prevent visual artifacts caused by modifying palette data while the PPU is actively drawing, all CPU writes to this memory region should be performed **only during non-rendering periods (V-Blank or H-Blank)**. Reading from CRAM is safe at any time.
 
 ### **7.2. Configuring Tilemap Base Addresses**
 
-The `BG_TMB` register at `F118` provides an efficient way to set the starting address for the BG0 and BG1 tilemaps. The 32 KiB of VRAM is divided into 16 slots of 2 KiB each. The `BG_TMB` register uses a 4-bit value for each background layer to specify which slot its tilemap begins in.
+The `BG_TMB` register at `F08B` provides an efficient way to set the starting address for the BG0 and BG1 tilemaps. The 32 KiB of VRAM is divided into 16 slots of 2 KiB each. The `BG_TMB` register uses a 4-bit value for each background layer to specify which slot its tilemap begins in.
 
 - **BG0:** The lower 4 bits (bits 3-0) of `BG_TMB` select the starting slot (0-15) for the BG0 tilemap.
 - **BG1:** The upper 4 bits (bits 7-4) of `BG_TMB` select the starting slot (0-15) for the BG1 tilemap.
 
 The PPU calculates the final base address using the formula: `base_address = slot_id * 2048`. For example, if `BG_TMB` holds the value `0x42`, BG0's tilemap will start at slot 2 (`2 * 2048 = 4096`, address `0x1000`), and BG1's tilemap will start at slot 4 (`4 * 2048 = 8192`, address `0x2000`).
 
-## **8. LCDC Register (F100)**
+## **8. LCDC Register (F080)**
 
 This 8-bit register is the primary control for the PPU.
 
@@ -178,7 +178,7 @@ This 8-bit register is the primary control for the PPU.
 | **1** | (Reserved) | Unused.                                                                      |
 | **0** | WIN_ENABLE | 1: The Window layer is enabled and will be drawn. 0: The Window is disabled. |
 
-## **9. STAT Register (F101)**
+## **9. STAT Register (F081)**
 
 This 8-bit register provides information about the PPU's current state and allows the CPU to request interrupts based on PPU events.
 
@@ -226,7 +226,7 @@ This is the core of the rendering process, where the PPU composes the final colo
         -   **Step B (Backgrounds):** The pixel from BG1 is drawn on top of the BG0 pixel, but only if its color index is not 0 (color 0 is transparent).
         -   **Step C (Window):** If the Window is active for this pixel, its pixel is drawn on top of the backgrounds, again treating color 0 as transparent.
         -   **Step D (Sprites):** If a sprite pixel is present at this location, its priority is checked against the background pixel beneath it. Sprite-on-background priority is determined by the sprite's Priority flag (OAM Byte 4, Bit 7) and the background tile's Priority flag (Tilemap entry, Bit 15). A sprite with its priority flag set to `0` will be drawn behind a background tile with its priority flag set to `1`. Sprite-on-sprite priority is determined by OAM index: a sprite with a lower index (e.g., sprite #0) is always drawn on top of a sprite with a higher index (e.g., sprite #1).
-    3.  **Final Color Lookup:** The result of the mixing logic is a 4-bit color index and a palette select value. The PPU uses these to look up the final 16-bit RGB555 color value from CRAM (`F300-F4FF`).
+    3.  **Final Color Lookup:** The result of the mixing logic is a 4-bit color index and a palette select value. The PPU uses these to look up the final 16-bit RGB555 color value from CRAM (`F400-F5FF`).
 
 #### **Mode 0: Horizontal Blank (H-Blank) (90 Cycles)**
 

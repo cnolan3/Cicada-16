@@ -2,25 +2,25 @@
 
 This document describes the design and functionality of the Direct Memory Access (DMA) controller for the Cicada-16 console. The DMA unit is responsible for performing fast memory copy operations, which significantly offloads the CPU and is essential for high-performance graphics.
 
-## **1. DMA Registers (F00A–F00F)**
+## **1. DMA Registers (F00B–F010)**
 
 The DMA system is controlled by a set of memory-mapped I/O registers.
 
 | Address   | Name        | Description                                      |
 | :-------- | :---------- | :----------------------------------------------- |
-| F00A-F00B | `DMA_SRC`   | The 16-bit source address for the transfer.      |
-| F00C-F00D | `DMA_DST`   | The 16-bit destination address for the transfer. |
-| F00E      | `DMA_LEN`   | The length of the transfer in bytes.             |
-| F00F      | `DMA_CTL`   | The DMA Control Register.                        |
+| F00B-F00C | `DMA_SRC`   | The 16-bit source address for the transfer.      |
+| F00D-F00E | `DMA_DST`   | The 16-bit destination address for the transfer. |
+| F00F      | `DMA_LEN`   | The length of the transfer in bytes.             |
+| F010      | `DMA_CTL`   | The DMA Control Register.                        |
 
 ## **2. The DMA Transfer Process**
 
 A DMA transfer is a multi-step process initiated by the CPU.
 
-1.  **Set Source:** Write the 16-bit source address to `DMA_SRC` (low byte to `F00A`, high byte to `F00B`).
-2.  **Set Destination:** Write the 16-bit destination address to `DMA_DST` (low byte to `F00C`, high byte to `F00D`).
-3.  **Set Length:** Write the number of bytes to copy to `DMA_LEN`. (See Section 6 for the special OAM DMA mode).
-4.  **Configure Control:** Set the desired transfer properties (e.g., address mode, safe transfer) in the `DMA_CTL` register.
+1.  **Set Source:** Write the 16-bit source address to `DMA_SRC` (low byte to `F00B`, high byte to `F00C`).
+2.  **Set Destination:** Write the 16-bit destination address to `DMA_DST` (low byte to `F00D`, high byte to `F00E`).
+3.  **Set Length:** Write the number of bytes to copy to `DMA_LEN` (`F00F`).
+4.  **Configure Control:** Set the desired transfer properties (e.g., address mode, safe transfer) in the `DMA_CTL` register (`F010`).
 5.  **Start Transfer:** Write a `1` to the `START` bit (bit 0) of the `DMA_CTL` register. The transfer will begin immediately (unless `VRAM_SAFE` is enabled).
 
 ## **3. CPU State and Timing**
@@ -44,7 +44,7 @@ The `DMA_CTL` register at `F00F` configures the behavior of the transfer.
 
 ## **5. Length Register (`DMA_LEN`) and OAM DMA**
 
-The `DMA_LEN` register at `F00E` typically holds the number of bytes (1-255) for a standard transfer. However, it has a special function when set to zero.
+The `DMA_LEN` register at `F00F` typically holds the number of bytes (1-255) for a standard transfer. However, it has a special function when set to zero.
 
 -   **Standard DMA:** If `DMA_LEN` is set to a non-zero value (e.g., `N`), the DMA controller will copy `N` bytes.
 -   **OAM DMA:** If `DMA_LEN` is set to `0`, this triggers a special, high-speed **OAM DMA**. This is the primary way to update sprite data. In this mode:

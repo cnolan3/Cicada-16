@@ -6,22 +6,20 @@
 | :--------- | :------- | :--------- | :----------------------------------------------------------- |
 | 0000       | 3FFF     | **16 KiB** | **ROM Bank 0 (fixed)**                                       |
 | 4000       | 7FFF     | **16 KiB** | **ROM Bank N (switchable)**                                  |
-| 8000       | 9FFF     | **8 KiB**  | **VRAM Window (banked, 1 of 4 banks, 32 KiB total)**         |
-| A000       | AFFF     | **4 KiB**  | **Cartridge RAM Window (banked)**                            |
+| 8000       | 8FFF     | **4 KiB**  | **Cartridge RAM Window (banked)**                            |
+| 9000       | AFFF     | **8 KiB**  | **VRAM Window (banked, 1 of 4 banks, 32 KiB total)**         |
 | B000       | CFFF     | **8 KiB**  | **Work RAM Bank 0 (WRAM0, fixed, 32 KiB total)**             |
 | D000       | DFFF     | **4 KiB**  | **Work RAM Window (WRAM1, banked, 1 of 6 switchable banks)** |
-| E000       | E7FF     | **2 KiB**  | **Wave RAM (user wave tables)**                              |
-| E800       | EFFF     | **2 KiB**  | **System Library RAM (Read-Only after boot)**                |
-| F000       | F0FF     | **256 B**  | **IO Registers (joypad, timers/div, RTC, DMA, mapper)**      |
-| F100       | F1FF     | **256 B**  | **PPU Registers (LCDC, STAT, SCX, SCY, LY/LYC, palettes)**   |
-| F200       | F200     | **1 B**    | **IE (Interrupt Enable)**                                    |
-| F201       | F201     | **1 B**    | **IF (Interrupt Flag) (write-1-to-clear bits)**              |
-| F202       | F2FF     | **254 B**  | **Reserved**                                                 |
-| F300       | F4FF     | **512 B**  | **CRAM (color pallete entries)**                             |
-| F500       | F5FF     | **256 B**  | **APU Registers (Core, Mixer, DSP)**                         |
+| E000       | EFFF     | **4 KiB**  | **System Library RAM (Read-Only after boot)**                |
+| F000       | F07F     | **128 B**  | **IO Registers (joypad, timers/div, RTC, DMA, mapper)**      |
+| F080       | F0FF     | **128 B**  | **PPU Registers (LCDC, STAT, SCX, SCY, LY/LYC, palettes)**   |
+| F100       | F17F     | **128 B**  | **APU Registers (Core, Mixer, DSP)**                         |
+| F180       | F3FF     | **640 B**  | **Reserved**                                                 |
+| F400       | F5FF     | **512 B**  | **CRAM (color pallete entries)**                             |
 | F600       | F7FF     | **512 B**  | **OAM (sprite attribute table)**                             |
 | F800       | FBFF     | **1 KiB**  | **DSP Delay Buffer**                                         |
-| FC00       | FFFF     | **1 KiB**  | **HRAM (high speed ram)**                                    |
+| FC00       | FDFF     | **512 B**  | **Wave RAM (user wave tables)**                              |
+| FE00       | FFFF     | **512 B**  | **HRAM (high speed ram)**                                    |
 
 ## **MMU Behavior and Rules**
 
@@ -31,10 +29,10 @@ The Memory Management Unit (MMU) is the hardware component responsible for inter
 
 To expand the amount of available RAM beyond the limits of the 16-bit address space, the system uses bank switching for several memory regions. This is controlled by writing to specific I/O registers.
 
-- **VRAM (`8000-9FFF`):** This 8 KiB window can be mapped to one of four 8 KiB banks within the PPU's 32 KiB of VRAM. The active bank is selected by the **`VRAM_BANK`** register at `F013`.
-- **WRAM (`D000-DFFF`):** This 4 KiB window can be mapped to one of six 4 KiB banks of switchable Work RAM (WRAM1-6). The active bank is selected by the **`WRAM_BANK`** register at `F014`.
-- **Cartridge ROM (`4000-7FFF`):** This 16 KiB window can be mapped to any 16 KiB bank in the cartridge's ROM. The active bank is selected by the **`MPR_BANK`** register at `F010`.
-- **Cartridge RAM (`A000-AFFF`):** This 4 KiB window can be mapped to different banks of RAM on the cartridge, if present. The active bank is selected by the **`RAM_BANK`** register at `F011`.
+- **VRAM (`9000-AFFF`):** This 8 KiB window can be mapped to one of four 8 KiB banks within the PPU's 32 KiB of VRAM. The active bank is selected by the **`VRAM_BANK`** register at `F014`.
+- **WRAM (`D000-DFFF`):** This 4 KiB window can be mapped to one of six 4 KiB banks of switchable Work RAM (WRAM1-6). The active bank is selected by the **`WRAM_BANK`** register at `F015`.
+- **Cartridge ROM (`4000-7FFF`):** This 16 KiB window can be mapped to any 16 KiB bank in the cartridge's ROM. The active bank is selected by the **`MPR_BANK`** register at `F011`.
+- **Cartridge RAM (`8000-8FFF`):** This 4 KiB window can be mapped to different banks of RAM on the cartridge, if present. The active bank is selected by the **`RAM_BANK`** register at `F012`.
 
 ### **Boot-time Mapping**
 
@@ -48,7 +46,7 @@ At power-on, the MMU starts in a special state to execute the internal Boot ROM.
 
 The MMU enforces access rules on certain memory regions.
 
-- **Read-Only Memory:** The Cartridge ROM (`0000-7FFF`) and the System Library RAM (`E800-EFFF`, after boot) are read-only. Any attempt by the CPU to write to these regions will be blocked by the MMU and will trigger a **Protected Memory Fault**.
+- **Read-Only Memory:** The Cartridge ROM (`0000-7FFF`) and the System Library RAM (`E000-EFFF`, after boot) are read-only. Any attempt by the CPU to write to these regions will be blocked by the MMU and will trigger a **Protected Memory Fault**.
 - **PPU Access Restrictions:** The PPU's internal RAM (VRAM, OAM, CRAM) is shared between the CPU and the PPU. While the CPU can access it at any time, writing to it while the PPU is actively drawing (`STAT` mode 3) can lead to visual glitches. Safe access is guaranteed during H-Blank (Mode 0) and V-Blank (Mode 1).
 
 ### **Memory Access Alignment**
@@ -62,10 +60,10 @@ The CPU requires 16-bit data to be aligned to an even memory address.
 
 Not all RAM is equal in speed.
 
-- **HRAM (High RAM, `FC00-FFFF`):** This small 1 KiB region is internal to the main processor chip. It can be accessed without any extra wait states, making it the fastest RAM in the system. It is ideal for storing frequently accessed variables, temporary "scratchpad" data, or time-critical interrupt handler code.
+- **HRAM (High RAM, `FE00-FFFF`):** This small 512 B region is internal to the main processor chip. It can be accessed without any extra wait states, making it the fastest RAM in the system. It is ideal for storing frequently accessed variables, temporary "scratchpad" data, or time-critical interrupt handler code.
 - **WRAM (Work RAM, `B000-DFFF`):** This is a larger pool of general-purpose external RAM. Accessing it incurs a small number of wait states, making it slightly slower than HRAM. The cycle counts listed in the CPU ISA documentation assume WRAM access times. Accesses to HRAM using the same instructions will be faster.
 
-## **IO Registers (F000–F0FF)**
+## **IO Registers (F000–F07F)**
 
 | Address | Name          | Description                                                       |
 | :------ | :------------ | :---------------------------------------------------------------- |
@@ -88,7 +86,7 @@ Not all RAM is equal in speed.
 | F011    | **MPR_BANK**  | **ROM bank select for 4000-7FFF window**                          |
 | F012    | **RAM_BANK**  | **Bank select for banked Cart RAM (if enabled)**                  |
 | F013    | **WE_LATCH**  | **Write-enable latch for battery RAM (write key)**                |
-| F014    | **VRAM_BANK** | **VRAM Bank Select (0-3 for 8000-9FFF window)**                   |
+| F014    | **VRAM_BANK** | **VRAM Bank Select (0-3 for 9000-AFFF window)**                   |
 | F015    | **WRAM_BANK** | **WRAM Bank Select (0-5 for D000-DFFF window -> maps banks 1-6)** |
 | F018    | **RTC_SEC**   | **0..59 (latched)**                                               |
 | F019    | **RTC_MIN**   | **0..59 (latched)**                                               |
@@ -97,6 +95,8 @@ Not all RAM is equal in speed.
 | F01C    | **RTC_DAY_H** | **day counter high (latched)**                                    |
 | F01D    | **RTC_CTL**   | **bit0=HALT, bit1=LATCH (1=latch snapshot)**                      |
 | F01E    | **RTC_STS**   | **bit0=LATCHED, bit1=BAT_OK (optional)**                          |
+| F020    | **IE**        | **Interrupt Enable Register**                                     |
+| F021    | **IF**        | **Interrupt Flag Register**                                       |
 
 ## **Joypad Register (JOYP)**
 
@@ -267,52 +267,9 @@ The **LATCHED bit (bit 0)** in the **RTC_STS** register (F01E) will be set to 1 
 2.  **Time-Locked Events:** A game could unlock special content or characters only on certain dates or at certain times of day.
 3.  **Player Progress Tracking:** The RTC can be used to log when a player last played or to track how much real time has been spent in the game.
 
-## **Interrupt Registers (IE & IF)**
-
-The interrupt system is controlled by two main registers: **IE (Interrupt Enable)** at F200 and **IF (Interrupt Flag)** at F201. For an interrupt to be triggered, the corresponding bit must be set in both the IE and IF registers, and the master interrupt switch must be enabled by the CPU's EI instruction.
-
-### **IE: Interrupt Enable (F200)**
-
-This register determines which types of interrupts are allowed to trigger an interrupt service routine. Writing a 1 to a bit enables that interrupt source.
-
-| Bit   | Name          | Description                                       |
-| :---- | :------------ | :------------------------------------------------ |
-| 7-6   | -             | Unused                                            |
-| **5** | **Link Status** | **Enable Link Status change interrupt**           |
-| **4** | **Joypad**    | **Enable Joypad button press interrupt**          |
-| **3** | **Serial**    | **Enable Serial Transfer Complete interrupt**     |
-| **2** | **Timer**     | **Enable Timer Overflow interrupt**               |
-| **1** | **H-Blank**   | **Enable Horizontal Blank interrupt (from STAT)** |
-| **0** | **V-Blank**   | **Enable Vertical Blank interrupt**               |
-
-### **IF: Interrupt Flag (F201)**
-
-This register indicates that an interrupt-triggering event has occurred. The hardware sets the appropriate bit to 1 when an event happens. The program can then request service by also setting the corresponding bit in the IE register.
-
-- **Clearing Flags:** To clear a flag, the program must write a 1 to that bit's position. This is a common "write-1-to-clear" mechanism.
-
-| Bit   | Name          | Description                                       |
-| :---- | :------------ | :------------------------------------------------ |
-| 7-6   | -             | Unused                                            |
-| **5** | **Link Status** | **Set when the serial port CONNECTED bit changes**  |
-| **4** | **Joypad**    | **Set when a joypad button is pressed**           |
-| **3** | **Serial**    | **Set when a serial data transfer is complete**   |
-| **2** | **Timer**     | **Set when the TIMA timer overflows**             |
-| **1** | **H-Blank**   | **Set when the PPU enters the H-Blank period**    |
-| **0** | **V-Blank**   | **Set when the PPU enters the V-Blank period**    |
-
 ## **Cartridge Mapper and Bank Switching**
 
-To support games larger than the CPU's addressable ROM space, the console uses a cartridge-based mapper for bank switching. The mapper hardware resides on the game cartridge and is controlled by writing to I/O registers. The primary register for this is **MPR_BANK** at address F010. The value written to this register directly selects which 16 KiB ROM bank is mapped into the `4000-7FFF` address window.
-
-## **APU Registers (F500-F5FF)**
-
-| Address Range | Name          | Description                                                 |
-| :------------ | :------------ | :---------------------------------------------------------- |
-| F500-F57F     | **APU Core**  | **Registers for the 4 sound channels (Pulse, Wave, Noise)** |
-| F580-F59F     | **APU Mixer** | **Master volume, panning, and mixing controls**             |
-| F5A0-F5FF     | **APU DSP**   | **Control registers for the DSP (echo/delay)**              |
-
+To support games larger than the CPU's addressable ROM space, the console uses a cartridge-based mapper for bank switching. The mapper hardware resides on the game cartridge and is controlled by writing to I/O registers. The primary register for this is **MPR_BANK** at address F011. The value written to this register directly selects which 16 KiB ROM bank is mapped into the `4000-7FFF` address window.
 
 ---
 
