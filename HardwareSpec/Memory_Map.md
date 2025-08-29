@@ -11,10 +11,10 @@
 | B000       | CFFF     | **8 KiB**  | **Work RAM Bank 0 (WRAM0, fixed, 32 KiB total)**             |
 | D000       | DFFF     | **4 KiB**  | **Work RAM Window (WRAM1, banked, 1 of 6 switchable banks)** |
 | E000       | EFFF     | **4 KiB**  | **System Library RAM (Read-Only after boot)**                |
-| F000       | F07F     | **128 B**  | **IO Registers (joypad, timers/div, RTC, DMA, mapper)**      |
-| F080       | F0FF     | **128 B**  | **PPU Registers (LCDC, STAT, SCX, SCY, LY/LYC, palettes)**   |
-| F100       | F17F     | **128 B**  | **APU Registers (Core, Mixer, DSP)**                         |
-| F180       | F1FF     | **128 B**  | **Reserved**                                                 |
+| F000       | F03F     | **64 B**   | **IO Registers (joypad, timers/div, RTC, DMA, mapper)**      |
+| F040       | F07F     | **64 B**   | **PPU Registers (LCDC, STAT, SCX, SCY, LY/LYC, palettes)**   |
+| F080       | F0BF     | **64 B**   | **APU Registers (Core, Mixer, DSP)**                         |
+| F0C0       | F1FF     | **320 B**  | **Reserved**                                                 |
 | F200       | F3FF     | **512 B**  | **CRAM (color pallete entries)**                             |
 | F400       | F5FF     | **512 B**  | **OAM (sprite attribute table)**                             |
 | F600       | F9FF     | **1 KiB**  | **DSP Delay Buffer**                                         |
@@ -63,7 +63,7 @@ Not all RAM is equal in speed.
 - **HRAM (High RAM, `FE00-FFFF`):** This small 512 B region is internal to the main processor chip. It can be accessed without any extra wait states, making it the fastest RAM in the system. It is ideal for storing frequently accessed variables, temporary "scratchpad" data, or time-critical interrupt handler code.
 - **WRAM (Work RAM, `B000-DFFF`):** This is a larger pool of general-purpose external RAM. Accessing it incurs a small number of wait states, making it slightly slower than HRAM. The cycle counts listed in the CPU ISA documentation assume WRAM access times. Accesses to HRAM using the same instructions will be faster.
 
-## **IO Registers (F000–F07F)**
+## **IO Registers (F000–F03F)**
 
 | Address | Name          | Description                                                       |
 | :------ | :------------ | :---------------------------------------------------------------- |
@@ -275,4 +275,3 @@ To support games larger than the CPU's addressable ROM space, the console uses a
 
 © 2025 Connor Nolan. This work is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
-

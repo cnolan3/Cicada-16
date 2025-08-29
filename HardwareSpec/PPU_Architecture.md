@@ -96,6 +96,7 @@ For displaying static UI elements like HUDs or dialogue boxes, the PPU supports 
 The PPU can render up to **64** sprites on screen at once.
 
 - **Attributes:** Each sprite's data is stored in OAM as an 8-byte entry:
+
   - **Byte 0:** Y-Position (vertical screen coordinate)
   - **Byte 1:** X-Position (horizontal screen coordinate)
   - **Byte 2:** **Size & Shape attribute** - Defines the sprite's dimensions (e.g., 8x8, 16x16, 8x16, 16x8).
@@ -135,20 +136,21 @@ The PPU renders the final image by drawing the graphical layers in a specific or
 
 These registers, mapped to the CPU's address space, control the PPU's operation.
 
-| Address | Name    | Description                                                                                                                                                                |
-| :------ | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| F080    | LCDC    | **LCD Control:** Master switch for the PPU. Contains bits to enable/disable the screen, background layers, sprites, and the window.                                        |
-| F081    | STAT    | **LCD Status:** Contains flags indicating the PPU's current mode (H-Blank, V-Blank, OAM Scan) and can be configured to trigger interrupts on specific events.              |
-| F082    | SCY0    | Background 0 - Vertical Scroll                                                                                                                                             |
-| F083    | SCX0    | Background 0 - Horizontal Scroll                                                                                                                                           |
-| F084    | SCY1    | Background 1 - Vertical Scroll                                                                                                                                             |
-| F085    | SCX1    | Background 1 - Horizontal Scroll                                                                                                                                           |
-| F086    | WINY    | **Window Y-Position:** The top edge of the Window layer.                                                                                                                   |
-| F087    | WINX    | **Window X-Position:** The left edge of the Window layer.                                                                                                                  |
-| F088    | LY      | **LCD Y-Coordinate:** Indicates the current vertical scanline being drawn (Read-only). Ranges from 0 to ~180.                                                              |
-| F089    | LYC     | **LY Compare:** The PPU compares LY with this value. If they match, a flag is set in the STAT register, which can trigger an interrupt. Useful for scanline-based effects. |
-| F08A    | BG_MODE | **Background Mode:** Configures the size (dimensions) of the BG0 and BG1 tilemaps.                                                                                         |
-| F08B    | BG_TMB  | **Background Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for BG0 (bits 3-0) and BG1 (bits 7-4).                                                            |
+| Address   | Name    | Description                                                                                                                                                                |
+| :-------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F040      | LCDC    | **LCD Control:** Master switch for the PPU. Contains bits to enable/disable the screen, background layers, sprites, and the window.                                        |
+| F041      | STAT    | **LCD Status:** Contains flags indicating the PPU's current mode (H-Blank, V-Blank, OAM Scan) and can be configured to trigger interrupts on specific events.              |
+| F042      | SCY0    | Background 0 - Vertical Scroll                                                                                                                                             |
+| F043      | SCX0    | Background 0 - Horizontal Scroll                                                                                                                                           |
+| F044      | SCY1    | Background 1 - Vertical Scroll                                                                                                                                             |
+| F045      | SCX1    | Background 1 - Horizontal Scroll                                                                                                                                           |
+| F046      | WINY    | **Window Y-Position:** The top edge of the Window layer.                                                                                                                   |
+| F047      | WINX    | **Window X-Position:** The left edge of the Window layer.                                                                                                                  |
+| F048      | LY      | **LCD Y-Coordinate:** Indicates the current vertical scanline being drawn (Read-only). Ranges from 0 to ~180.                                                              |
+| F049      | LYC     | **LY Compare:** The PPU compares LY with this value. If they match, a flag is set in the STAT register, which can trigger an interrupt. Useful for scanline-based effects. |
+| F04A      | BG_MODE | **Background Mode:** Configures the size (dimensions) of the BG0 and BG1 tilemaps.                                                                                         |
+| F04B      | BG_TMB  | **Background Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for BG0 (bits 3-0) and BG1 (bits 7-4).                                                            |
+| F04C-F07F | ---     | **Reserved**                                                                                                                                                               |
 
 ### **7.1. Accessing Color RAM (CRAM)**
 
@@ -163,7 +165,7 @@ The `BG_TMB` register at `F08B` provides an efficient way to set the starting ad
 
 The PPU calculates the final base address using the formula: `base_address = slot_id * 2048`. For example, if `BG_TMB` holds the value `0x42`, BG0's tilemap will start at slot 2 (`2 * 2048 = 4096`, address `0x1000`), and BG1's tilemap will start at slot 4 (`4 * 2048 = 8192`, address `0x2000`).
 
-## **8. LCDC Register (F080)**
+## **8. LCDC Register (F040)**
 
 This 8-bit register is the primary control for the PPU.
 
@@ -178,7 +180,7 @@ This 8-bit register is the primary control for the PPU.
 | **1** | (Reserved) | Unused.                                                                      |
 | **0** | WIN_ENABLE | 1: The Window layer is enabled and will be drawn. 0: The Window is disabled. |
 
-## **9. STAT Register (F081)**
+## **9. STAT Register (F041)**
 
 This 8-bit register provides information about the PPU's current state and allows the CPU to request interrupts based on PPU events.
 
@@ -206,44 +208,44 @@ For each of the 160 visible scanlines, the PPU performs the exact same sequence 
 
 At the beginning of a scanline, the PPU determines which sprites need to be drawn on this specific line.
 
--   **Action:** The PPU iterates through all 64 sprite entries in OAM (Object Attribute Memory, `F400-F5FF`).
--   **Condition:** It checks if the current scanline (`LY` register) falls within the vertical range of each sprite (i.e., `sprite.y <= LY < sprite.y + sprite.height`).
--   **Result:** The PPU builds a temporary internal list of up to 16 sprites that are visible on this line. If more than 16 sprites are on the line, the additional ones are ignored for this frame. This list contains the sprite's X-position, tile index, attributes, and OAM index (for priority).
--   **Status:** The `STAT` register's mode flag (bits 1-0) is set to `10`. An OAM Scan interrupt can be triggered if enabled.
+- **Action:** The PPU iterates through all 64 sprite entries in OAM (Object Attribute Memory, `F400-F5FF`).
+- **Condition:** It checks if the current scanline (`LY` register) falls within the vertical range of each sprite (i.e., `sprite.y <= LY < sprite.y + sprite.height`).
+- **Result:** The PPU builds a temporary internal list of up to 16 sprites that are visible on this line. If more than 16 sprites are on the line, the additional ones are ignored for this frame. This list contains the sprite's X-position, tile index, attributes, and OAM index (for priority).
+- **Status:** The `STAT` register's mode flag (bits 1-0) is set to `10`. An OAM Scan interrupt can be triggered if enabled.
 
 #### **Mode 3: Drawing Pixels (480 Cycles)**
 
 This is the core of the rendering process, where the PPU composes the final color for each of the 240 horizontal pixels on the scanline. It processes one pixel every two CPU cycles.
 
--   **Status:** The `STAT` register mode flag is set to `11`. Accessing VRAM, OAM, or CRAM during this mode can cause visual glitches.
--   **The Pixel Pipeline:** For each pixel X from 0 to 239, the PPU performs the following logic:
-    1.  **Fetch Pixels:** The PPU fetches a single pixel's data (a 4-bit color index) from all relevant layers that are enabled in the `LCDC` register. This includes:
-        -   **BG0 & BG1:** Based on the scroll registers (`SCX0`, `SCY0`, `SCX1`, `SCY1`) plus the current `LY` and `X` coordinates.
-        -   **Window:** If the current (`X`, `LY`) is within the window's rectangle (`WINX`, `WINY`).
-        -   **Sprites:** From the list of 16 sprites generated during the OAM scan.
-    2.  **Layer & Priority Mixing:** The PPU combines these pixels using a fixed priority system to determine the final pixel to be drawn.
-        -   **Step A (Backdrop):** The pixel from BG0 is always the starting point. It is always opaque, even if its color index is 0.
-        -   **Step B (Backgrounds):** The pixel from BG1 is drawn on top of the BG0 pixel, but only if its color index is not 0 (color 0 is transparent).
-        -   **Step C (Window):** If the Window is active for this pixel, its pixel is drawn on top of the backgrounds, again treating color 0 as transparent.
-        -   **Step D (Sprites):** If a sprite pixel is present at this location, its priority is checked against the background pixel beneath it. Sprite-on-background priority is determined by the sprite's Priority flag (OAM Byte 4, Bit 7) and the background tile's Priority flag (Tilemap entry, Bit 15). A sprite with its priority flag set to `0` will be drawn behind a background tile with its priority flag set to `1`. Sprite-on-sprite priority is determined by OAM index: a sprite with a lower index (e.g., sprite #0) is always drawn on top of a sprite with a higher index (e.g., sprite #1).
-    3.  **Final Color Lookup:** The result of the mixing logic is a 4-bit color index and a palette select value. The PPU uses these to look up the final 16-bit RGB555 color value from CRAM (`F200-F3FF`).
+- **Status:** The `STAT` register mode flag is set to `11`. Accessing VRAM, OAM, or CRAM during this mode can cause visual glitches.
+- **The Pixel Pipeline:** For each pixel X from 0 to 239, the PPU performs the following logic:
+  1.  **Fetch Pixels:** The PPU fetches a single pixel's data (a 4-bit color index) from all relevant layers that are enabled in the `LCDC` register. This includes:
+      - **BG0 & BG1:** Based on the scroll registers (`SCX0`, `SCY0`, `SCX1`, `SCY1`) plus the current `LY` and `X` coordinates.
+      - **Window:** If the current (`X`, `LY`) is within the window's rectangle (`WINX`, `WINY`).
+      - **Sprites:** From the list of 16 sprites generated during the OAM scan.
+  2.  **Layer & Priority Mixing:** The PPU combines these pixels using a fixed priority system to determine the final pixel to be drawn.
+      - **Step A (Backdrop):** The pixel from BG0 is always the starting point. It is always opaque, even if its color index is 0.
+      - **Step B (Backgrounds):** The pixel from BG1 is drawn on top of the BG0 pixel, but only if its color index is not 0 (color 0 is transparent).
+      - **Step C (Window):** If the Window is active for this pixel, its pixel is drawn on top of the backgrounds, again treating color 0 as transparent.
+      - **Step D (Sprites):** If a sprite pixel is present at this location, its priority is checked against the background pixel beneath it. Sprite-on-background priority is determined by the sprite's Priority flag (OAM Byte 4, Bit 7) and the background tile's Priority flag (Tilemap entry, Bit 15). A sprite with its priority flag set to `0` will be drawn behind a background tile with its priority flag set to `1`. Sprite-on-sprite priority is determined by OAM index: a sprite with a lower index (e.g., sprite #0) is always drawn on top of a sprite with a higher index (e.g., sprite #1).
+  3.  **Final Color Lookup:** The result of the mixing logic is a 4-bit color index and a palette select value. The PPU uses these to look up the final 16-bit RGB555 color value from CRAM (`F200-F3FF`).
 
 #### **Mode 0: Horizontal Blank (H-Blank) (90 Cycles)**
 
 After the last pixel of a scanline is drawn, the PPU enters a short idle period before starting the next line.
 
--   **Action:** The PPU is idle. This is a safe period for the CPU to write to VRAM, CRAM, and OAM without causing visual artifacts.
--   **Status:** The `STAT` register mode flag is set to `00`. An H-Blank interrupt can be triggered if enabled.
+- **Action:** The PPU is idle. This is a safe period for the CPU to write to VRAM, CRAM, and OAM without causing visual artifacts.
+- **Status:** The `STAT` register mode flag is set to `00`. An H-Blank interrupt can be triggered if enabled.
 
 ### **10.2. Phase 2: Vertical Blank (V-Blank) Period (LY 160-221)**
 
 After all 160 visible scanlines have been drawn, the PPU enters the V-Blank period, which lasts for 62 scanlines' worth of time.
 
-#### **Mode 1: V-Blank (62 * 650 Cycles)**
+#### **Mode 1: V-Blank (62 \* 650 Cycles)**
 
--   **Action:** The PPU is completely idle and does no drawing. This is the main safe period for the CPU to perform lengthy graphics updates, such as updating tilemaps, copying new tile graphics to VRAM, or updating palettes in CRAM.
--   **Status:** As soon as `LY` becomes 160, the `STAT` register mode flag is set to `01`.
--   **V-Blank Interrupt:** The PPU sets the V-Blank flag in the `IF` register (`F201`, Bit 0). This is the most important interrupt in the system, as it signals to the game that it is time to prepare all the data for the next frame.
+- **Action:** The PPU is completely idle and does no drawing. This is the main safe period for the CPU to perform lengthy graphics updates, such as updating tilemaps, copying new tile graphics to VRAM, or updating palettes in CRAM.
+- **Status:** As soon as `LY` becomes 160, the `STAT` register mode flag is set to `01`.
+- **V-Blank Interrupt:** The PPU sets the V-Blank flag in the `IF` register (`F021`, Bit 0). This is the most important interrupt in the system, as it signals to the game that it is time to prepare all the data for the next frame.
 
 After the V-Blank period ends, the `LY` register wraps back to 0, and the entire frame rendering process begins again.
 

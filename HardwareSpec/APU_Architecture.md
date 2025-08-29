@@ -145,7 +145,7 @@ The DSP operates on the final mixed audio signal just before it is sent to the s
   - **`Delay (seconds) = Delay (samples) / 32768`**
   - This allows for a delay time ranging from ~0.12ms to ~31.25ms. This is short, but useful for creating chorus, flange, or simple reverb-like spatial effects.
 
-## **7. APU Registers (F100–F17F)**
+## **7. APU Registers (F080–F0BF)**
 
 This section details the memory-mapped registers used to control all APU functions, starting with a high-level overview.
 
@@ -153,30 +153,31 @@ This section details the memory-mapped registers used to control all APU functio
 
 | Address   | Name             | Description                                                |
 | :-------- | :--------------- | :--------------------------------------------------------- |
-| F100      | CH0_CTRL         | Pulse A: Control Register                                  |
-| F101-F102 | CH0_ADSR         | ADSR settings for Channel 0                                |
-| F103      | CH0_SWP          | Sweep settings for Channel 0                               |
-| F104-F105 | CH0_FREQ         | 16-bit frequency for Channel 0                             |
-| F110      | CH1_CTRL         | Pulse B: Control Register                                  |
-| F111-F112 | CH1_ADSR         | ADSR settings for Channel 1                                |
-| F114-F115 | CH1_FREQ         | 16-bit frequency for Channel 1                             |
-| F120      | CH2_CTRL         | Wave channel: Control Register                             |
-| F121-F122 | CH2_ADSR         | ADSR settings for Channel 2                                |
-| F124-F125 | CH2_FREQ         | 16-bit frequency for Channel 2                             |
-| F130      | CH3_CTRL         | Noise channel: Control Register                            |
-| F131-F132 | CH3_ADSR         | ADSR settings for Channel 3                                |
-| F140      | MIX_CTRL         | Master APU enable, individual channel enables              |
-| F141      | MIX_VOL_L        | Master volume Left (0-15)                                  |
-| F142      | MIX_VOL_R        | Master volume Right (0-15)                                 |
-| F144-F147 | CH0_OUT..CH3_OUT | Per-channel stereo volume/panning control                  |
-| F150      | DSP_CTRL         | DSP Control Register                                       |
-| F151      | DSP_DELAY        | Delay time/length (controls read offset into delay buffer) |
-| F152      | DSP_FBACK        | Feedback level (0-15). Controls echo decay.                |
-| F153      | DSP_WET          | Wet signal mix level (0-15). Controls echo volume.         |
+| F080      | CH0_CTRL         | Pulse A: Control Register                                  |
+| F081-F082 | CH0_ADSR         | ADSR settings for Channel 0                                |
+| F083      | CH0_SWP          | Sweep settings for Channel 0                               |
+| F084-F085 | CH0_FREQ         | 16-bit frequency for Channel 0                             |
+| F086      | CH1_CTRL         | Pulse B: Control Register                                  |
+| F087-F088 | CH1_ADSR         | ADSR settings for Channel 1                                |
+| F089-F08A | CH1_FREQ         | 16-bit frequency for Channel 1                             |
+| F08B      | CH2_CTRL         | Wave channel: Control Register                             |
+| F08C-F08D | CH2_ADSR         | ADSR settings for Channel 2                                |
+| F08E-F08F | CH2_FREQ         | 16-bit frequency for Channel 2                             |
+| F090      | CH3_CTRL         | Noise channel: Control Register                            |
+| F091-F092 | CH3_ADSR         | ADSR settings for Channel 3                                |
+| F093      | MIX_CTRL         | Master APU enable, individual channel enables              |
+| F094      | MIX_VOL_L        | Master volume Left (0-15)                                  |
+| F095      | MIX_VOL_R        | Master volume Right (0-15)                                 |
+| F096-F097 | CH0_OUT..CH3_OUT | Per-channel stereo volume/panning control                  |
+| F098      | DSP_CTRL         | DSP Control Register                                       |
+| F099      | DSP_DELAY        | Delay time/length (controls read offset into delay buffer) |
+| F09A      | DSP_FBACK        | Feedback level (0-15). Controls echo decay.                |
+| F09B      | DSP_WET          | Wet signal mix level (0-15). Controls echo volume.         |
+| F09C-F0BF | **reserved**     | Reserved for future use                                    |
 
 ### **Channel Register Details**
 
-#### **F100: CH0_CTRL (Pulse A)**
+#### **F080: CH0_CTRL (Pulse A)**
 
 | Bit | Name   | Description                                                                                             |
 | :-- | :----- | :------------------------------------------------------------------------------------------------------ |
@@ -184,7 +185,7 @@ This section details the memory-mapped registers used to control all APU functio
 | 6-5 | DUTY   | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
 | 4-0 | -      | Unused.                                                                                                 |
 
-#### **F503: CH0_SWP (Pulse A Sweep)**
+#### **F083: CH0_SWP (Pulse A Sweep)**
 
 | Bit | Name      | Description                                                                                                                                                          |
 | :-- | :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -193,11 +194,11 @@ This section details the memory-mapped registers used to control all APU functio
 | 3   | SWP_DIR   | Sweep direction. 0: Addition (frequency increases), 1: Subtraction (frequency decreases).                                                                            |
 | 2-0 | SWP_SHIFT | Sweep magnitude. The new frequency is calculated by shifting the current frequency this many bits to the right and adding/subtracting it. If 0, sweep has no effect. |
 
-#### **F504-F505: CH0_FREQ**
+#### **F084-F085: CH0_FREQ**
 
 This 16-bit register controls the frequency of the pulse wave for Channel 0. See section "2.1. Frequency and Pitch" for the calculation formula.
 
-#### **F510: CH1_CTRL (Pulse B)**
+#### **F086: CH1_CTRL (Pulse B)**
 
 | Bit | Name   | Description                                                                                             |
 | :-- | :----- | :------------------------------------------------------------------------------------------------------ |
@@ -205,11 +206,11 @@ This 16-bit register controls the frequency of the pulse wave for Channel 0. See
 | 6-5 | DUTY   | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
 | 4-0 | -      | Unused.                                                                                                 |
 
-#### **F514-F515: CH1_FREQ**
+#### **F089-F08A: CH1_FREQ**
 
 This 16-bit register controls the frequency of the pulse wave for Channel 1. See section "2.1. Frequency and Pitch" for the calculation formula.
 
-#### **F520: CH2_CTRL (Wave)**
+#### **F08B: CH2_CTRL (Wave)**
 
 | Bit | Name     | Description                                                                                             |
 | :-- | :------- | :------------------------------------------------------------------------------------------------------ |
@@ -217,11 +218,11 @@ This 16-bit register controls the frequency of the pulse wave for Channel 1. See
 | 6   | -        | Unused.                                                                                                 |
 | 5-0 | WAVE_IDX | Selects which 32-byte waveform to play from Wave RAM (0-31).                                            |
 
-#### **F524-F525: CH2_FREQ**
+#### **F08E-F08F: CH2_FREQ**
 
 This 16-bit register controls the playback frequency of the selected waveform for Channel 2. See section "3.1. Waveform Frequency" for the calculation formula.
 
-#### **F530: CH3_CTRL (Noise)**
+#### **F090: CH3_CTRL (Noise)**
 
 | Bit | Name      | Description                                                                                             |
 | :-- | :-------- | :------------------------------------------------------------------------------------------------------ |
@@ -229,7 +230,7 @@ This 16-bit register controls the playback frequency of the selected waveform fo
 | 6   | LFSR_MODE | 0: 15-bit LFSR (Tonal noise), 1: 7-bit LFSR (Metallic noise).                                           |
 | 5-0 | CLK_DIV   | Clock divider for the LFSR, controls the base pitch of the noise.                                       |
 
-#### **F5x1 / F5x2: ADSR Registers**
+#### **F0x1 / F0x2: ADSR Registers**
 
 These two registers are identical for each channel (CH0, CH1, CH2, CH3).
 
@@ -259,7 +260,7 @@ These two registers are identical for each channel (CH0, CH1, CH2, CH3).
 
 ### **Mixer & DSP Register Details**
 
-#### **F580: MIX_CTRL**
+#### **F093: MIX_CTRL**
 
 | Bit | Name   | Description                                         |
 | :-- | :----- | :-------------------------------------------------- |
@@ -270,7 +271,7 @@ These two registers are identical for each channel (CH0, CH1, CH2, CH3).
 | 1   | CH1_EN | 1: Channel 1 (Pulse B) is enabled.                  |
 | 0   | CH0_EN | 1: Channel 0 (Pulse A) is enabled.                  |
 
-#### **F584 - F587: CHx_OUT (Channel Output Level)**
+#### **F096 - F097: CHx_OUT (Channel Output Level)**
 
 These registers control the final output volume and stereo panning for each channel (F584 for CH0, F585 for CH1, etc.). This provides a final "fader" for each channel before the audio is sent to the master volume controls.
 
@@ -279,7 +280,7 @@ These registers control the final output volume and stereo panning for each chan
 | 7-4 | VOL_L | R/W  | Volume for the Left Speaker (0-15)  |
 | 3-0 | VOL_R | R/W  | Volume for the Right Speaker (0-15) |
 
-#### **F5A0: DSP_CTRL**
+#### **F098: DSP_CTRL**
 
 | Bit | Name   | Description                                          |
 | :-- | :----- | :--------------------------------------------------- |
@@ -290,11 +291,11 @@ These registers control the final output volume and stereo panning for each chan
 | 1   | CH1_IN | 1: Send Channel 1's output into the DSP echo buffer. |
 | 0   | CH0_IN | 1: Send Channel 0's output into the DSP echo buffer. |
 
-#### **F5A1: DSP_DELAY**
+#### **F099: DSP_DELAY**
 
 An 8-bit register that controls the delay time by setting the read offset into the delay buffer. The delay is `(value + 1) * 4` samples. See section 6.2 for details.
 
-#### **F5A2: DSP_FBACK**
+#### **F09A: DSP_FBACK**
 
 A 4-bit value (0-15) that controls the feedback level (how much of the delayed signal is mixed back into the delay line input).
 
@@ -302,7 +303,7 @@ A 4-bit value (0-15) that controls the feedback level (how much of the delayed s
 - `15`: Maximum feedback, creating long, repeating echoes.
 - **Formula:** `Feedback = DelayedSample * (DSP_FBACK / 16)`
 
-#### **F5A3: DSP_WET**
+#### **F09B: DSP_WET**
 
 A 4-bit value (0-15) that controls the wet/dry mix. This is the volume of the delayed signal in the final output.
 

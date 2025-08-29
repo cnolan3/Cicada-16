@@ -29,40 +29,42 @@ The process for triggering and handling an interrupt or CPU fault is as follows:
 
 The Cicada-16 has six hardware interrupt sources, controlled via the `IE` (`F020`) and `IF` (`F021`) registers.
 
-| Bit | Name          | Description                                                                 |
-| :-- | :------------ | :-------------------------------------------------------------------------- |
+| Bit | Name            | Description                                                                 |
+| :-- | :-------------- | :-------------------------------------------------------------------------- |
 | 5   | **Link Status** | Occurs when the serial port `CONNECTED` bit changes state.                  |
-| 4   | **Joypad**    | Occurs when a joypad button is pressed **(on the 1-to-0 transition only)**. |
-| 3   | **Serial**    | Occurs when a serial data transfer is complete.                             |
-| 2   | **Timer**     | Occurs when the TIMA timer overflows.                                       |
-| 1   | **H-Blank**   | Occurs when the PPU enters the H-Blank period.                              |
-| 0   | **V-Blank**   | Occurs when the PPU enters the V-Blank period.                              |
+| 4   | **Joypad**      | Occurs when a joypad button is pressed **(on the 1-to-0 transition only)**. |
+| 3   | **Serial**      | Occurs when a serial data transfer is complete.                             |
+| 2   | **Timer**       | Occurs when the TIMA timer overflows.                                       |
+| 1   | **H-Blank**     | Occurs when the PPU enters the H-Blank period.                              |
+| 0   | **V-Blank**     | Occurs when the PPU enters the V-Blank period.                              |
 
 ### **IE (F020) - Interrupt Enable Register**
+
 This register controls whether a specific hardware interrupt is allowed to trigger the CPU's interrupt sequence. Setting a bit to `1` enables the corresponding interrupt.
 
-| Bit | Name          | Type | Function                                  |
-| :-- | :------------ | :--- | :---------------------------------------- |
-| 7-6 | -             | R    | Unused                                    |
+| Bit | Name            | Type | Function                                  |
+| :-- | :-------------- | :--- | :---------------------------------------- |
+| 7-6 | -               | R    | Unused                                    |
 | 5   | **Link Status** | R/W  | Enable Link Status Interrupt              |
-| 4   | **Joypad**    | R/W  | Enable Joypad Interrupt                   |
-| 3   | **Serial**    | R/W  | Enable Serial Transfer Complete Interrupt |
-| 2   | **Timer**     | R/W  | Enable Timer Overflow Interrupt           |
-| 1   | **H-Blank**   | R/W  | Enable PPU H-Blank Interrupt              |
-| 0   | **V-Blank**   | R/W  | Enable PPU V-Blank Interrupt              |
+| 4   | **Joypad**      | R/W  | Enable Joypad Interrupt                   |
+| 3   | **Serial**      | R/W  | Enable Serial Transfer Complete Interrupt |
+| 2   | **Timer**       | R/W  | Enable Timer Overflow Interrupt           |
+| 1   | **H-Blank**     | R/W  | Enable PPU H-Blank Interrupt              |
+| 0   | **V-Blank**     | R/W  | Enable PPU V-Blank Interrupt              |
 
 ### **IF (F021) - Interrupt Flag Register**
+
 This register holds the flags for pending hardware interrupts. When a hardware event occurs, the corresponding bit is set to `1` by the hardware. It is the programmer's responsibility to clear the flag by writing a `1` to the bit inside the ISR.
 
-| Bit | Name          | Type | Function                                                                                                                            |
-| :-- | :------------ | :--- | :---------------------------------------------------------------------------------------------------------------------------------- |
-| 7-6 | -             | R    | Unused                                                                                                                              |
-| 5   | **Link Status** | R/W  | Link Status Interrupt Flag. Set when the `CONNECTED` bit in the `SC` register changes state.                                        |
-| 4   | **Joypad**    | R/W  | Joypad Interrupt Flag. Set when a joypad button is pressed.                                                                         |
-| 3   | **Serial**    | R/W  | Serial Transfer Complete Flag. Set when a serial data transfer finishes.                                                            |
-| 2   | **Timer**     | R/W  | Timer Overflow Flag. Set when the `TIMA` register overflows.                                                                        |
-| 1   | **H-Blank**   | R/W  | PPU H-Blank Flag. Set when the PPU enters the H-Blank period.                                                                       |
-| 0   | **V-Blank**   | R/W  | PPU V-Blank Flag. Set when the PPU enters the V-Blank period.                                                                       |
+| Bit | Name            | Type | Function                                                                                     |
+| :-- | :-------------- | :--- | :------------------------------------------------------------------------------------------- |
+| 7-6 | -               | R    | Unused                                                                                       |
+| 5   | **Link Status** | R/W  | Link Status Interrupt Flag. Set when the `CONNECTED` bit in the `SC` register changes state. |
+| 4   | **Joypad**      | R/W  | Joypad Interrupt Flag. Set when a joypad button is pressed.                                  |
+| 3   | **Serial**      | R/W  | Serial Transfer Complete Flag. Set when a serial data transfer finishes.                     |
+| 2   | **Timer**       | R/W  | Timer Overflow Flag. Set when the `TIMA` register overflows.                                 |
+| 1   | **H-Blank**     | R/W  | PPU H-Blank Flag. Set when the PPU enters the H-Blank period.                                |
+| 0   | **V-Blank**     | R/W  | PPU V-Blank Flag. Set when the PPU enters the V-Blank period.                                |
 
 ## **4. CPU Faults**
 
@@ -70,7 +72,7 @@ CPU Faults are critical, non-maskable events triggered by illegal or dangerous o
 
 - **Bus Error:** Triggered when a 16-bit word (e.g., from an `LD.w` instruction) is accessed from an odd memory address. All 16-bit memory accesses must be aligned to an even address.
 - **Illegal Instruction:** Triggered when the CPU attempts to execute an opcode that is not defined in the instruction set, including any reserved or unused opcode values.
-- **Protected Memory:** Triggered when a write operation is attempted on a memory region that is designated as read-only. This includes the cartridge ROM space (`0x0000-0x7FFF`), the System Library RAM (`E000-EFFF`) after boot, and the PPU/APU register space (`F080-F0FF` and `F100-F17F`) under normal operation.
+- **Protected Memory:** Triggered when a write operation is attempted on a memory region that is designated as read-only. This includes the cartridge ROM space (`0x0000-0x7FFF`), the System Library RAM (`E000-EFFF`) after boot.
 - **Stack Overflow:** Triggered if the Stack Pointer (SP) register decrements below the base of the stack memory region (`0xC000` for WRAM0 or `0xD000` for WRAM1). This helps catch runaway recursive calls or stack corruption before it overwrites other critical memory.
 
 ## **5. Interrupt Vector Table**
@@ -113,7 +115,6 @@ This mode enables advanced programming techniques by allowing the game to modify
   1.  It sets a hardware latch that re-routes the CPU's interrupt vector lookups to a fixed location in Work RAM Bank 0 (WRAM0): **`0xC000 - 0xC01F`**.
   2.  It uses the DMA controller to automatically copy the 32-byte vector table from the cartridge ROM (`0x00E0`) to WRAM (`0xC000`) as a default starting point.
 - **Flexibility**: Because the interrupt table is in RAM, the game can overwrite any of these vector addresses at any time to point to different handler routines, allowing for dynamic, state-based interrupt handling.
-
 
 ---
 
