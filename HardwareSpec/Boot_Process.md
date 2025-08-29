@@ -16,11 +16,11 @@ This table describes the memory map from the CPU's perspective while the interna
 | 0xF000 - 0xF07F | I/O Registers                   | Read/Write |                                                                                      |
 | 0xF080 - 0xF0FF | PPU Registers                   | Read/Write |                                                                                      |
 | 0xF100 - 0xF17F | APU Registers                   | Read/Write |                                                                                      |
-| 0xF400 - 0xF5FF | CRAM                            | Read/Write | CPU writes should be timed to V-Blank/H-Blank.                                       |
-| 0xF600 - 0xF7FF | OAM (Sprite Attribute Memory)   | Read/Write |                                                                                      |
-| 0xF800 - 0xFBFF | DSP Delay Buffer                | Read/Write |                                                                                      |
-| 0xFC00 - 0xFDFF | Wave RAM                        | Read/Write | Available for boot sound data.                                                       |
-| 0xFE00 - 0xFFFF | (Unmapped)                      | -          | HRAM is not available during the boot sequence.                                      |
+| 0xF200 - 0xF3FF | CRAM                            | Read/Write | CPU writes should be timed to V-Blank/H-Blank.                                       |
+| 0xF400 - 0xF5FF | OAM (Sprite Attribute Memory)   | Read/Write |
+| 0xF600 - 0xF9FF | DSP Delay Buffer                | Read/Write |
+| 0xFA00 - 0xFDFF | Wave RAM                        | Read/Write | Available for boot sound data.                                                       |
+| 0xFE00 - 0xFFFF | HRAM                            | Read/Write |                                                                                      |
 
 ###
 
@@ -48,8 +48,6 @@ The code on the Boot ROM executes the following steps in order:
    - **Enable read-only protection** on the System Library RAM (`E800-EFFF`).
    - **Map the game cartridge** to the main memory map, starting at address 0x0000.
 9. **Jump to Game Code**: The very last act of the Boot ROM is to execute a JMP 0x0100 instruction. This transfers control to the game's official entry point. The game is now responsible for enabling its own interrupts when it is ready.
-
-
 
 ---
 

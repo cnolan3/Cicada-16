@@ -5,13 +5,13 @@ This document describes the design of the Picture Processing Unit (PPU) for the 
 ## **1. Core Components**
 
 - **VRAM (Video RAM):** 32 KiB of dedicated, bank-switched RAM. An 8 KiB window of VRAM is accessible to the CPU at any time at `9000-AFFF` for writing and reading data; the active bank for this window is selected via the `VRAM_BANK` I/O register. For rendering, the PPU has a wider internal address bus and can access the entire 32 KiB of VRAM simultaneously. VRAM holds the tile data (the 8x8 pixel building blocks for graphics) and the tilemaps (the data that arranges tiles into background layers).
-- **OAM (Object Attribute Memory):** 512 bytes of dedicated RAM at F600-F7FF used to store the attributes for all 64 hardware sprites (position, tile index, palette, etc.).
+- **OAM (Object Attribute Memory):** 512 bytes of dedicated RAM at F400-F5FF used to store the attributes for all 64 hardware sprites (position, tile index, palette, etc.).
 
 ### **1.1. Memory Access Conflicts**
 
 Accessing OAM/VRAM/CRAM (reading or writing) by the CPU is generally safe during V-Blank and H-Blank periods. However, if the CPU attempts to write to OAM/VRAM/CRAM while the PPU is in **Mode 2 (OAM Scan)** or **Mode 3 (Drawing Pixels)**, the write will still occur, but the PPU may read corrupted or inconsistent data for the current frame, leading to **graphical glitches** on the screen. This behavior is intentional and requires developers to synchronize OAM updates with the PPU's rendering cycle.
 
-- **CRAM (Color RAM / Palette RAM):** 512 bytes of RAM located at `F400-F5FF` in the main memory map. It holds the 256 16-bit color palette entries.
+- **CRAM (Color RAM / Palette RAM):** 512 bytes of RAM located at `F200-F3FF` in the main memory map. It holds the 256 16-bit color palette entries.
 - **Screen Resolution:** 240x160 pixels.
 - **Refresh Rate:** 60 Hz.
 
@@ -152,7 +152,7 @@ These registers, mapped to the CPU's address space, control the PPU's operation.
 
 ### **7.1. Accessing Color RAM (CRAM)**
 
-Since CRAM is mapped directly to the CPU's address space (`F400-F5FF`), there are no registers for indirect access. This allows for very fast reads and writes. However, to prevent visual artifacts caused by modifying palette data while the PPU is actively drawing, all CPU writes to this memory region should be performed **only during non-rendering periods (V-Blank or H-Blank)**. Reading from CRAM is safe at any time.
+Since CRAM is mapped directly to the CPU's address space (`F200-F3FF`), there are no registers for indirect access. This allows for very fast reads and writes. However, to prevent visual artifacts caused by modifying palette data while the PPU is actively drawing, all CPU writes to this memory region should be performed **only during non-rendering periods (V-Blank or H-Blank)**. Reading from CRAM is safe at any time.
 
 ### **7.2. Configuring Tilemap Base Addresses**
 
@@ -206,7 +206,7 @@ For each of the 160 visible scanlines, the PPU performs the exact same sequence 
 
 At the beginning of a scanline, the PPU determines which sprites need to be drawn on this specific line.
 
--   **Action:** The PPU iterates through all 64 sprite entries in OAM (Object Attribute Memory, `F600-F7FF`).
+-   **Action:** The PPU iterates through all 64 sprite entries in OAM (Object Attribute Memory, `F400-F5FF`).
 -   **Condition:** It checks if the current scanline (`LY` register) falls within the vertical range of each sprite (i.e., `sprite.y <= LY < sprite.y + sprite.height`).
 -   **Result:** The PPU builds a temporary internal list of up to 16 sprites that are visible on this line. If more than 16 sprites are on the line, the additional ones are ignored for this frame. This list contains the sprite's X-position, tile index, attributes, and OAM index (for priority).
 -   **Status:** The `STAT` register's mode flag (bits 1-0) is set to `10`. An OAM Scan interrupt can be triggered if enabled.
@@ -226,7 +226,7 @@ This is the core of the rendering process, where the PPU composes the final colo
         -   **Step B (Backgrounds):** The pixel from BG1 is drawn on top of the BG0 pixel, but only if its color index is not 0 (color 0 is transparent).
         -   **Step C (Window):** If the Window is active for this pixel, its pixel is drawn on top of the backgrounds, again treating color 0 as transparent.
         -   **Step D (Sprites):** If a sprite pixel is present at this location, its priority is checked against the background pixel beneath it. Sprite-on-background priority is determined by the sprite's Priority flag (OAM Byte 4, Bit 7) and the background tile's Priority flag (Tilemap entry, Bit 15). A sprite with its priority flag set to `0` will be drawn behind a background tile with its priority flag set to `1`. Sprite-on-sprite priority is determined by OAM index: a sprite with a lower index (e.g., sprite #0) is always drawn on top of a sprite with a higher index (e.g., sprite #1).
-    3.  **Final Color Lookup:** The result of the mixing logic is a 4-bit color index and a palette select value. The PPU uses these to look up the final 16-bit RGB555 color value from CRAM (`F400-F5FF`).
+    3.  **Final Color Lookup:** The result of the mixing logic is a 4-bit color index and a palette select value. The PPU uses these to look up the final 16-bit RGB555 color value from CRAM (`F200-F3FF`).
 
 #### **Mode 0: Horizontal Blank (H-Blank) (90 Cycles)**
 

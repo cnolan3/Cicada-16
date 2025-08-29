@@ -60,7 +60,7 @@ The sweep unit is controlled by the `CH0_SWP` register.
 
 The wave channel offers the most sonic flexibility by playing back a small, user-defined waveform. This is ideal for creating unique instrument tones or simple speech/sound effects.
 
-- **Wave RAM:** A 512-byte area of memory at `FC00-FDFF` is dedicated to waveform data. This RAM is organized as a bank of 16 unique waveforms, indexed from 0 to 15.
+- **Wave RAM:** A 1 KiB (1024-byte) area of memory at `FA00-FDFF` is dedicated to waveform data. This RAM is organized as a bank of 32 unique waveforms, indexed from 0 to 31.
 - **Waveform Format:** Each waveform is 32 bytes long and contains 64 sequential 4-bit samples. The samples are packed two per byte, with the high nibble (bits 7-4) being the first sample and the low nibble (bits 3-0) being the second. The 4-bit sample values represent amplitude, from 0 (lowest point) to 15 (highest point).
 - **Playback:** When the channel is triggered via `KEY_ON`, the APU begins reading the 64 samples of the selected waveform sequentially. The playback speed is controlled by the `CH2_FREQ` register. When the 64th sample is played, the playback loops back to the first sample. The output of the wave channel is the current sample's 4-bit value, scaled by the channel's current 4-bit ADSR envelope volume.
 - **Volume Envelope:** This channel includes the same hardware ADSR envelope found on the Pulse and Noise channels.
@@ -132,7 +132,7 @@ The APU includes a simple DSP unit that applies a single echo/delay effect to th
 The DSP operates on the final mixed audio signal just before it is sent to the speakers. The process works as follows:
 
 1.  **Input Mix:** The audio from any channel with its corresponding `CHx_IN` bit set in `DSP_CTRL` is summed together. This becomes the "dry" input signal for the DSP.
-2.  **Delay Line:** The dry signal is written to a circular buffer in the **Delay Buffer RAM** (`F800-FBFF`). A "read head" retrieves a sample from an earlier point in the buffer. The distance between the read and write heads is the delay time.
+2.  **Delay Line:** The dry signal is written to a circular buffer in the **Delay Buffer RAM** (`F600-F9FF`). A "read head" retrieves a sample from an earlier point in the buffer. The distance between the read and write heads is the delay time.
 3.  **Feedback:** A portion of the retrieved (delayed) signal, scaled by the `DSP_FBACK` register, is added back into the dry input signal before it's written to the delay buffer. This creates repeating, decaying echoes.
 4.  **Final Mix:** The retrieved (delayed) signal is scaled by the `DSP_WET` register and added to the original, unprocessed dry signal. This final mix is what is sent to the main stereo panning and volume controls.
 
@@ -215,7 +215,7 @@ This 16-bit register controls the frequency of the pulse wave for Channel 1. See
 | :-- | :------- | :------------------------------------------------------------------------------------------------------ |
 | 7   | KEY_ON   | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
 | 6   | -        | Unused.                                                                                                 |
-| 5-0 | WAVE_IDX | Selects which 32-byte waveform to play from Wave RAM (0-63).                                            |
+| 5-0 | WAVE_IDX | Selects which 32-byte waveform to play from Wave RAM (0-31).                                            |
 
 #### **F524-F525: CH2_FREQ**
 

@@ -14,11 +14,11 @@
 | F000       | F07F     | **128 B**  | **IO Registers (joypad, timers/div, RTC, DMA, mapper)**      |
 | F080       | F0FF     | **128 B**  | **PPU Registers (LCDC, STAT, SCX, SCY, LY/LYC, palettes)**   |
 | F100       | F17F     | **128 B**  | **APU Registers (Core, Mixer, DSP)**                         |
-| F180       | F3FF     | **640 B**  | **Reserved**                                                 |
-| F400       | F5FF     | **512 B**  | **CRAM (color pallete entries)**                             |
-| F600       | F7FF     | **512 B**  | **OAM (sprite attribute table)**                             |
-| F800       | FBFF     | **1 KiB**  | **DSP Delay Buffer**                                         |
-| FC00       | FDFF     | **512 B**  | **Wave RAM (user wave tables)**                              |
+| F180       | F1FF     | **128 B**  | **Reserved**                                                 |
+| F200       | F3FF     | **512 B**  | **CRAM (color pallete entries)**                             |
+| F400       | F5FF     | **512 B**  | **OAM (sprite attribute table)**                             |
+| F600       | F9FF     | **1 KiB**  | **DSP Delay Buffer**                                         |
+| FA00       | FDFF     | **1 KiB**  | **Wave RAM (user wave tables)**                              |
 | FE00       | FFFF     | **512 B**  | **HRAM (high speed ram)**                                    |
 
 ## **MMU Behavior and Rules**
@@ -275,3 +275,4 @@ To support games larger than the CPU's addressable ROM space, the console uses a
 
 © 2025 Connor Nolan. This work is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
+
