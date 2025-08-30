@@ -65,38 +65,39 @@ Not all RAM is equal in speed.
 
 ## **IO Registers (F000–F03F)**
 
-| Address | Name          | Description                                                       |
-| :------ | :------------ | :---------------------------------------------------------------- |
-| F000    | **JOYP**      | **Joypad: read buttons, write column select**                     |
-| F002    | **SB**        | **Serial Buffer (R/W)**                                           |
-| F003    | **SC**        | **Serial Control (R/W)**                                          |
-| F004    | **DIV0**      | **32-bit free-running divider (byte 0, LSB)**                     |
-| F005    | **DIV1**      | **32-bit free-running divider (byte 1)**                          |
-| F006    | **DIV2**      | **32-bit free-running divider (byte 2)**                          |
-| F007    | **DIV3**      | **32-bit free-running divider (byte 3, MSB)**                     |
-| F008    | **TIMA**      | **8-bit timer counter (IRQ on overflow → IF.TMR)**                |
-| F009    | **TMA**       | **8-bit timer modulo (reload value on overflow)**                 |
-| F00A    | **TAC**       | **Timer control: bit2=EN, bits1..0=clock sel**                    |
-| F00B    | **DMA_SRC_L** | **DMA source address low**                                        |
-| F00C    | **DMA_SRC_H** | **DMA source address high**                                       |
-| F00D    | **DMA_DST_L** | **DMA destination low**                                           |
-| F00E    | **DMA_DST_H** | **DMA destination high**                                          |
-| F00F    | **DMA_LEN**   | **DMA length in bytes (0 => special 512 default)**                |
-| F010    | **DMA_CTL**   | **DMA control: bit0=START, bit1=DIR, bit2=VRAM_ONLY, etc.**       |
-| F011    | **MPR_BANK**  | **ROM bank select for 4000-7FFF window**                          |
-| F012    | **RAM_BANK**  | **Bank select for banked Cart RAM (if enabled)**                  |
-| F013    | **WE_LATCH**  | **Write-enable latch for battery RAM (write key)**                |
-| F014    | **VRAM_BANK** | **VRAM Bank Select (0-3 for 9000-AFFF window)**                   |
-| F015    | **WRAM_BANK** | **WRAM Bank Select (0-5 for D000-DFFF window -> maps banks 1-6)** |
-| F018    | **RTC_SEC**   | **0..59 (latched)**                                               |
-| F019    | **RTC_MIN**   | **0..59 (latched)**                                               |
-| F01A    | **RTC_HOUR**  | **0..23 (latched)**                                               |
-| F01B    | **RTC_DAY_L** | **day counter low (latched)**                                     |
-| F01C    | **RTC_DAY_H** | **day counter high (latched)**                                    |
-| F01D    | **RTC_CTL**   | **bit0=HALT, bit1=LATCH (1=latch snapshot)**                      |
-| F01E    | **RTC_STS**   | **bit0=LATCHED, bit1=BAT_OK (optional)**                          |
-| F020    | **IE**        | **Interrupt Enable Register**                                     |
-| F021    | **IF**        | **Interrupt Flag Register**                                       |
+| Address | Name           | Description                                                       |
+| :------ | :------------- | :---------------------------------------------------------------- |
+| F000    | **JOYP**       | **Joypad: read buttons, write column select**                     |
+| F002    | **SB**         | **Serial Buffer (R/W)**                                           |
+| F003    | **SC**         | **Serial Control (R/W)**                                          |
+| F004    | **DIV0**       | **32-bit free-running divider (byte 0, LSB)**                     |
+| F005    | **DIV1**       | **32-bit free-running divider (byte 1)**                          |
+| F006    | **DIV2**       | **32-bit free-running divider (byte 2)**                          |
+| F007    | **DIV3**       | **32-bit free-running divider (byte 3, MSB)**                     |
+| F008    | **TIMA**       | **8-bit timer counter (IRQ on overflow → IF.TMR)**                |
+| F009    | **TMA**        | **8-bit timer modulo (reload value on overflow)**                 |
+| F00A    | **TAC**        | **Timer control: bit2=EN, bits1..0=clock sel**                    |
+| F00B    | **DMA_SRC_L**  | **DMA source address low**                                        |
+| F00C    | **DMA_SRC_H**  | **DMA source address high**                                       |
+| F00D    | **DMA_DST_L**  | **DMA destination low**                                           |
+| F00E    | **DMA_DST_H**  | **DMA destination high**                                          |
+| F00F    | **DMA_LEN**    | **DMA length in bytes (0 => special 512 default)**                |
+| F010    | **DMA_CTL**    | **DMA control: bit0=START, bit1=DIR, bit2=VRAM_ONLY, etc.**       |
+| F011    | **MPR_BANK**   | **ROM bank select for 4000-7FFF window**                          |
+| F012    | **RAM_BANK**   | **Bank select for banked Cart RAM (if enabled)**                  |
+| F013    | **WE_LATCH**   | **Write-enable latch for battery RAM (write key)**                |
+| F014    | **VRAM_BANK**  | **VRAM Bank Select (0-3 for 9000-AFFF window)**                   |
+| F015    | **WRAM_BANK**  | **WRAM Bank Select (0-5 for D000-DFFF window -> maps banks 1-6)** |
+| F018    | **RTC_SEC**    | **Seconds (0-59)**                                                |
+| F019    | **RTC_MIN**    | **Minutes (0-59)**                                                |
+| F01A    | **RTC_HOUR**   | **Hours (0-23)**                                                  |
+| F01B    | **RTC_DAY**    | **Day of the month (1-31)**                                       |
+| F01C    | **RTC_MONTH**  | **Month of the year (1-12)**                                      |
+| F01D    | **RTC_YEAR_L** | **Lower 8 bits of the year**                                      |
+| F01E    | **RTC_YEAR_H** | **Upper 8 bits of the year**                                      |
+| F01F    | **RTC_CTL**    | **Control register (LATCH, HALT)**                                |
+| F020    | **IE**         | **Interrupt Enable Register**                                     |
+| F021    | **IF**         | **Interrupt Flag Register**                                       |
 
 ## **Joypad Register (JOYP)**
 
@@ -218,19 +219,22 @@ The 5-bit value in CLK_SEL selects the clock source for the timer by directly ma
 
 ## **Real-Time Clock (RTC)**
 
-The console includes a battery-backed Real-Time Clock (RTC) that keeps track of time even when the console is powered off. This feature is available on cartridges that include the necessary RTC hardware and a battery. The RTC is controlled by a set of I/O registers from F018 to F01E.
+The console includes a battery-backed Real-Time Clock (RTC) that keeps track of time even when the console is powered off. This feature is available on cartridges that include the necessary RTC hardware and a battery. The RTC is controlled by a set of I/O registers from F018 to F01F.
 
-| Address | Name          | Description                           |
-| :------ | :------------ | :------------------------------------ |
-| F018    | **RTC_SEC**   | Seconds (0-59)                        |
-| F019    | **RTC_MIN**   | Minutes (0-59)                        |
-| F01A    | **RTC_HOUR**  | Hours (0-23)                          |
-| F01B    | **RTC_DAY_L** | Lower 8 bits of a 16-bit day counter. |
-| F01C    | **RTC_DAY_H** | Upper 8 bits of a 16-bit day counter. |
-| F01D    | **RTC_CTL**   | Control register for the RTC.         |
-| F01E    | **RTC_STS**   | Status register for the RTC.          |
+The RTC's internal logic is responsible for handling all the rules of the calendar, including months of different lengths and leap years. When RTC_SEC rolls past 59, RTC_MIN is incremented. When RTC_MIN rolls past 59, RTC_HOUR is incremented. When RTC_HOUR rolls past 23, RTC_DAY is incremented. When RTC_DAY is incremented, the hardware checks the current RTC_MONTH and RTC_YEAR. If it's January 31st, the day resets to 1 and the month increments to February. If it's February 28th on a non-leap year, the day resets to 1 and the month increments to March. If it's February 28th on a leap year, the day simply increments to 29. This logic continues for all months. When December 31st rolls over, the day and month reset to 1, and the year is incremented.
 
-### **RTC_CTL (F01D) Bit Assignments**
+| Address | Name           | Description                   |
+| :------ | :------------- | :---------------------------- |
+| F018    | **RTC_SEC**    | Seconds (0-59)                |
+| F019    | **RTC_MIN**    | Minutes (0-59)                |
+| F01A    | **RTC_HOUR**   | Hours (0-23)                  |
+| F01B    | **RTC_DAY**    | Day of the month (1-31)       |
+| F01C    | **RTC_MONTH**  | Month of the year (1-12)      |
+| F01D    | **RTC_YEAR_L** | Lower 8 bits of the year      |
+| F01E    | **RTC_YEAR_H** | Upper 8 bits of the year      |
+| F01F    | **RTC_CTL**    | Control register for the RTC. |
+
+### **RTC_CTL (F01F) Bit Assignments**
 
 | Bit   | Name      | Type    | Description                                 |
 | :---- | :-------- | :------ | :------------------------------------------ |
@@ -238,28 +242,25 @@ The console includes a battery-backed Real-Time Clock (RTC) that keeps track of 
 | **1** | **LATCH** | **R/W** | **Latch RTC Snapshot (1=latch, 0=release)** |
 | **0** | **HALT**  | **R/W** | **Halt Clock (1=Stop, 0=Run)**              |
 
-### **RTC_STS (F01E) Bit Assignments**
-
-| Bit   | Name        | Type  | Description                                     |
-| :---- | :---------- | :---- | :---------------------------------------------- |
-| 7-2   | -           | R     | Unused                                          |
-| **1** | **BAT_OK**  | **R** | **Battery Status (1=OK, 0=Fail, optional)**     |
-| **0** | **LATCHED** | **R** | **Snapshot Latched (1=Latched, 0=Not Latched)** |
-
 ### **Reading the RTC Registers (Latching)**
 
 To prevent reading inconsistent time values (e.g., reading the minutes just as the seconds roll over to 0), the RTC uses a latching mechanism. To safely read the time, the game must perform the following sequence:
 
-1.  Write a `1` to the **LATCH bit (bit 1)** of the **RTC_CTL** register (F01D). This copies the current state of all RTC counter registers into a separate, stable set of latched registers.
-2.  Read the time values from the RTC registers (F018-F01C). These reads will access the latched snapshot, not the live counters.
+1.  Write a `1` to the **LATCH bit (bit 1)** of the **RTC_CTL** register (F01F). This copies the current state of all RTC counter registers into a separate, stable set of latched registers.
+2.  Read the time values from the RTC registers (F018-F01E). These reads will access the latched snapshot, not the live counters.
 3.  Write a `0` to the **LATCH bit** to release the latch and allow the snapshot to be updated again on the next latch request.
-
-The **LATCHED bit (bit 0)** in the **RTC_STS** register (F01E) will be set to 1 by the hardware after a successful latch, confirming the data is ready to be read.
 
 ### **Controlling the RTC**
 
 - **Halting the Clock:** Setting the **HALT bit (bit 0)** in **RTC_CTL** will stop the RTC from incrementing. This is typically only done when the game needs to set the time.
-- **Battery Status:** The optional **BAT_OK bit (bit 1)** in **RTC_STS** can be checked to see if the cartridge battery is still good. A value of 1 indicates the battery is okay.
+
+### **Setting the RTC**
+
+To set the time and date, the following sequence must be performed:
+
+1.  Set the **HALT bit (bit 0)** in the **RTC_CTL** register (F01F) to `1`. This stops the RTC from incrementing.
+2.  Write the desired values to the `RTC_SEC`, `RTC_MIN`, `RTC_HOUR`, `RTC_DAY`, `RTC_MONTH`, `RTC_YEAR_L`, and `RTC_YEAR_H` registers.
+3.  Set the **HALT bit** back to `0` to start the RTC again.
 
 ### **Use-Cases**
 
