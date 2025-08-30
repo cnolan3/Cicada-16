@@ -206,7 +206,7 @@ The "pitch" of the noise is controlled by the rate at which the LFSR is clocked.
 | Bit | Name      | Description                                                                                             |
 | :-- | :-------- | :------------------------------------------------------------------------------------------------------ |
 | 7   | KEY_ON    | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
-| 6   | LFSR_MODE | 0: 15-bit LFSR (Tonal noise), 1: 7-bit LFSR (Metallic noise).                                           |
+| 6   | LFSR_MODE | 0: 15-bit LFSR (White noise), 1: 7-bit LFSR (Metallic noise).                                           |
 | 5-0 | CLK_DIV   | Clock divider for the LFSR, controls the base pitch of the noise.                                       |
 
 ## **6. ADSR Volume Envelopes**

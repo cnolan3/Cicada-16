@@ -14,8 +14,8 @@ This table describes the memory map from the CPU's perspective while the interna
 | 0xA000 - 0xBFFF | Work RAM (WRAM0)                | Read/Write | The WRAM1 window (`D000-DFFF`) is unmapped during boot.                              |
 | 0xE000 - 0xEFFF | System Library RAM              | Read/Write | Copied here during boot. Made Read-Only after handover.                              |
 | 0xF000 - 0xF07F | I/O Registers                   | Read/Write |                                                                                      |
-| 0xF080 - 0xF0FF | PPU Registers                   | Read/Write |                                                                                      |
-| 0xF100 - 0xF17F | APU Registers                   | Read/Write |                                                                                      |
+| 0xF040 - 0xF07F | PPU Registers                   | Read/Write |                                                                                      |
+| 0xF800 - 0xF0BF | APU Registers                   | Read/Write |                                                                                      |
 | 0xF200 - 0xF3FF | CRAM                            | Read/Write | CPU writes should be timed to V-Blank/H-Blank.                                       |
 | 0xF400 - 0xF5FF | OAM (Sprite Attribute Memory)   | Read/Write |
 | 0xF600 - 0xF9FF | DSP Delay Buffer                | Read/Write |
