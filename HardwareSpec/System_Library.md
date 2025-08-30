@@ -9,7 +9,7 @@ These functions are copied from the internal Boot ROM to the System Library RAM 
 To provide a stable and future-proof API, all System Library functions and data are accessed indirectly through a **System Call Vector Table**. This table is located at the very beginning of the System Library RAM, starting at `E000`.
 
 - **Size**: The table has 128 entries, each being a 16-bit pointer. This provides a total of 128 unique system calls.
-- **Memory Footprint**: 128 entries \* 2 bytes/entry = 256 bytes (`E000-E0FF`).
+- **Memory Footprint**: 128 entries * 2 bytes/entry = 256 bytes (`E000-E0FF`).
 - **Function**: Each entry in the table holds the absolute 16-bit address of a specific system function or data block. To call a function, a developer uses its official vector number (e.g., `SYSCALL_DECOMPRESS_RLE`) to look up the address in the table and then performs an indirect call.
 - **Data Blocks**: For library data blocks (such as the Default Font, Note Frequency Table, Default Waveforms, and Percussion Presets), the vector table contains a single entry that points to the beginning address of the respective data block.
 
@@ -38,11 +38,11 @@ The 4 KiB (4096 bytes) of System Library RAM is allocated as follows:
 
 | Component                  | Size (Bytes) | Address Range (Approx.) | Notes                                 |
 | :------------------------- | :----------- | :---------------------- | :------------------------------------ |
-| **System Call Vectors**    | 256          | `E000-E0FF`             | 128 entries \* 2 bytes each           |
-| **Default Font Data**      | 768          | `E100-E3FF`             | 96 characters \* 8 bytes each (1bpp)  |
+| **System Call Vectors**    | 256          | `E000-E0FF`             | 128 entries * 2 bytes each           |
+| **Default Font Data**      | 768          | `E100-E3FF`             | 96 characters * 8 bytes each (1bpp)  |
 | **Sine Wave Table**        | 256          | `E400-E4FF`             | 256 samples for wave synthesis        |
 | **Note Frequency Table**   | 120          | `E500-E577`             | 5 octaves _ 12 notes _ 2 bytes each   |
-| **Default APU Waves**      | 128          | `E578-E5F7`             | 4 waveforms \* 32 bytes each          |
+| **Default APU Waves**      | 128          | `E578-E5F7`             | 4 waveforms * 32 bytes each          |
 | **APU Percussion Presets** | 24           | `E5F8-E610`             | ADSR/timing for drum sounds           |
 | **(Function Code)**        | 2544         | `E611-EFFF`             | Remaining space for library functions |
 | **Total**                  | **4096**     | `E000-EFFF`             |                                       |
@@ -84,57 +84,40 @@ The 4 KiB (4096 bytes) of System Library RAM is allocated as follows:
 | 0x20      | Function   | `dmaCopyVBlank`          |
 | 0x21-0x7F | ---        | **Unused**               |
 
-## **Graphics Routines**
+## **System Library Functions and Data**
 
-### `clearTilemap` : Index 0x0E
+### **Default Font Data** : Index 0x00
 
-Explanation: A highly optimized routine to fill a rectangular area of a background tilemap in VRAM with a specific tile entry. This is far faster than a developer's own loop in game code. It's essential for clearing the screen or dialogue boxes.
+#### **Font Storage Format (1bpp vs 4bpp)**
 
-Inputs: R0=VRAM address of the tilemap, R1=Tile entry value to write (16-bit), R2.b=Width of area in tiles, R3.b=Height of area in tiles.
+To save a significant amount of space in the System Library, the default font is stored in a compact, 1-bit-per-pixel (1bpp) monochrome format.
 
-Outputs: None.
+- **Hardware Format (4bpp):** The PPU requires every 8x8 tile in VRAM to be in its native 4bpp planar format, which takes 32 bytes. Storing the 96-character font this way would consume `96 * 32 = 3072` bytes, which is too large.
+- **Storage Format (1bpp):** In the 1bpp library format, each 8x8 character only requires 8 bytes (1 bit per pixel). The total storage size is therefore `96 * 8 = 768` bytes.
 
-Clobbered Registers: R0, R1, R2, R3.
+The `initDefaultFont` function handles the conversion, reading the compact 8-byte characters and expanding them into the 32-byte, 4bpp format that the PPU requires before writing them to VRAM.
 
-### `waitForVBlank` : Index 0x0F
+### **Sine Wave Table** : Index 0x01
 
-Explanation: This is arguably the most critical function for any game. It puts the CPU into a low-power HALT state until the V-Blank interrupt occurs. This synchronizes the game loop to the screen's refresh rate (preventing tearing) and is the correct way to idle, as it saves power and frees the memory bus. Every game's main loop would call this once per frame.
+A 256-byte table containing a single cycle of a sine wave. This can be used by the APU's wave channel to produce a pure tone, or as a building block for more complex sounds.
 
-Inputs: None.
+### **Note Frequency Table** : Index 0x02
 
-Outputs: None.
+To simplify music creation, the System Library provides a pre-calculated lookup table containing the 16-bit `FREQ_REG` values for a range of standard musical notes. This allows developers to play specific pitches without needing to perform the frequency calculation manually.
 
-Clobbered Registers: None.
+- **Location:** The table resides at a fixed address within the System Library space.
+- **Range:** The table covers 5 octaves, from C2 to B6.
+- **Format:** The table is a simple array of 16-bit unsigned integers. Each entry corresponds to a note in the chromatic scale.
 
-### `drawChar` : Index 0x10
+**Note:** The exact addresses and constant names will be finalized in the official toolchain documentation.
 
-Explanation: You already have initDefaultFont to load the font tiles; these functions would use them. drawChar writes a single character's tile index to a specified tilemap location.
+### **Default APU Waves** : Index 0x03
 
-Inputs: R0=Character to draw (ASCII), R1=Pointer to destination in VRAM tilemap.
+This is a 128-byte block containing four simple, ready-to-use 32-byte waveforms for the APU's wave channel. These include a sawtooth wave, a triangle wave, and others, providing a quick way to get varied sounds without having to define custom waveforms.
 
-Outputs: None.
+### **APU Percussion Presets** : Index 0x04
 
-Clobbered Registers: R2, R3.
-
-### `drawString` : Index 0x11
-
-Explanation: drawString iterates over a null-terminated string in RAM and calls drawChar for each character, handling advancing the "cursor" position on the tilemap.
-
-Inputs: R0=Pointer to null-terminated string, R1=Pointer to destination in VRAM tilemap, R2.b=Tilemap width (for line wrapping).
-
-Outputs: R0 and R1 are updated to point past the end of the source/destination.
-
-Clobbered Registers: R2, R3.
-
-### `setPalette` : Index 0x12
-
-Explanation: A simple helper to copy a block of color data into the PPU's CRAM. It would essentially be an optimized memcpy but serves to standardize the process. Developers should still be taught to only call this during V-Blank.
-
-Inputs: R0=Source address of palette data, R1=Destination CRAM index (0-255), R2.b=Number of colors to copy.
-
-Outputs: None.
-
-Clobbered Registers: R0, R1, R2, R3.
+A small 24-byte data block containing a set of pre-configured ADSR and timing parameters for creating common percussion sounds (like a kick drum or hi-hat) using the APU's noise channel.
 
 ### `initDefaultFont` : Index 0x05
 
@@ -150,129 +133,6 @@ This function initializes the default system font by copying it from the System 
   5.  `R0` is incremented by 32 after each tile is written.
 - **Output:** None.
 - **Clobbered Registers:** `R1`, `R2`, `R3`.
-
-### **Default Font Data** : Index 0x00
-
-#### **Font Storage Format (1bpp vs 4bpp)**
-
-To save a significant amount of space in the System Library, the default font is stored in a compact, 1-bit-per-pixel (1bpp) monochrome format.
-
-- **Hardware Format (4bpp):** The PPU requires every 8x8 tile in VRAM to be in its native 4bpp planar format, which takes 32 bytes. Storing the 96-character font this way would consume `96 * 32 = 3072` bytes, which is too large.
-- **Storage Format (1bpp):** In the 1bpp library format, each 8x8 character only requires 8 bytes (1 bit per pixel). The total storage size is therefore `96 * 8 = 768` bytes.
-
-The `initDefaultFont` function handles the conversion, reading the compact 8-byte characters and expanding them into the 32-byte, 4bpp format that the PPU requires before writing them to VRAM.
-
-## **Memory Management Routines**
-
-### `memcpy` : Index 0x13
-
-Explanation: Standard C library equivalents. memcpy copies a block of memory from a source to a destination.
-
-Inputs: R0=Source, R1=Destination, R2=Length in bytes.
-
-Outputs: None.
-
-Clobbered Registers: R0, R1, R2, R3.
-
-### `memset` : Index 0x14
-
-Explanation: memset fills a block of memory with a specific byte value. These would be written in highly optimized assembly, making them faster than any loop a developer might write themselves. They're used for everything from clearing RAM to initializing data structures.
-
-Inputs: R0=Destination, R1.b=Value to write, R2=Length in bytes.
-
-Outputs: None.
-
-Clobbered Registers: R0, R1, R2, R3.
-
-### `setBankROM` : Index 0x15
-
-Explanation: Since bank switching is a core mechanic of the console, providing standardized functions to do it is a must. This function would simply take a bank number and write it to the correct I/O register (MPR_BANK).
-
-Inputs: R0.b=Bank number.
-
-Outputs: None.
-
-Clobbered Registers: None.
-
-### `setBankWRAM` : Index 0x16
-
-Explanation: This function would simply take a bank number and write it to the correct I/O register (WRAM_BANK).
-
-Inputs: R0.b=Bank number.
-
-Outputs: None.
-
-Clobbered Registers: None.
-
-### `setBankVRAM` : Index 0x17
-
-Explanation: This function would simply take a bank number and write it to the correct I/O register (VRAM_BANK).
-
-Inputs: R0.b=Bank number.
-
-Outputs: None.
-
-Clobbered Registers: None.
-
-## **Music and Sound Routines**
-
-### **Note Frequency Table** : Index 0x02
-
-To simplify music creation, the System Library provides a pre-calculated lookup table containing the 16-bit `FREQ_REG` values for a range of standard musical notes. This allows developers to play specific pitches without needing to perform the frequency calculation manually.
-
-- **Location:** The table resides at a fixed address within the System Library space.
-- **Range:** The table covers 5 octaves, from C2 to B6.
-- **Format:** The table is a simple array of 16-bit unsigned integers. Each entry corresponds to a note in the chromatic scale.
-
-**Note:** The exact addresses and constant names will be finalized in the official toolchain documentation.
-
-### **Sine Wave Table** : Index 0x01
-
-A 256-byte table containing a single cycle of a sine wave. This can be used by the APU's wave channel to produce a pure tone, or as a building block for more complex sounds.
-
-### **Default APU Waves** : Index 0x03
-
-This is a 128-byte block containing four simple, ready-to-use 32-byte waveforms for the APU's wave channel. These include a sawtooth wave, a triangle wave, and others, providing a quick way to get varied sounds without having to define custom waveforms.
-
-### **APU Percussion Presets** : Index 0x04
-
-A small 24-byte data block containing a set of pre-configured ADSR and timing parameters for creating common percussion sounds (like a kick drum or hi-hat) using the APU's noise channel.
-
-## **Audio & Music Routines**
-
-### `playSoundEffect` : Index 0x18
-
-Explanation: This would be a huge quality-of-life improvement. Instead of manually setting 5-6 APU registers, a developer could call this single function. It would take a pointer to a small data structure in RAM/ROM that defines a sound effect (e.g., which channel to use, initial frequency, ADSR settings, noise parameters, etc.). The function reads this structure and configures the appropriate APU channel.
-
-Inputs: R0=Pointer to sound effect data structure, R1.b=Channel to play on (0-3).
-
-Outputs: None.
-
-Clobbered Registers: R2.
-
-### `initMusicDriver` : Index 0x19
-
-Explanation: A simple, tick-based music driver. initMusicDriver would take a pointer to the song data and set up internal state variables.
-
-Inputs: R0=Pointer to music data.
-
-Outputs: None.
-
-Clobbered Registers: Varies (would need several internal state registers).
-
-### `updateMusicDriver` : Index 0x1A
-
-Explanation: updateMusicDriver would be called once per frame (typically from the V-Blank interrupt) to process the next "tick" of the song data, read note/effect commands, and update the APU registers accordingly. This abstracts away the entire complexity of a music tracker engine.
-
-Inputs: None.
-
-Outputs: None.
-
-Clobbered Registers: Varies (would need several internal state registers).
-
-## **Serial Communication Functions**
-
-To simplify serial communication, the System Library provides functions to handle the low-level boilerplate of exchanging single bytes.
 
 ### `serialExchangeByte` : Index 0x06
 
@@ -328,32 +188,6 @@ Serial_ISR:
     RETI ; Return from interrupt
 ```
 
-## **Input Handling Routines**
-
-### `readJoypad` : Index 0x1B
-
-Explanation: This function performs the necessary sequence of writes and reads to the JOYP register to poll all three button groups (D-Pad, Action, Utility). It then combines the results into a single, clean 16-bit bitmask. This is much more convenient than doing it manually.
-
-Inputs: None.
-
-Outputs: R0=A 16-bit value where each bit represents a button (e.g., bit 0 = Right, bit 1 = Left, bit 8 = A, etc.).
-
-Clobbered Registers: R1.
-
-### `readJoypadTrigger` : Index 0x1C
-
-Explanation: An even more useful input function. It would call readJoypad and compare the result with the state from the previous frame (which it stores internally in System Library RAM). It returns a bitmask of only the buttons that were just pressed on this frame (a 0-to-1 transition). This is what most game logic actually needs (e.g., "jump when A is pressed," not "jump while A is held down").
-
-Inputs: None.
-
-Outputs: R0=A 16-bit bitmask of newly pressed buttons.
-
-Clobbered Registers: R1.
-
-## **Advanced Arithmetic Functions**
-
-Since the Cicada-16 CPU does not have hardware support for multiplication or division, the System Library provides highly optimized routines for these common operations.
-
 ### `fastMultiply16` : Index 0x09
 
 Multiplies two 16-bit unsigned integers and returns a 32-bit result.
@@ -404,30 +238,6 @@ Divides a 16-bit unsigned integer by an 8-bit unsigned integer.
 - **Error Handling:** If the divisor in `R1.b` is zero, the function will immediately return, setting the **Carry Flag (F.C)** to 1. The contents of `R0` will be undefined in this case.
 - **Clobbered Registers:** `R1`, `R2`.
 
-## **Advanced Math & Utility Routines**
-
-### `rand` : Index 0x1D
-
-Explanation: Provides a standardized Pseudo-Random Number Generator (PRNG). The first time it's called, it could seed itself using the free-running DIV register. Subsequent calls would use a fast algorithm (like a Linear Congruential Generator or a Xorshift) to produce the next number in the sequence. Absolutely essential for any game with random elements.
-
-Inputs: None.
-
-Outputs: R0=A 16-bit pseudo-random number.
-
-Clobbered Registers: R1.
-
-### `setInterruptHandler` : Index 0x1E
-
-Explanation: For games running in "Enhanced Mode" (RAM-based vectors), this provides a safe, standardized way to change an interrupt service routine. It takes an interrupt vector number and a function pointer and writes the address into the correct slot in the WRAM vector table (0xC000). This is safer than having the developer hardcode memory addresses.
-
-Inputs: R0.b=Interrupt vector number, R1=Address of the new ISR.
-
-Outputs: None.
-
-Clobbered Registers: None.
-
-## **Data Decompression Functions**
-
 ### `decompressRLE` : Index 0x0D
 
 Decompresses data that was compressed using a Run-Length Encoding (RLE) scheme. The function processes control bytes to expand runs of repeated data and copy raw data blocks.
@@ -451,7 +261,175 @@ Decompresses data that was compressed using a Run-Length Encoding (RLE) scheme. 
 - **Clobbered Registers:** `R2`, `R3`.
 - **Important Note:** The developer is responsible for ensuring the destination buffer in RAM is large enough to hold the fully decompressed data. This function does not perform any bounds checking.
 
-## **DMA Helper Routines**
+### `clearTilemap` : Index 0x0E
+
+Explanation: A highly optimized routine to fill a rectangular area of a background tilemap in VRAM with a specific tile entry. This is far faster than a developer's own loop in game code. It's essential for clearing the screen or dialogue boxes.
+
+Inputs: R0=VRAM address of the tilemap, R1=Tile entry value to write (16-bit), R2.b=Width of area in tiles, R3.b=Height of area in tiles.
+
+Outputs: None.
+
+Clobbered Registers: R0, R1, R2, R3.
+
+### `waitForVBlank` : Index 0x0F
+
+Explanation: This is arguably the most critical function for any game. It puts the CPU into a low-power HALT state until the V-Blank interrupt occurs. This synchronizes the game loop to the screen's refresh rate (preventing tearing) and is the correct way to idle, as it saves power and frees the memory bus. Every game's main loop would call this once per frame.
+
+Inputs: None.
+
+Outputs: None.
+
+Clobbered Registers: None.
+
+### `drawChar` : Index 0x10
+
+Explanation: You already have initDefaultFont to load the font tiles; these functions would use them. drawChar writes a single character's tile index to a specified tilemap location.
+
+Inputs: R0=Character to draw (ASCII), R1=Pointer to destination in VRAM tilemap.
+
+Outputs: None.
+
+Clobbered Registers: R2, R3.
+
+### `drawString` : Index 0x11
+
+Explanation: drawString iterates over a null-terminated string in RAM and calls drawChar for each character, handling advancing the "cursor" position on the tilemap.
+
+Inputs: R0=Pointer to null-terminated string, R1=Pointer to destination in VRAM tilemap, R2.b=Tilemap width (for line wrapping).
+
+Outputs: R0 and R1 are updated to point past the end of the source/destination.
+
+Clobbered Registers: R2, R3.
+
+### `setPalette` : Index 0x12
+
+Explanation: A simple helper to copy a block of color data into the PPU's CRAM. It would essentially be an optimized memcpy but serves to standardize the process. Developers should still be taught to only call this during V-Blank.
+
+Inputs: R0=Source address of palette data, R1=Destination CRAM index (0-255), R2.b=Number of colors to copy.
+
+Outputs: None.
+
+Clobbered Registers: R0, R1, R2, R3.
+
+### `memcpy` : Index 0x13
+
+Explanation: Standard C library equivalents. memcpy copies a block of memory from a source to a destination.
+
+Inputs: R0=Source, R1=Destination, R2=Length in bytes.
+
+Outputs: None.
+
+Clobbered Registers: R0, R1, R2, R3.
+
+### `memset` : Index 0x14
+
+Explanation: memset fills a block of memory with a specific byte value. These would be written in highly optimized assembly, making them faster than any loop a developer might write themselves. They're used for everything from clearing RAM to initializing data structures.
+
+Inputs: R0=Destination, R1.b=Value to write, R2=Length in bytes.
+
+Outputs: None.
+
+Clobbered Registers: R0, R1, R2, R3.
+
+### `setBankROM` : Index 0x15
+
+Explanation: Since bank switching is a core mechanic of the console, providing standardized functions to do it is a must. This function would simply take a bank number and write it to the correct I/O register (MPR_BANK).
+
+Inputs: R0.b=Bank number.
+
+Outputs: None.
+
+Clobbered Registers: None.
+
+### `setBankWRAM` : Index 0x16
+
+Explanation: This function would simply take a bank number and write it to the correct I/O register (WRAM_BANK).
+
+Inputs: R0.b=Bank number.
+
+Outputs: None.
+
+Clobbered Registers: None.
+
+### `setBankVRAM` : Index 0x17
+
+Explanation: This function would simply take a bank number and write it to the correct I/O register (VRAM_BANK).
+
+Inputs: R0.b=Bank number.
+
+Outputs: None.
+
+Clobbered Registers: None.
+
+### `playSoundEffect` : Index 0x18
+
+Explanation: This would be a huge quality-of-life improvement. Instead of manually setting 5-6 APU registers, a developer could call this single function. It would take a pointer to a small data structure in RAM/ROM that defines a sound effect (e.g., which channel to use, initial frequency, ADSR settings, noise parameters, etc.). The function reads this structure and configures the appropriate APU channel.
+
+Inputs: R0=Pointer to sound effect data structure, R1.b=Channel to play on (0-3).
+
+Outputs: None.
+
+Clobbered Registers: R2.
+
+### `initMusicDriver` : Index 0x19
+
+Explanation: A simple, tick-based music driver. initMusicDriver would take a pointer to the song data and set up internal state variables.
+
+Inputs: R0=Pointer to music data.
+
+Outputs: None.
+
+Clobbered Registers: Varies (would need several internal state registers).
+
+### `updateMusicDriver` : Index 0x1A
+
+Explanation: updateMusicDriver would be called once per frame (typically from the V-Blank interrupt) to process the next "tick" of the song data, read note/effect commands, and update the APU registers accordingly. This abstracts away the entire complexity of a music tracker engine.
+
+Inputs: None.
+
+Outputs: None.
+
+Clobbered Registers: Varies (would need several internal state registers).
+
+### `readJoypad` : Index 0x1B
+
+Explanation: This function performs the necessary sequence of writes and reads to the JOYP register to poll all three button groups (D-Pad, Action, Utility). It then combines the results into a single, clean 16-bit bitmask. This is much more convenient than doing it manually.
+
+Inputs: None.
+
+Outputs: R0=A 16-bit value where each bit represents a button (e.g., bit 0 = Right, bit 1 = Left, bit 8 = A, etc.).
+
+Clobbered Registers: R1.
+
+### `readJoypadTrigger` : Index 0x1C
+
+Explanation: An even more useful input function. It would call readJoypad and compare the result with the state from the previous frame (which it stores internally in System Library RAM). It returns a bitmask of only the buttons that were just pressed on this frame (a 0-to-1 transition). This is what most game logic actually needs (e.g., "jump when A is pressed," not "jump while A is held down").
+
+Inputs: None.
+
+Outputs: R0=A 16-bit bitmask of newly pressed buttons.
+
+Clobbered Registers: R1.
+
+### `rand` : Index 0x1D
+
+Explanation: Provides a standardized Pseudo-Random Number Generator (PRNG). The first time it's called, it could seed itself using the free-running DIV register. Subsequent calls would use a fast algorithm (like a Linear Congruential Generator or a Xorshift) to produce the next number in the sequence. Absolutely essential for any game with random elements.
+
+Inputs: None.
+
+Outputs: R0=A 16-bit pseudo-random number.
+
+Clobbered Registers: R1.
+
+### `setInterruptHandler` : Index 0x1E
+
+Explanation: For games running in "Enhanced Mode" (RAM-based vectors), this provides a safe, standardized way to change an interrupt service routine. It takes an interrupt vector number and a function pointer and writes the address into the correct slot in the WRAM vector table (0xC000). This is safer than having the developer hardcode memory addresses.
+
+Inputs: R0.b=Interrupt vector number, R1=Address of the new ISR.
+
+Outputs: None.
+
+Clobbered Registers: None.
 
 ### `dmaCopy` : Index 0x1F
 
@@ -476,4 +454,4 @@ Clobbered Registers: None.
 ---
 
 © 2025 Connor Nolan. This work is licensed under a
-[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/)
