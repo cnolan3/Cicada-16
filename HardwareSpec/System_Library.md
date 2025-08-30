@@ -19,7 +19,7 @@ This vector table approach ensures that even if the internal layout of the Syste
 
 ```assembly
 ; Assume R0 points to the start of the vector table (E000)
-; Assume the vector number for '''fastMultiply16''' is 0x2A
+; Assume the vector number for 'fastMultiply16' is 0x2A
 
 ; Calculate the address of the vector entry
 LDI R1, 0x2A * 2 ; Vector number * 2 bytes per entry
@@ -47,11 +47,96 @@ The 4 KiB (4096 bytes) of System Library RAM is allocated as follows:
 | **(Function Code)**        | 2544         | `E611-EFFF`             | Remaining space for library functions |
 | **Total**                  | **4096**     | `E000-EFFF`             |                                       |
 
-**note**: the addresses of functions listed below have a placeholder of 0xXXXX for now
+| Index     | Type       | Name                     |
+| :-------- | :--------- | :----------------------- |
+| 0x00      | Data Block | `Default Font Data`      |
+| 0x01      | Data Block | `Sine Wave Table`        |
+| 0x02      | Data Block | `Note Frequency Table`   |
+| 0x03      | Data Block | `Default APU Waves`      |
+| 0x04      | Data Block | `APU Percussion Presets` |
+| 0x05      | Function   | `initDefaultFont`        |
+| 0x06      | Function   | `serialExchangeByte`     |
+| 0x07      | Function   | `serialByteWrite`        |
+| 0x08      | Function   | `serialByteRecv`         |
+| 0x09      | Function   | `fastMultiply16`         |
+| 0x0A      | Function   | `fastDivide32`           |
+| 0x0B      | Function   | `fastMultiply8`          |
+| 0x0C      | Function   | `fastDivide16`           |
+| 0x0D      | Function   | `decompressRLE`          |
+| 0x0E      | Function   | `clearTilemap`           |
+| 0x0F      | Function   | `waitForVBlank`          |
+| 0x10      | Function   | `drawChar`               |
+| 0x11      | Function   | `drawString`             |
+| 0x12      | Function   | `setPalette`             |
+| 0x13      | Function   | `memcpy`                 |
+| 0x14      | Function   | `memset`                 |
+| 0x15      | Function   | `setBankROM`             |
+| 0x16      | Function   | `setBankWRAM`            |
+| 0x17      | Function   | `setBankVRAM`            |
+| 0x18      | Function   | `playSoundEffect`        |
+| 0x19      | Function   | `initMusicDriver`        |
+| 0x1A      | Function   | `updateMusicDriver`      |
+| 0x1B      | Function   | `readJoypad`             |
+| 0x1C      | Function   | `readJoypadTrigger`      |
+| 0x1D      | Function   | `rand`                   |
+| 0x1E      | Function   | `setInterruptHandler`    |
+| 0x1F      | Function   | `dmaCopy`                |
+| 0x20      | Function   | `dmaCopyVBlank`          |
+| 0x21-0x7F | ---        | **Unused**               |
 
 ## **Graphics Routines**
 
-### `initDefaultFont` : Index 0x05 (Addr 0xXXXX)
+### `clearTilemap` : Index 0x0E
+
+Explanation: A highly optimized routine to fill a rectangular area of a background tilemap in VRAM with a specific tile entry. This is far faster than a developer's own loop in game code. It's essential for clearing the screen or dialogue boxes.
+
+Inputs: R0=VRAM address of the tilemap, R1=Tile entry value to write (16-bit), R2.b=Width of area in tiles, R3.b=Height of area in tiles.
+
+Outputs: None.
+
+Clobbered Registers: R0, R1, R2, R3.
+
+### `waitForVBlank` : Index 0x0F
+
+Explanation: This is arguably the most critical function for any game. It puts the CPU into a low-power HALT state until the V-Blank interrupt occurs. This synchronizes the game loop to the screen's refresh rate (preventing tearing) and is the correct way to idle, as it saves power and frees the memory bus. Every game's main loop would call this once per frame.
+
+Inputs: None.
+
+Outputs: None.
+
+Clobbered Registers: None.
+
+### `drawChar` : Index 0x10
+
+Explanation: You already have initDefaultFont to load the font tiles; these functions would use them. drawChar writes a single character's tile index to a specified tilemap location.
+
+Inputs: R0=Character to draw (ASCII), R1=Pointer to destination in VRAM tilemap.
+
+Outputs: None.
+
+Clobbered Registers: R2, R3.
+
+### `drawString` : Index 0x11
+
+Explanation: drawString iterates over a null-terminated string in RAM and calls drawChar for each character, handling advancing the "cursor" position on the tilemap.
+
+Inputs: R0=Pointer to null-terminated string, R1=Pointer to destination in VRAM tilemap, R2.b=Tilemap width (for line wrapping).
+
+Outputs: R0 and R1 are updated to point past the end of the source/destination.
+
+Clobbered Registers: R2, R3.
+
+### `setPalette` : Index 0x12
+
+Explanation: A simple helper to copy a block of color data into the PPU's CRAM. It would essentially be an optimized memcpy but serves to standardize the process. Developers should still be taught to only call this during V-Blank.
+
+Inputs: R0=Source address of palette data, R1=Destination CRAM index (0-255), R2.b=Number of colors to copy.
+
+Outputs: None.
+
+Clobbered Registers: R0, R1, R2, R3.
+
+### `initDefaultFont` : Index 0x05
 
 This function initializes the default system font by copying it from the System Library's compact storage format into VRAM in the PPU-ready 4bpp format.
 
@@ -66,7 +151,7 @@ This function initializes the default system font by copying it from the System 
 - **Output:** None.
 - **Clobbered Registers:** `R1`, `R2`, `R3`.
 
-### **Default Font Data** : Index 0x00 (Addr 0xE100)
+### **Default Font Data** : Index 0x00
 
 #### **Font Storage Format (1bpp vs 4bpp)**
 
@@ -77,9 +162,61 @@ To save a significant amount of space in the System Library, the default font is
 
 The `initDefaultFont` function handles the conversion, reading the compact 8-byte characters and expanding them into the 32-byte, 4bpp format that the PPU requires before writing them to VRAM.
 
+## **Memory Management Routines**
+
+### `memcpy` : Index 0x13
+
+Explanation: Standard C library equivalents. memcpy copies a block of memory from a source to a destination.
+
+Inputs: R0=Source, R1=Destination, R2=Length in bytes.
+
+Outputs: None.
+
+Clobbered Registers: R0, R1, R2, R3.
+
+### `memset` : Index 0x14
+
+Explanation: memset fills a block of memory with a specific byte value. These would be written in highly optimized assembly, making them faster than any loop a developer might write themselves. They're used for everything from clearing RAM to initializing data structures.
+
+Inputs: R0=Destination, R1.b=Value to write, R2=Length in bytes.
+
+Outputs: None.
+
+Clobbered Registers: R0, R1, R2, R3.
+
+### `setBankROM` : Index 0x15
+
+Explanation: Since bank switching is a core mechanic of the console, providing standardized functions to do it is a must. This function would simply take a bank number and write it to the correct I/O register (MPR_BANK).
+
+Inputs: R0.b=Bank number.
+
+Outputs: None.
+
+Clobbered Registers: None.
+
+### `setBankWRAM` : Index 0x16
+
+Explanation: This function would simply take a bank number and write it to the correct I/O register (WRAM_BANK).
+
+Inputs: R0.b=Bank number.
+
+Outputs: None.
+
+Clobbered Registers: None.
+
+### `setBankVRAM` : Index 0x17
+
+Explanation: This function would simply take a bank number and write it to the correct I/O register (VRAM_BANK).
+
+Inputs: R0.b=Bank number.
+
+Outputs: None.
+
+Clobbered Registers: None.
+
 ## **Music and Sound Routines**
 
-### **Note Frequency Table** : Index 0x02 (Addr 0xE500)
+### **Note Frequency Table** : Index 0x02
 
 To simplify music creation, the System Library provides a pre-calculated lookup table containing the 16-bit `FREQ_REG` values for a range of standard musical notes. This allows developers to play specific pitches without needing to perform the frequency calculation manually.
 
@@ -89,23 +226,55 @@ To simplify music creation, the System Library provides a pre-calculated lookup 
 
 **Note:** The exact addresses and constant names will be finalized in the official toolchain documentation.
 
-### **Sine Wave Table** : Index 0x01 (Addr 0xE400)
+### **Sine Wave Table** : Index 0x01
 
 A 256-byte table containing a single cycle of a sine wave. This can be used by the APU's wave channel to produce a pure tone, or as a building block for more complex sounds.
 
-### **Default APU Waves** : Index 0x03 (Addr 0xE578)
+### **Default APU Waves** : Index 0x03
 
 This is a 128-byte block containing four simple, ready-to-use 32-byte waveforms for the APU's wave channel. These include a sawtooth wave, a triangle wave, and others, providing a quick way to get varied sounds without having to define custom waveforms.
 
-### **APU Percussion Presets** : Index 0x04 (Addr 0xE5F8)
+### **APU Percussion Presets** : Index 0x04
 
 A small 24-byte data block containing a set of pre-configured ADSR and timing parameters for creating common percussion sounds (like a kick drum or hi-hat) using the APU's noise channel.
+
+## **Audio & Music Routines**
+
+### `playSoundEffect` : Index 0x18
+
+Explanation: This would be a huge quality-of-life improvement. Instead of manually setting 5-6 APU registers, a developer could call this single function. It would take a pointer to a small data structure in RAM/ROM that defines a sound effect (e.g., which channel to use, initial frequency, ADSR settings, noise parameters, etc.). The function reads this structure and configures the appropriate APU channel.
+
+Inputs: R0=Pointer to sound effect data structure, R1.b=Channel to play on (0-3).
+
+Outputs: None.
+
+Clobbered Registers: R2.
+
+### `initMusicDriver` : Index 0x19
+
+Explanation: A simple, tick-based music driver. initMusicDriver would take a pointer to the song data and set up internal state variables.
+
+Inputs: R0=Pointer to music data.
+
+Outputs: None.
+
+Clobbered Registers: Varies (would need several internal state registers).
+
+### `updateMusicDriver` : Index 0x1A
+
+Explanation: updateMusicDriver would be called once per frame (typically from the V-Blank interrupt) to process the next "tick" of the song data, read note/effect commands, and update the APU registers accordingly. This abstracts away the entire complexity of a music tracker engine.
+
+Inputs: None.
+
+Outputs: None.
+
+Clobbered Registers: Varies (would need several internal state registers).
 
 ## **Serial Communication Functions**
 
 To simplify serial communication, the System Library provides functions to handle the low-level boilerplate of exchanging single bytes.
 
-### `serialExchangeByte` : Index 0x06 (Addr 0xXXXX)
+### `serialExchangeByte` : Index 0x06
 
 This function, intended to be called by the **Master** console, simultaneously sends one byte and receives one byte.
 
@@ -119,7 +288,7 @@ This function, intended to be called by the **Master** console, simultaneously s
 
 **Note:** This is a blocking function. It will halt CPU execution until the transfer is complete. It should only be called by the Master console (`CLK_SRC = 0`). The Slave console must have its outgoing byte pre-loaded into its `SB` register before this function is called by the Master.
 
-### `serialByteWrite` : Index 0x07 (Addr 0xXXXX)
+### `serialByteWrite` : Index 0x07
 
 This non-blocking function simply writes a byte to the serial buffer. It is intended to be used by the **Slave** console to prepare the next byte for transmission before the Master initiates an exchange.
 
@@ -128,7 +297,7 @@ This non-blocking function simply writes a byte to the serial buffer. It is inte
   1.  Writes the input byte to the **`SB`** (Serial Buffer) register at `F002`.
 - **Output:** None.
 
-### `serialByteRecv` : Index 0x08 (Addr 0xXXXX)
+### `serialByteRecv` : Index 0x08
 
 This function reads a single byte from the serial buffer. It is designed to be lightweight and is typically called from within the Serial Transfer Complete interrupt service routine, primarily on the **Slave** console.
 
@@ -159,11 +328,33 @@ Serial_ISR:
     RETI ; Return from interrupt
 ```
 
+## **Input Handling Routines**
+
+### `readJoypad` : Index 0x1B
+
+Explanation: This function performs the necessary sequence of writes and reads to the JOYP register to poll all three button groups (D-Pad, Action, Utility). It then combines the results into a single, clean 16-bit bitmask. This is much more convenient than doing it manually.
+
+Inputs: None.
+
+Outputs: R0=A 16-bit value where each bit represents a button (e.g., bit 0 = Right, bit 1 = Left, bit 8 = A, etc.).
+
+Clobbered Registers: R1.
+
+### `readJoypadTrigger` : Index 0x1C
+
+Explanation: An even more useful input function. It would call readJoypad and compare the result with the state from the previous frame (which it stores internally in System Library RAM). It returns a bitmask of only the buttons that were just pressed on this frame (a 0-to-1 transition). This is what most game logic actually needs (e.g., "jump when A is pressed," not "jump while A is held down").
+
+Inputs: None.
+
+Outputs: R0=A 16-bit bitmask of newly pressed buttons.
+
+Clobbered Registers: R1.
+
 ## **Advanced Arithmetic Functions**
 
 Since the Cicada-16 CPU does not have hardware support for multiplication or division, the System Library provides highly optimized routines for these common operations.
 
-### `fastMultiply16` : Index 0x09 (Addr 0xXXXX)
+### `fastMultiply16` : Index 0x09
 
 Multiplies two 16-bit unsigned integers and returns a 32-bit result.
 
@@ -175,7 +366,7 @@ Multiplies two 16-bit unsigned integers and returns a 32-bit result.
   - `R1`: Low word of the 32-bit result.
 - **Clobbered Registers:** `R2`, `R3` (These registers are used internally by the function and their previous values will be lost).
 
-### `fastDivide32` : Index 0x0A (Addr 0xXXXX)
+### `fastDivide32` : Index 0x0A
 
 Divides a 32-bit unsigned integer by a 16-bit unsigned integer.
 
@@ -189,7 +380,7 @@ Divides a 32-bit unsigned integer by a 16-bit unsigned integer.
 - **Error Handling:** If the divisor in `R2` is zero, the function will immediately return, setting the **Carry Flag (F.C)** to 1. The contents of `R0` and `R1` will be undefined in this case.
 - **Clobbered Registers:** `R3`.
 
-### `fastMultiply8` : Index 0x0B (Addr 0xXXXX)
+### `fastMultiply8` : Index 0x0B
 
 Multiplies two 8-bit unsigned integers and returns a 16-bit result. This is the fastest multiplication routine.
 
@@ -200,7 +391,7 @@ Multiplies two 8-bit unsigned integers and returns a 16-bit result. This is the 
   - `R0`: 16-bit result.
 - **Clobbered Registers:** `R1`.
 
-### `fastDivide16` : Index 0x0C (Addr 0xXXXX)
+### `fastDivide16` : Index 0x0C
 
 Divides a 16-bit unsigned integer by an 8-bit unsigned integer.
 
@@ -213,9 +404,31 @@ Divides a 16-bit unsigned integer by an 8-bit unsigned integer.
 - **Error Handling:** If the divisor in `R1.b` is zero, the function will immediately return, setting the **Carry Flag (F.C)** to 1. The contents of `R0` will be undefined in this case.
 - **Clobbered Registers:** `R1`, `R2`.
 
+## **Advanced Math & Utility Routines**
+
+### `rand` : Index 0x1D
+
+Explanation: Provides a standardized Pseudo-Random Number Generator (PRNG). The first time it's called, it could seed itself using the free-running DIV register. Subsequent calls would use a fast algorithm (like a Linear Congruential Generator or a Xorshift) to produce the next number in the sequence. Absolutely essential for any game with random elements.
+
+Inputs: None.
+
+Outputs: R0=A 16-bit pseudo-random number.
+
+Clobbered Registers: R1.
+
+### `setInterruptHandler` : Index 0x1E
+
+Explanation: For games running in "Enhanced Mode" (RAM-based vectors), this provides a safe, standardized way to change an interrupt service routine. It takes an interrupt vector number and a function pointer and writes the address into the correct slot in the WRAM vector table (0xC000). This is safer than having the developer hardcode memory addresses.
+
+Inputs: R0.b=Interrupt vector number, R1=Address of the new ISR.
+
+Outputs: None.
+
+Clobbered Registers: None.
+
 ## **Data Decompression Functions**
 
-### `decompressRLE` : Index 0x0D (Addr 0xXXXX)
+### `decompressRLE` : Index 0x0D
 
 Decompresses data that was compressed using a Run-Length Encoding (RLE) scheme. The function processes control bytes to expand runs of repeated data and copy raw data blocks.
 
@@ -238,8 +451,29 @@ Decompresses data that was compressed using a Run-Length Encoding (RLE) scheme. 
 - **Clobbered Registers:** `R2`, `R3`.
 - **Important Note:** The developer is responsible for ensuring the destination buffer in RAM is large enough to hold the fully decompressed data. This function does not perform any bounds checking.
 
+## **DMA Helper Routines**
+
+### `dmaCopy` : Index 0x1F
+
+Explanation: A simple wrapper that configures and starts a DMA transfer. The developer provides source, destination, and length, and this function writes them to the DMA_SRC, DMA_DST, and DMA_LEN registers before setting the START bit. It abstracts away the I/O addresses.
+
+Inputs: R0=Source, R1=Destination, R2=Length.
+
+Outputs: None.
+
+Clobbered Registers: None (The CPU is halted during the transfer).
+
+### `dmaCopyVBlank` : Index 0x20
+
+Explanation: The most common use for DMA is updating graphics in VRAM. This is a specialized version of dmaCopy that automatically sets the VRAM_SAFE bit in the DMA_CTL register. This guarantees the transfer will only begin during a non-rendering period (H-Blank or V-Blank), preventing screen tearing and other artifacts automatically.
+
+Inputs: R0=Source, R1=Destination, R2=Length.
+
+Outputs: None.
+
+Clobbered Registers: None.
+
 ---
 
 © 2025 Connor Nolan. This work is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
-
