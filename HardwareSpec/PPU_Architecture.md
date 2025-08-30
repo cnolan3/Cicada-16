@@ -132,7 +132,7 @@ The PPU renders the final image by drawing the graphical layers in a specific or
 
 4.  **Sprites (Objects):** Sprites are the topmost layer, rendered over all background and window layers. Color #0 of a sprite's assigned sub-palette is always **transparent**. The sprite's priority flag (in its OAM data) can cause it to be rendered behind high-priority background tiles, but it is always drawn on top of low-priority tiles.
 
-## **7. PPU Registers (F080-F0FF)**
+## **7. PPU Registers (F040-F07F)**
 
 These registers, mapped to the CPU's address space, control the PPU's operation.
 
@@ -158,7 +158,7 @@ Since CRAM is mapped directly to the CPU's address space (`F200-F3FF`), there ar
 
 ### **7.2. Configuring Tilemap Base Addresses**
 
-The `BG_TMB` register at `F08B` provides an efficient way to set the starting address for the BG0 and BG1 tilemaps. The 32 KiB of VRAM is divided into 16 slots of 2 KiB each. The `BG_TMB` register uses a 4-bit value for each background layer to specify which slot its tilemap begins in.
+The `BG_TMB` register at `F04B` provides an efficient way to set the starting address for the BG0 and BG1 tilemaps. The 32 KiB of VRAM is divided into 16 slots of 2 KiB each. The `BG_TMB` register uses a 4-bit value for each background layer to specify which slot its tilemap begins in.
 
 - **BG0:** The lower 4 bits (bits 3-0) of `BG_TMB` select the starting slot (0-15) for the BG0 tilemap.
 - **BG1:** The upper 4 bits (bits 7-4) of `BG_TMB` select the starting slot (0-15) for the BG1 tilemap.

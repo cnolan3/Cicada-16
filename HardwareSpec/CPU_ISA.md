@@ -35,8 +35,8 @@ The Cicada-16 CPU features a simple, **non-pipelined** architecture. Each instru
 
 The core timing of the system is measured in two units:
 
--   **T-cycles (Clock Cycles):** This is the fundamental clock rate of the system, driven by the main crystal oscillator.
--   **M-cycles (Machine Cycles):** One M-cycle consists of **4 T-cycles**. M-cycles are the basic unit of time used for instruction execution. A simple operation, like a register-to-register move, might take one M-cycle (4 T-cycles), while a more complex instruction that requires multiple memory accesses will take several M-cycles.
+- **T-cycles (Clock Cycles):** This is the fundamental clock rate of the system, driven by the main crystal oscillator.
+- **M-cycles (Machine Cycles):** One M-cycle consists of **4 T-cycles**. M-cycles are the basic unit of time used for instruction execution. A simple operation, like a register-to-register move, might take one M-cycle (4 T-cycles), while a more complex instruction that requires multiple memory accesses will take several M-cycles.
 
 All instruction cycle counts in this document are given in **T-cycles**.
 
@@ -78,85 +78,86 @@ All instruction cycle counts in this document are given in **T-cycles**.
 ### **16-Bit Arithmetic/Logic Instructions**
 
 #### **Accumulator (R0) Arithmetic**
+
 **These instructions use R0 as an implicit accumulator.**
 
-| Mnemonic    | Operands   | Bytes | Cycles | Description                                                                      |
-| :---------- | :--------- | :---- | :----- | :------------------------------------------------------------------------------- |
-| ADD rs      | R1         | 1     | 4      | R0 = R0 + R1. Affects Z, N, C, V flags.                                          |
-| SUB rs      | R1         | 1     | 4      | R0 = R0 - R1. Affects Z, N, C, V flags.                                          |
-| AND rs      | R1         | 1     | 4      | R0 = R0 & R1. Affects Z, N flags.                                                |
-| OR rs       | R1         | 1     | 4      | R0 = R0 or R1. Affects Z, N flags.                                               |
-| XOR rs      | R1         | 1     | 4      | R0 = R0 ^ R1. Affects Z, N flags.                                                |
-| CMP rs      | R1         | 1     | 4      | Compares R0 and R1 (calculates R0 - R1) and sets flags, but discards the result. |
-| NEG r       | R1         | 1     | 4      | r = -r. Affects Z, N, C, V flags.                                                |
+| Mnemonic | Operands | Bytes | Cycles | Description                                                                      |
+| :------- | :------- | :---- | :----- | :------------------------------------------------------------------------------- |
+| ADD rs   | R1       | 1     | 4      | R0 = R0 + R1. Affects Z, N, C, V flags.                                          |
+| SUB rs   | R1       | 1     | 4      | R0 = R0 - R1. Affects Z, N, C, V flags.                                          |
+| AND rs   | R1       | 1     | 4      | R0 = R0 & R1. Affects Z, N flags.                                                |
+| OR rs    | R1       | 1     | 4      | R0 = R0 or R1. Affects Z, N flags.                                               |
+| XOR rs   | R1       | 1     | 4      | R0 = R0 ^ R1. Affects Z, N flags.                                                |
+| CMP rs   | R1       | 1     | 4      | Compares R0 and R1 (calculates R0 - R1) and sets flags, but discards the result. |
+| NEG r    | R1       | 1     | 4      | r = -r. Affects Z, N, C, V flags.                                                |
 
 #### **Register-to-Register Arithmetic**
 
-| Mnemonic    | Operands   | Bytes | Cycles | Description                                                                      |
-| :---------- | :--------- | :---- | :----- | :------------------------------------------------------------------------------- |
-| ADD rd, rs  | R1, R2     | 2     | 8      | rd = rd + rs. Affects Z, N, C, V flags.                                          |
-| SUB rd, rs  | R1, R2     | 2     | 8      | rd = rd - rs. Affects Z, N, C, V flags.                                          |
-| AND rd, rs  | R1, R2     | 2     | 8      | rd = rd & rs. Affects Z, N flags.                                                |
-| OR rd, rs   | R1, R2     | 2     | 8      | rd = rd or rs. Affects Z, N flags.                                              |
-| XOR rd, rs  | R1, R2     | 2     | 8      | rd = rd ^ rs. Affects Z, N flags.                                                |
-| CMP rd, rs  | R1, R2     | 2     | 8      | Compares rd and rs and sets flags, but discards the result.                      |
-| ADC rd, rs  | R1, R2     | 2     | 8      | rd = rd + rs + C. Affects Z, N, C, V flags.                                      |
-| SBC rd, rs  | R1, R2     | 2     | 8      | rd = rd - rs - C. Affects Z, N, C, V flags.                                      |
+| Mnemonic   | Operands | Bytes | Cycles | Description                                                 |
+| :--------- | :------- | :---- | :----- | :---------------------------------------------------------- |
+| ADD rd, rs | R1, R2   | 2     | 8      | rd = rd + rs. Affects Z, N, C, V flags.                     |
+| SUB rd, rs | R1, R2   | 2     | 8      | rd = rd - rs. Affects Z, N, C, V flags.                     |
+| AND rd, rs | R1, R2   | 2     | 8      | rd = rd & rs. Affects Z, N flags.                           |
+| OR rd, rs  | R1, R2   | 2     | 8      | rd = rd or rs. Affects Z, N flags.                          |
+| XOR rd, rs | R1, R2   | 2     | 8      | rd = rd ^ rs. Affects Z, N flags.                           |
+| CMP rd, rs | R1, R2   | 2     | 8      | Compares rd and rs and sets flags, but discards the result. |
+| ADC rd, rs | R1, R2   | 2     | 8      | rd = rd + rs + C. Affects Z, N, C, V flags.                 |
+| SBC rd, rs | R1, R2   | 2     | 8      | rd = rd - rs - C. Affects Z, N, C, V flags.                 |
 
 #### **Immediate Arithmetic**
 
-| Mnemonic    | Operands   | Bytes | Cycles | Description                                                                      |
-| :---------- | :--------- | :---- | :----- | :------------------------------------------------------------------------------- |
-| ADDI r, n16 | R1, 0x100  | 4     | 12     | r = r + n16. Affects Z, N, C, V flags.                                           |
-| SUBI r, n16 | R1, 0x100  | 4     | 12     | r = r - n16. Affects Z, N, C, V flags.                                           |
-| ANDI r, n16 | R1, 0xFF   | 4     | 12     | r = r & n16. Affects Z, N flags.                                                 |
-| ORI r, n16  | R1, 0xF0F0 | 4     | 12     | r = r or n16. Affects Z, N flags.                                                |
-| XORI r, n16 | R1, 0xFFFF | 4     | 12     | r = r ^ n16. Affects Z, N flags.                                                 |
-| CMPI r, n16 | R1, 0x4000 | 4     | 12     | Compares r with n16 and sets flags, discarding the result.                       |
-| INC r       | R2         | 1     | 4      | R2 = R2 + 1. Affects Z, N, V flags.                                              |
-| DEC r       | R2         | 1     | 4      | R2 = R2 - 1. Affects Z, N, V flags.                                              |
+| Mnemonic    | Operands   | Bytes | Cycles | Description                                                |
+| :---------- | :--------- | :---- | :----- | :--------------------------------------------------------- |
+| ADDI r, n16 | R1, 0x100  | 4     | 12     | r = r + n16. Affects Z, N, C, V flags.                     |
+| SUBI r, n16 | R1, 0x100  | 4     | 12     | r = r - n16. Affects Z, N, C, V flags.                     |
+| ANDI r, n16 | R1, 0xFF   | 4     | 12     | r = r & n16. Affects Z, N flags.                           |
+| ORI r, n16  | R1, 0xF0F0 | 4     | 12     | r = r or n16. Affects Z, N flags.                          |
+| XORI r, n16 | R1, 0xFFFF | 4     | 12     | r = r ^ n16. Affects Z, N flags.                           |
+| CMPI r, n16 | R1, 0x4000 | 4     | 12     | Compares r with n16 and sets flags, discarding the result. |
+| INC r       | R2         | 1     | 4      | R2 = R2 + 1. Affects Z, N, V flags.                        |
+| DEC r       | R2         | 1     | 4      | R2 = R2 - 1. Affects Z, N, V flags.                        |
 
 #### **Accumulator-Immediate Arithmetic**
 
-| Mnemonic    | Operands   | Bytes | Cycles | Description                                                                      |
-| :---------- | :--------- | :---- | :----- | :------------------------------------------------------------------------------- |
-| ADDI n16    | 0x100      | 3     | 8      | R0 = R0 + n16. Affects Z, N, C, V flags.                                         |
-| SUBI n16    | 0x100      | 3     | 8      | R0 = R0 - n16. Affects Z, N, C, V flags.                                         |
-| ANDI n16    | 0xFF       | 3     | 8      | R0 = R0 & n16. Affects Z, N flags.                                               |
-| ORI n16     | 0xF0F0     | 3     | 8      | R0 = R0 or n16. Affects Z, N flags.                                              |
-| XORI n16    | 0xFFFF     | 3     | 8      | R0 = R0 ^ n16. Affects Z, N flags.                                               |
-| CMPI n16    | 0x4000     | 3     | 8      | Compares R0 with n16 and sets flags, discarding the result.                      |
-| ADDCI n16   | 0x100      | 3     | 8      | R0 = R0 + n16 + C. Affects Z, N, C, V flags.                                     |
-| SUBCI n16   | 0x100      | 3     | 8      | R0 = R0 - n16 - C. Affects Z, N, C, V flags.                                     |
+| Mnemonic  | Operands | Bytes | Cycles | Description                                                 |
+| :-------- | :------- | :---- | :----- | :---------------------------------------------------------- |
+| ADDI n16  | 0x100    | 3     | 8      | R0 = R0 + n16. Affects Z, N, C, V flags.                    |
+| SUBI n16  | 0x100    | 3     | 8      | R0 = R0 - n16. Affects Z, N, C, V flags.                    |
+| ANDI n16  | 0xFF     | 3     | 8      | R0 = R0 & n16. Affects Z, N flags.                          |
+| ORI n16   | 0xF0F0   | 3     | 8      | R0 = R0 or n16. Affects Z, N flags.                         |
+| XORI n16  | 0xFFFF   | 3     | 8      | R0 = R0 ^ n16. Affects Z, N flags.                          |
+| CMPI n16  | 0x4000   | 3     | 8      | Compares R0 with n16 and sets flags, discarding the result. |
+| ADDCI n16 | 0x100    | 3     | 8      | R0 = R0 + n16 + C. Affects Z, N, C, V flags.                |
+| SUBCI n16 | 0x100    | 3     | 8      | R0 = R0 - n16 - C. Affects Z, N, C, V flags.                |
 
 ### **8-Bit Arithmetic/Logic Instructions**
 
 **These operate on the lower 8 bits of the specified registers. The upper 8 bits of the destination register are unaffected. R0.b is the implicit accumulator. All are prefixed instructions.**
 
-| Mnemonic    | Operands | Bytes | Cycles | Description                                          |
-| :---------- | :------- | :---- | :----- | :--------------------------------------------------- |
-| ADD.b rs    | R1       | 2     | 8      | R0.b = R0.b + R1.b.                                  |
-| SUB.b rs    | R1       | 2     | 8      | R0.b = R0.b - R1.b.                                  |
-| AND.b rs    | R1       | 2     | 8      | R0.b = R0.b & R1.b.                                  |
-| OR.b rs     | R1       | 2     | 8      | R0.b = R0.b or R1.b.                                 |
-| XOR.b rs    | R1       | 2     | 8      | R0.b = R0.b ^ R1.b.                                  |
-| CMP.b rs    | R1       | 2     | 8      | Compares the low bytes of R0 and R1.                 |
+| Mnemonic | Operands | Bytes | Cycles | Description                          |
+| :------- | :------- | :---- | :----- | :----------------------------------- |
+| ADD.b rs | R1       | 2     | 8      | R0.b = R0.b + R1.b.                  |
+| SUB.b rs | R1       | 2     | 8      | R0.b = R0.b - R1.b.                  |
+| AND.b rs | R1       | 2     | 8      | R0.b = R0.b & R1.b.                  |
+| OR.b rs  | R1       | 2     | 8      | R0.b = R0.b or R1.b.                 |
+| XOR.b rs | R1       | 2     | 8      | R0.b = R0.b ^ R1.b.                  |
+| CMP.b rs | R1       | 2     | 8      | Compares the low bytes of R0 and R1. |
 
 ### **Rotate, Shift, and Bit Instructions**
 
-| Mnemonic  | Operands | Bytes | Cycles | Description                                                         |
-| :-------- | :------- | :---- | :----- | :------------------------------------------------------------------ |
-| SHL r     | R0       | 2     | 8      | Shift Left Logical. C <- MSB <- ... <- LSB <- 0. (Prefixed)         |
-| SHR r     | R0       | 2     | 8      | Shift Right Logical. 0 -> MSB -> ... -> LSB -> C. (Prefixed)        |
-| SRA r     | R0       | 2     | 8      | Shift Right Arithmetic. MSB -> MSB -> ... -> LSB -> C. (Prefixed)   |
-| ROL r     | R0       | 2     | 8      | Rotate Left through Carry. C <- MSB <- ... <- LSB <- C. (Prefixed)  |
-| ROR r     | R0       | 2     | 8      | Rotate Right through Carry. C -> MSB -> ... -> LSB -> C. (Prefixed) |
-| BIT r, b  | R0, 7    | 2     | 8      | Test bit b (0-7) of register r's low byte. Sets Z flag if bit is 0. (Prefixed) |
-| SET r, b  | R0, 7    | 2     | 8      | Set bit b (0-7) of register r's low byte to 1. (Prefixed)           |
-| RES r, b  | R0, 7    | 2     | 8      | Reset bit b (0-7) of register r's low byte to 0. (Prefixed)         |
+| Mnemonic     | Operands    | Bytes | Cycles | Description                                                                             |
+| :----------- | :---------- | :---- | :----- | :-------------------------------------------------------------------------------------- |
+| SHL r        | R0          | 2     | 8      | Shift Left Logical. C <- MSB <- ... <- LSB <- 0. (Prefixed)                             |
+| SHR r        | R0          | 2     | 8      | Shift Right Logical. 0 -> MSB -> ... -> LSB -> C. (Prefixed)                            |
+| SRA r        | R0          | 2     | 8      | Shift Right Arithmetic. MSB -> MSB -> ... -> LSB -> C. (Prefixed)                       |
+| ROL r        | R0          | 2     | 8      | Rotate Left through Carry. C <- MSB <- ... <- LSB <- C. (Prefixed)                      |
+| ROR r        | R0          | 2     | 8      | Rotate Right through Carry. C -> MSB -> ... -> LSB -> C. (Prefixed)                     |
+| BIT r, b     | R0, 7       | 2     | 8      | Test bit b (0-7) of register r's low byte. Sets Z flag if bit is 0. (Prefixed)          |
+| SET r, b     | R0, 7       | 2     | 8      | Set bit b (0-7) of register r's low byte to 1. (Prefixed)                               |
+| RES r, b     | R0, 7       | 2     | 8      | Reset bit b (0-7) of register r's low byte to 0. (Prefixed)                             |
 | BIT (n16), b | (0xC000), 7 | 4     | 12/16  | Test bit b (0-7) of the byte at memory address n16. Sets Z flag if bit is 0. (Prefixed) |
-| SET (n16), b | (0xC000), 7 | 4     | 16/20  | Set bit b (0-7) of the byte at memory address n16 to 1. (Prefixed)           |
-| RES (n16), b | (0xC000), 7 | 4     | 16/20  | Reset bit b (0-7) of the byte at memory address n16 to 0. (Prefixed)         |
+| SET (n16), b | (0xC000), 7 | 4     | 16/20  | Set bit b (0-7) of the byte at memory address n16 to 1. (Prefixed)                      |
+| RES (n16), b | (0xC000), 7 | 4     | 16/20  | Reset bit b (0-7) of the byte at memory address n16 to 0. (Prefixed)                    |
 
 ### **Control Flow Instructions (Jumps, Calls, Returns)**
 
@@ -179,13 +180,12 @@ All instruction cycle counts in this document are given in **T-cycles**.
 
 ### **CPU Control Instructions**
 
-| Mnemonic | Operands | Bytes | Cycles | Description                                          |
-| :------- | :------- | :---- | :----- | :--------------------------------------------------- |
-| NOP      |          | 1     | 4      | No operation. Wastes 4 cycles.                       |
+| Mnemonic | Operands | Bytes | Cycles | Description                                                     |
+| :------- | :------- | :---- | :----- | :-------------------------------------------------------------- |
+| NOP      |          | 1     | 4      | No operation. Wastes 4 cycles.                                  |
 | HALT     |          | 2     | 8      | Halts CPU until an interrupt occurs. Low power mode. (Prefixed) |
-| ID       |          | 1     | 4      | Disable interrupts.                                  |
-| IE       |          | 1     | 4      | Enable interrupts.                                   |
-
+| DI       |          | 1     | 4      | Disable interrupts.                                             |
+| EI       |          | 1     | 4      | Enable interrupts.                                              |
 
 ---
 

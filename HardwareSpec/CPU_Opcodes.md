@@ -73,8 +73,8 @@
 | **<- FA-FF ->** | **-------**   | -     | **---Misc Control & Prefixes---**                                 |
 | F9              | RET           | 1     | Return from subroutine.                                           |
 | FA              | RETI          | 1     | Return from interrupt.                                            |
-| FB              | IE            | 1     | Interrupt Enable.                                                 |
-| FC              | ID            | 1     | Interrupt Disable.                                                |
+| FB              | EI            | 1     | Enable Interrupts.                                                |
+| FC              | DI            | 1     | Disable Interrupts.                                               |
 | FD              | PREFIX        | 1+    | Advanced Addressing 1. See below.                                 |
 | FE              | PREFIX        | 1+    | Bit, Byte, and Shift Operations. See below.                       |
 | FF              | PREFIX        | 1+    | Advanced Addressing 2. See below.                                 |
@@ -83,38 +83,38 @@
 
 ## FD Prefix Map (Advanced Addressing 1)
 
-| Opcode (Hex) | Mnemonic          | Bytes | Description                                                        |
-| :----------- | :---------------- | :---- | :----------------------------------------------------------------- |
-| 00-3F        | LD.w rd, (rs, n8) | 3     | `FD 00dddsss n8`. Load word from rs + offset.                      |
-| 40-7F        | ST.w (rs, n8), rd | 3     | `FD 01dddsss n8`. Store word to rs + offset.                       |
-| 80-BF        | LEA rd, (rs, n8)  | 3     | `FD 10dddsss n8`. Load effective address rs + offset into rd.      |
+| Opcode (Hex) | Mnemonic          | Bytes | Description                                                   |
+| :----------- | :---------------- | :---- | :------------------------------------------------------------ |
+| 00-3F        | LD.w rd, (rs, n8) | 3     | `FD 00dddsss n8`. Load word from rs + offset.                 |
+| 40-7F        | ST.w (rs, n8), rd | 3     | `FD 01dddsss n8`. Store word to rs + offset.                  |
+| 80-BF        | LEA rd, (rs, n8)  | 3     | `FD 10dddsss n8`. Load effective address rs + offset into rd. |
 
 ---
 
 ## FE Prefix Map (Bit, Byte, and Shift Operations)
 
-| Opcode (Hex) | Mnemonic      | Bytes | Description                                             |
-| :----------- | :------------ | :---- | :------------------------------------------------------ |
-| 00           | HALT          | 2     | `FE 00`. Halt CPU.                                      |
-| 08-0F        | BIT (n16), b  | 4     | `FE (08+b) n16`. Test bit b of byte at address n16.     |
-| 10-17        | SET (n16), b  | 4     | `FE (10+b) n16`. Set bit b of byte at address n16.      |
-| 18-1F        | SRA r         | 2     | `FE 18+r`. Shift Right Arithmetic.                      |
-| 20-27        | SHL r    | 2     | `FE 20+r`. Shift Left Logical.                          |
-| 28-2F        | SHR r    | 2     | `FE 28+r`. Shift Right Logical.                         |
-| 30-37        | ROL r    | 2     | `FE 30+r`. Rotate Left through Carry.                   |
-| 38-3F        | ROR r    | 2     | `FE 38+r`. Rotate Right through Carry.                  |
-| 40-7F        | BIT r, b | 2     | `FE 01 bbb rrr`. Test bit b of register r.              |
-| 80-87        | ADD.b rs | 2     | `FE 10000 sss`. R0.b = R0.b + rs.b.                     |
-| 88-8F        | SUB.b rs | 2     | `FE 10001 sss`. R0.b = R0.b - rs.b.                     |
-| 90-97        | AND.b rs | 2     | `FE 10010 sss`. R0.b = R0.b & rs.b.                     |
-| 98-9F        | OR.b rs  | 2     | `FE 10011 sss`. R0.b = R0.b or rs.b.                    |
-| A0-A7        | XOR.b rs | 2     | `FE 10100 sss`. R0.b = R0.b ^ rs.b.                     |
-| A8-AF        | CMP.b rs | 2     | `FE 10101 sss`. Compares R0.b with rs.b.                |
-| B0           | PUSH F        | 2     | `FE B0`. Push Flags register onto stack.                |
-| B1           | POP F         | 2     | `FE B1`. Pop Flags register from stack.                 |
-| B8-BF        | RES (n16), b  | 4     | `FE (B8+b) n16`. Reset bit b of byte at address n16.    |
-| C0-DF        | SET r, b | 2     | `FE 110 bbb rrr`. Set bit b of register r's low byte.   |
-| E0-FF        | RES r, b | 2     | `FE 111 bbb rrr`. Reset bit b of register r's low byte. |
+| Opcode (Hex) | Mnemonic     | Bytes | Description                                             |
+| :----------- | :----------- | :---- | :------------------------------------------------------ |
+| 00           | HALT         | 2     | `FE 00`. Halt CPU.                                      |
+| 08-0F        | BIT (n16), b | 4     | `FE (08+b) n16`. Test bit b of byte at address n16.     |
+| 10-17        | SET (n16), b | 4     | `FE (10+b) n16`. Set bit b of byte at address n16.      |
+| 18-1F        | SRA r        | 2     | `FE 18+r`. Shift Right Arithmetic.                      |
+| 20-27        | SHL r        | 2     | `FE 20+r`. Shift Left Logical.                          |
+| 28-2F        | SHR r        | 2     | `FE 28+r`. Shift Right Logical.                         |
+| 30-37        | ROL r        | 2     | `FE 30+r`. Rotate Left through Carry.                   |
+| 38-3F        | ROR r        | 2     | `FE 38+r`. Rotate Right through Carry.                  |
+| 40-7F        | BIT r, b     | 2     | `FE 01 bbb rrr`. Test bit b of register r.              |
+| 80-87        | ADD.b rs     | 2     | `FE 10000 sss`. R0.b = R0.b + rs.b.                     |
+| 88-8F        | SUB.b rs     | 2     | `FE 10001 sss`. R0.b = R0.b - rs.b.                     |
+| 90-97        | AND.b rs     | 2     | `FE 10010 sss`. R0.b = R0.b & rs.b.                     |
+| 98-9F        | OR.b rs      | 2     | `FE 10011 sss`. R0.b = R0.b or rs.b.                    |
+| A0-A7        | XOR.b rs     | 2     | `FE 10100 sss`. R0.b = R0.b ^ rs.b.                     |
+| A8-AF        | CMP.b rs     | 2     | `FE 10101 sss`. Compares R0.b with rs.b.                |
+| B0           | PUSH F       | 2     | `FE B0`. Push Flags register onto stack.                |
+| B1           | POP F        | 2     | `FE B1`. Pop Flags register from stack.                 |
+| B8-BF        | RES (n16), b | 4     | `FE (B8+b) n16`. Reset bit b of byte at address n16.    |
+| C0-DF        | SET r, b     | 2     | `FE 110 bbb rrr`. Set bit b of register r's low byte.   |
+| E0-FF        | RES r, b     | 2     | `FE 111 bbb rrr`. Reset bit b of register r's low byte. |
 
 ---
 
@@ -126,7 +126,6 @@
 | 40-7F        | ST.w (rd), rs | 2     | `FF 01 ddd sss`. Store word to address in rd.  |
 | 80-BF        | LD.b rd, (rs) | 2     | `FF 10 ddd sss`. Load byte from address in rs. |
 | C0-FF        | ST.b (rd), rs | 2     | `FF 11 ddd sss`. Store byte to address in rd.  |
-
 
 ---
 
