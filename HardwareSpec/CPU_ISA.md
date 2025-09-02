@@ -29,9 +29,16 @@
 
 ### **1.1. Execution and Timing**
 
+### 1.1. Execution and Timing
+
 The master system clock frequency is **8.388608 MHz** (2^23 Hz).
 
-The Cicada-16 CPU features a simple, **non-pipelined** architecture. Each instruction is fetched, decoded, and executed completely before the next one begins. This design choice prioritizes simplicity and predictable timing over high performance.
+The Cicada-16 CPU features a simple **2-stage instruction pipeline** to improve performance. The two stages are:
+
+1.  **Fetch:** The CPU fetches the next instruction from memory.
+2.  **Execute:** The CPU decodes and executes the current instruction.
+
+This allows the CPU to fetch one instruction while executing the previous one, overlapping operations and increasing instruction throughput.
 
 The core timing of the system is measured in two units:
 

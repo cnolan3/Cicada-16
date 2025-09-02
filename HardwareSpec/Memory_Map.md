@@ -98,6 +98,7 @@ Not all RAM is equal in speed.
 | F01F    | **RTC_CTL**    | **Control register (LATCH, HALT)**                                |
 | F020    | **IE**         | **Interrupt Enable Register**                                     |
 | F021    | **IF**         | **Interrupt Flag Register**                                       |
+| F022    | **BOOT_CTRL**  | **Boot Control: Write 1 to exit boot ROM.**                       |
 
 ## **Joypad Register (JOYP)**
 
