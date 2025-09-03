@@ -36,13 +36,13 @@
 | **<- 40-7F ->** | **-------**   | -     | **---Register-to-Register Load---**                                                      |
 | 40-7F           | LD rd, rs     | 1     | `01 ddd sss`. Copies value from rs to rd. (64 opcodes)                                   |
 | **<- 80-AF ->** | **-------**   | -     | **---16-bit Accumulator (R0) Arithmetic---**                                             |
-| 80-87           | ADD rs        | 1     | `10000 sss`. R0 = R0 + rs.                                                               |
-| 88-8F           | SUB rs        | 1     | `10001 sss`. R0 = R0 - rs.                                                               |
-| 90-97           | AND rs        | 1     | `10010 sss`. R0 = R0 & rs.                                                               |
-| 98-9F           | OR rs         | 1     | `10011 sss`. R0 = R0 or rs.                                                              |
-| A0-A7           | XOR rs        | 1     | `10100 sss`. R0 = R0 ^ rs.                                                               |
-| A8-AF           | CMP rs        | 1     | `10101 sss`. Compares R0 with rs.                                                        |
-| B0-B7           | NEG r         | 1     | `11000 rrr`. r = 0 - r.                                                                  |
+| 80-87           | ADD rs        | 1     | `80+rs`. R0 = R0 + rs.                                                                   |
+| 88-8F           | SUB rs        | 1     | `88+rs`. R0 = R0 - rs.                                                                   |
+| 90-97           | AND rs        | 1     | `90+rs`. R0 = R0 & rs.                                                                   |
+| 98-9F           | OR rs         | 1     | `98+rs`. R0 = R0 or rs.                                                                  |
+| A0-A7           | XOR rs        | 1     | `A0+rs`. R0 = R0 ^ rs.                                                                   |
+| A8-AF           | CMP rs        | 1     | `A8+rs`. Compares R0 with rs.                                                            |
+| B0-B7           | NEG r         | 1     | `B0+r`. r = 0 - r.                                                                       |
 | **<- B8-BF ->** | **-------**   | -     | **---Register-to-Register Arithmetic---**                                                |
 | B8              | ADD rd, rs    | 2     | `rd = rd + rs`. `B8 ddd sss`.                                                            |
 | B9              | SUB rd, rs    | 2     | `rd = rd - rs`. `B9 ddd sss`.                                                            |
@@ -63,13 +63,13 @@
 | C7              | SUBCI n16     | 3     | `C7 imm16`. R0 = R0 - imm16 - C.                                                         |
 | **<- C8-D8 ->** | **-------**   | -     | **---Subroutines---**                                                                    |
 | C8              | CALL n16      | 3     | `CE addr_lo addr_hi`.                                                                    |
-| C9-D0           | CALL (r)      | 1     | `CF+r`. Call subroutine at address in r.                                                 |
+| C9-D0           | CALL (r)      | 1     | `C9+r`. Call subroutine at address in r.                                                 |
 | D1-D8           | CALLcc n16    | 3     | `D1+cc addr_lo addr_hi`. Conditional call.                                               |
 | **<- D9-F8 ->** | **-------**   | -     | **---Stack Operations & inc/dec---**                                                     |
-| D9-E0           | DEC r         | 1     | `11010 rrr`. Decrement r.                                                                |
-| E1-E8           | INC r         | 1     | `11011 rrr`. Increment r.                                                                |
-| E9-F0           | POP r         | 1     | `11100 rrr`. Pop from stack into r.                                                      |
-| F1-F8           | PUSH r        | 1     | `11101 rrr`. Push r onto stack.                                                          |
+| D9-E0           | DEC r         | 1     | `D9+r`. Decrement r.                                                                     |
+| E1-E8           | INC r         | 1     | `E1+r`. Increment r.                                                                     |
+| E9-F0           | POP r         | 1     | `E9+r`. Pop from stack into r.                                                           |
+| F1-F8           | PUSH r        | 1     | `F1+r`. Push r onto stack.                                                               |
 | **<- FA-FF ->** | **-------**   | -     | **---Misc Control & Prefixes---**                                                        |
 | F9              | RET           | 1     | Return from subroutine.                                                                  |
 | FA              | RETI          | 1     | Return from interrupt.                                                                   |

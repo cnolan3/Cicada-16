@@ -42,14 +42,18 @@ The `DMA_CTL` register at `F010` configures the behavior of the transfer.
 | 1   | `ADDR_MODE` | **Address Mode.** If `0`, the source and destination addresses increment after each byte is copied. If `1`, the addresses decrement.                                                                                                                                                                               |
 | 0   | `START`     | **Start/Status Bit.** Writing a `1` to this bit initiates the transfer. This bit will read as `1` while the transfer is in progress and is automatically cleared to `0` by the hardware upon completion.                                                                                                           |
 
-## **5. Length Register (`DMA_LEN`) and OAM DMA**
+## **5. Length Register (`DMA_LEN`) and Special Transfers**
 
-The `DMA_LEN` register at `F00F` typically holds the number of bytes (1-255) for a standard transfer. However, it has a special function when set to zero.
+The `DMA_LEN` register at `F00F` typically holds the number of bytes (1-255) for a standard transfer. However, it has special functions for values `0` and `1`.
 
-- **Standard DMA:** If `DMA_LEN` is set to a non-zero value (e.g., `N`), the DMA controller will copy `N` bytes.
+- **Standard DMA:** If `DMA_LEN` is set to a value from `2` to `255` (e.g., `N`), the DMA controller will copy `N` bytes.
 - **OAM DMA:** If `DMA_LEN` is set to `0`, this triggers a special, high-speed **OAM DMA**. This is the primary way to update sprite data. In this mode:
   - The DMA controller will automatically copy **512 bytes** from the `DMA_SRC` address.
   - The destination is fixed to the start of OAM memory (`F400`). The `DMA_DST` register is ignored.
+- **System Library DMA (Boot Mode Only):** If `DMA_LEN` is set to `1`, this triggers a special automatic transfer **only available while the console is in its initial boot state**.
+  - The DMA controller will automatically copy **4 KiB (4096 bytes)** from the `DMA_SRC` address.
+  - The destination is fixed to the start of the System Library RAM (`E000`). The `DMA_DST` register is ignored.
+  - This mode is used by the internal Boot ROM to load the System Library. It is disabled and inaccessible to game cartridges after the boot process is complete.
 
 ---
 

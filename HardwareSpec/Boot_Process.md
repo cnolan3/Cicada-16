@@ -37,7 +37,11 @@ During the boot sequence, the CPU operates in a special "Boot Mode" for interrup
 The code on the Boot ROM executes the following steps in order:
 
 1. **Hardware Initialization**: From power-on, the Boot ROM has full access to WRAM, VRAM, CRAM, OAM, and all I/O registers. It performs basic hardware setup, which includes clearing WRAM and initializing the Stack Pointer (SP) to the top of WRAM0 (e.g., 0xCFFF).
-2. **System Library Copy**: The Boot ROM uses the DMA controller to copy the 4 KiB System Library from its internal ROM to the dedicated System Library RAM at `E000-EFFF`. After this, it sets the PPU and APU registers to a known-default, disabled state.
+2.  **System Library Copy**: The Boot ROM initiates a DMA transfer to copy the 4 KiB System Library from its internal ROM to the dedicated System Library RAM at `E000-EFFF`. It does this by:
+    -   Writing the source address in the Boot ROM to the `DMA_SRC` register.
+    -   Writing the value `1` to the `DMA_LEN` register, which triggers the special 4 KiB system library transfer mode.
+    -   Setting the `START` bit in `DMA_CTL`.
+    After the DMA transfer is complete, it sets the PPU and APU registers to a known-default, disabled state.
 3. **Display Boot Animation**: The Boot ROM displays the console logo, enables interrupts (EI), and uses its internal V-Blank ISR to perform a brief startup animation. It may read the **Boot Animation ID** from the cartridge header to select a specific visual effect.
 4. **Cartridge Detection & Verification**: While the animation is playing, the Boot ROM checks for a cartridge and verifies its header.
 5. **Configure Game Interrupt Mode**: It reads the "Interrupt Mode" flag from the cartridge header and sets an internal hardware latch that determines where the CPU will look for interrupt vectors once the game starts (either the cartridge ROM or WRAM).
