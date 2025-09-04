@@ -13,7 +13,7 @@ Accessing OAM/VRAM/CRAM (reading or writing) by the CPU is generally safe during
 
 - **CRAM (Color RAM / Palette RAM):** 512 bytes of RAM located at `F200-F3FF` in the main memory map. It holds the 256 16-bit color palette entries.
 - **Screen Resolution:** 240x160 pixels.
-- **Refresh Rate:** 60 Hz.
+- **Refresh Rate:** ~58 Hz.
 
 ## **2. Color System**
 
@@ -34,6 +34,7 @@ By hardware rule, the **Tile Graphics Area** is always assumed to begin at addre
 ### **3.2. Tilemap Data Format**
 
 A tilemap is a 2D grid of 16-bit entries. Each entry tells the PPU which tile to draw at a position, and how to draw it.
+Notice that the PAL data field is only 3 bits, so it is only able to index 8 out of the total 16 sub-palettes stored in the master palette in CRAM. Background tiles are limited to using the first 8 sub-palettes (0-7), while sprites have access to all 16.
 
 | Bit(s) | Name             | Description                         |
 | :----- | :--------------- | :---------------------------------- |

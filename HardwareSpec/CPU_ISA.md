@@ -56,7 +56,7 @@ All instruction cycle counts in this document are given in **T-cycles**.
 - **.w:** Suffix for a word (16-bit) operation. This is the default for most instructions.
 - **.b:** Suffix for a byte (8-bit) operation.
 - **cc:** Condition code for jumps/calls (Z, NZ, C, NC, N, NN, V, NV)
-- **Prefixes:** `0xFD` accesses the "Advanced Addressing 1" instruction map. `0xFE` accesses the "Bit, Byte, and Shift Operations" instruction map. `0xFF` accesses the "Advanced Addressing 2" instruction map.
+- **Prefixes:** `0xFD` accesses the "Bit, Byte, and Shift Operations" instruction map. `0xFE` accesses the "Advanced Addressing 1" instruction map. `0xFF` accesses the "Advanced Addressing 2" instruction map.
 
 ## **3. Instruction Set**
 
@@ -159,9 +159,10 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | SRA r        | R0          | 2     | 8      | Shift Right Arithmetic. MSB -> MSB -> ... -> LSB -> C. (Prefixed)                       |
 | ROL r        | R0          | 2     | 8      | Rotate Left through Carry. C <- MSB <- ... <- LSB <- C. (Prefixed)                      |
 | ROR r        | R0          | 2     | 8      | Rotate Right through Carry. C -> MSB -> ... -> LSB -> C. (Prefixed)                     |
-| BIT r, b     | R0, 7       | 2     | 8      | Test bit b (0-7) of register r's low byte. Sets Z flag if bit is 0. (Prefixed)          |
-| SET r, b     | R0, 7       | 2     | 8      | Set bit b (0-7) of register r's low byte to 1. (Prefixed)                               |
-| RES r, b     | R0, 7       | 2     | 8      | Reset bit b (0-7) of register r's low byte to 0. (Prefixed)                             |
+| SWAP r       | R0          | 2     | 8      | Swap the upper and lower bytes of register r. Affects Z, N flags. (Prefixed)            |
+| BIT r, b     | R0, 7       | 3     | 12     | Test bit b (0-7) of register r's low byte. Sets Z flag if bit is 0. (Prefixed)          |
+| SET r, b     | R0, 7       | 3     | 12     | Set bit b (0-7) of register r's low byte to 1. (Prefixed)                               |
+| RES r, b     | R0, 7       | 3     | 12     | Reset bit b (0-7) of register r's low byte to 0. (Prefixed)                             |
 | BIT (n16), b | (0xC000), 7 | 4     | 12/16  | Test bit b (0-7) of the byte at memory address n16. Sets Z flag if bit is 0. (Prefixed) |
 | SET (n16), b | (0xC000), 7 | 4     | 16/20  | Set bit b (0-7) of the byte at memory address n16 to 1. (Prefixed)                      |
 | RES (n16), b | (0xC000), 7 | 4     | 16/20  | Reset bit b (0-7) of the byte at memory address n16 to 0. (Prefixed)                    |
@@ -190,7 +191,7 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | Mnemonic | Operands | Bytes | Cycles | Description                                                     |
 | :------- | :------- | :---- | :----- | :-------------------------------------------------------------- |
 | NOP      |          | 1     | 4      | No operation. Wastes 4 cycles.                                  |
-| HALT     |          | 2     | 8      | Halts CPU until an interrupt occurs. Low power mode. (Prefixed) |
+| HALT     |          | 1     | 4      | Halts CPU until an interrupt occurs. Low power mode.          |
 | DI       |          | 1     | 4      | Disable interrupts.                                             |
 | EI       |          | 1     | 4      | Enable interrupts.                                              |
 
