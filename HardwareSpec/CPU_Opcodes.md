@@ -36,21 +36,21 @@ ex) opcode 0x63 => Jump Zero (0x63 = 0x5D + **6**, cc = 6)
 | :-------------- | :------------ | :---- | :------------------------------------------------------------------------------------------------------- |
 | **<- 00-0F ->** | **-------**   | -     | **---Misc & Immediate Arithmetic---**                                                                    |
 | 00              | NOP           | 1     | No operation.                                                                                            |
-| 01-08           | LDI r, n16    | 3     | Load register r with immediate 16-bit value, the opcode is 0x01 + r. `(3 bytes) => 0x01+r n16_lo n16_hi` |
-| 09              | ADDI r, n16   | 4     | r = r + n16. `(4 bytes) => 0x09 b'00000rrr n16_lo n16_hi`.                                               |
-| 0A              | SUBI r, n16   | 4     | r = r - n16. `(4 bytes) => 0x0A b'00000rrr n16_lo n16_hi`.                                               |
-| 0B              | ANDI r, n16   | 4     | r = r & n16. `(4 bytes) => 0x0B b'00000rrr n16_lo n16_hi`.                                               |
-| 0C              | ORI r, n16    | 4     | r = r or n16. `(4 bytes) => 0x0C b'00000rrr n16_lo n16_hi`.                                              |
-| 0D              | XORI r, n16   | 4     | r = r ^ n16. `(4 bytes) => 0x0D b'00000rrr n16_lo n16_hi`.                                               |
-| 0E              | CMPI r, n16   | 4     | Compares r with n16. `(4 bytes) => 0x0E b'00000rrr n16_lo n16_hi`.                                       |
+| 01-08           | LDI r, n16    | 3     | `(3 bytes) => 0x01+r n16_lo n16_hi` Load register r with immediate 16-bit value, the opcode is 0x01 + r. |
+| 09              | ADDI r, n16   | 4     | `(4 bytes) => 0x09 b'00000rrr n16_lo n16_hi`. r = r + n16.                                               |
+| 0A              | SUBI r, n16   | 4     | `(4 bytes) => 0x0A b'00000rrr n16_lo n16_hi`. r = r - n16.                                               |
+| 0B              | ANDI r, n16   | 4     | `(4 bytes) => 0x0B b'00000rrr n16_lo n16_hi`. r = r & n16.                                               |
+| 0C              | ORI r, n16    | 4     | `(4 bytes) => 0x0C b'00000rrr n16_lo n16_hi`. r = r or n16.                                              |
+| 0D              | XORI r, n16   | 4     | `(4 bytes) => 0x0D b'00000rrr n16_lo n16_hi`. r = r ^ n16.                                               |
+| 0E              | CMPI r, n16   | 4     | `(4 bytes) => 0x0E b'00000rrr n16_lo n16_hi`. Compares r with n16.                                       |
 | 0F              | HALT          | 1     | Halt CPU.                                                                                                |
 | **<- 10-17 ->** | **-------**   | -     | **---Register-to-Register Arithmetic---**                                                                |
-| 10              | ADD rd, rs    | 2     | rd = rd + rs. `(2 bytes) => 0x10 b'00dddsss`.                                                            |
-| 11              | SUB rd, rs    | 2     | rd = rd - rs. `(2 bytes) => 0x11 b'00dddsss`.                                                            |
-| 12              | AND rd, rs    | 2     | rd = rd & rs. `(2 bytes) => 0x12 b'00dddsss`.                                                            |
-| 13              | OR rd, rs     | 2     | rd = rd or rs. `(2 bytes) => 0x13 b'00dddsss`.                                                           |
-| 14              | XOR rd, rs    | 2     | d = rd ^ rs. `(2 bytes) => 0x14 b'00dddsss`.                                                             |
-| 15              | CMP rd, rs    | 2     | Compares rd with rs. `(2 bytes) => 0x15 b'00dddsss`.                                                     |
+| 10              | ADD rd, rs    | 2     | `(2 bytes) => 0x10 b'00dddsss`. rd = rd + rs.                                                            |
+| 11              | SUB rd, rs    | 2     | `(2 bytes) => 0x11 b'00dddsss`. rd = rd - rs.                                                            |
+| 12              | AND rd, rs    | 2     | `(2 bytes) => 0x12 b'00dddsss`. rd = rd & rs.                                                            |
+| 13              | OR rd, rs     | 2     | `(2 bytes) => 0x13 b'00dddsss`. rd = rd or rs.                                                           |
+| 14              | XOR rd, rs    | 2     | `(2 bytes) => 0x14 b'00dddsss`. d = rd ^ rs.                                                             |
+| 15              | CMP rd, rs    | 2     | `(2 bytes) => 0x15 b'00dddsss`. Compares rd with rs.                                                     |
 | 16              | ADC rd, rs    | 2     | `(2 bytes) => 0x16 b'00dddsss`. rd = rd + rs + C.                                                        |
 | 17              | SBC rd, rs    | 2     | `(2 bytes) => 0x17 b'00dddsss`. rd = rd - rs - C.                                                        |
 | **<- 18-50 ->** | **-------**   | -     | **---16-bit Accumulator (R0) Arithmetic---**                                                             |
@@ -62,19 +62,19 @@ ex) opcode 0x63 => Jump Zero (0x63 = 0x5D + **6**, cc = 6)
 | 40-47           | CMP rs        | 1     | `(1 byte) => 0x40+rs`. Compares R0 with rs.                                                              |
 | 48-4F           | NEG r         | 1     | `(1 byte) => 0x48+r`. r = 0 - r.                                                                         |
 | 50              | NOT           | 1     | `(1 byte) => 0x50`. R0 = !R0.                                                                            |
-| **<- 51-52 ->** | **-------**   | -     | **---Flag Manipulation---**                                                                              |
-| 51              | CCF           | 1     | Complement carry flag. N flag is reset.                                                                  |
-| 52              | SCF           | 2     | `(2 bytes) => 0x52 b'0000000c`. Set carry flag to c. N flag is reset.                                    |
-| **<- 53-6D ->** | **-------**   | -     | **---Control Flow---**                                                                                   |
-| 53              | JMP n16       | 3     | `(3 bytes) => 0x53 addr_lo addr_hi`.                                                                     |
-| 54-5B           | JMP (r)       | 1     | `(1 byte) => 0x54+r`. Jump to address in register r.                                                     |
-| 5C              | JR n8         | 2     | `(2 bytes) => 0x5C offset`. Relative jump by signed 8-bit offset.                                        |
-| 5D-64           | Jcc n16       | 3     | `(3 bytes) => 0x5D+cc addr_lo addr_hi`. Conditional jump.                                                |
-| 65-6C           | JRcc n8       | 2     | `(2 bytes) => 0x65+cc offset`. Conditional relative jump.                                                |
-| 6D              | DJNZ n8       | 2     | `(2 bytes) => 0x6D offset`. Decrement the accumulator and jump to relative address if not zero.          |
-| **<- 6E-7F ->** | **-------**   | -     | **---Stack Operations---**                                                                               |
-| 6E-75           | POP r         | 1     | `(1 byte) => 0x6E+r`. Pop from stack into r.                                                             |
-| 76-7D           | PUSH r        | 1     | `(1 byte) => 0x76+r`. Push r onto stack.                                                                 |
+| **<- 51 ->**    | **-------**   | -     | **------**                                                                                               |
+| 51              | ---           | -     | Reserved                                                                                                 |
+| **<- 52-6C ->** | **-------**   | -     | **---Control Flow---**                                                                                   |
+| 52              | JMP n16       | 3     | `(3 bytes) => 0x52 addr_lo addr_hi`.                                                                     |
+| 53-5A           | JMP (r)       | 1     | `(1 byte) => 0x53+r`. Jump to address in register r.                                                     |
+| 5B              | JR n8         | 2     | `(2 bytes) => 0x5B offset`. Relative jump by signed 8-bit offset.                                        |
+| 5C-63           | Jcc n16       | 3     | `(3 bytes) => 0x5C+cc addr_lo addr_hi`. Conditional jump.                                                |
+| 64-6B           | JRcc n8       | 2     | `(2 bytes) => 0x64+cc offset`. Conditional relative jump.                                                |
+| 6C              | DJNZ n8       | 2     | `(2 bytes) => 0x6C offset`. Decrement the accumulator and jump to relative address if not zero.          |
+| **<- 6D-7F ->** | **-------**   | -     | **---Stack Operations---**                                                                               |
+| 6D-74           | PUSH r        | 1     | `(1 byte) => 0x6D+r`. Push r onto stack.                                                                 |
+| 75-7C           | POP r         | 1     | `(1 byte) => 0x75+r`. Pop from stack into r.                                                             |
+| 7D              | PUSH n16      | 3     | `(1 byte) => 0x7D n16_lo n16_hi`. Push immediate value onto stack.                                       |
 | 7E              | PUSH F        | 1     | `(1 byte) => 0x7E`. Push Flags register onto stack.                                                      |
 | 7F              | POP F         | 1     | `(1 byte) => 0x7F`. Pop Flags register from stack.                                                       |
 | **<- 80-BF ->** | **-------**   | -     | **---Register-to-Register Load---**                                                                      |
@@ -96,8 +96,8 @@ ex) opcode 0x63 => Jump Zero (0x63 = 0x5D + **6**, cc = 6)
 | D9-E0           | DEC r         | 1     | `(1 byte) => 0xD9+r`. Decrement r.                                                                       |
 | E1-E8           | INC r         | 1     | `(1 byte) => 0xE1+r`. Increment r.                                                                       |
 | **<- E9-F8 ->** | **-------**   | -     | **---Absolute Address Load/Store---**                                                                    |
-| E9-F0           | LD.w r, (n16) | 3     | Load r from absolute address. `(3 bytes) => 0xE9+r addr_lo addr_hi`                                      |
-| F1-F8           | ST.w (n16), r | 3     | Store r to absolute address. `(3 bytes) => 0xF1+r addr_lo addr_hi`                                       |
+| E9-F0           | LD.w r, (n16) | 3     | `(3 bytes) => 0xE9+r addr_lo addr_hi`. Load r from absolute address.                                     |
+| F1-F8           | ST.w (n16), r | 3     | `(3 bytes) => 0xF1+r addr_lo addr_hi`. Store r to absolute address.                                      |
 | **<- F9-FF ->** | **-------**   | -     | **---Misc Control & Prefixes---**                                                                        |
 | F9              | RET           | 1     | Return from subroutine.                                                                                  |
 | FA              | RETI          | 1     | Return from interrupt.                                                                                   |
@@ -131,6 +131,9 @@ ex) opcode 0x63 => Jump Zero (0x63 = 0x5D + **6**, cc = 6)
 | 78-7F        | SET (n16), b | 4     | `(4 bytes) => 0xFD 0x78+b n16_lo n16_hi`. Set bit b of byte at address n16.   |
 | 80-87        | RES (n16), b | 4     | `(4 bytes) => 0xFD 0x80+b n16_lo n16_hi`. Reset bit b of byte at address n16. |
 | 88-8F        | SWAP r       | 2     | `(2 bytes) => 0xFD 0x88+r`. Swap the upper and lower bytes of r.              |
+| 90           | CCF          | 2     | `(2 bytes) => 0xFD 0x90` Complement carry flag. N flag is reset.              |
+| 91           | SCF          | 2     | `(2 bytes) => 0xFD 0x91`. Set carry flag to 1. N flag is reset.               |
+| 92           | RCF          | 2     | `(2 bytes) => 0xFD 0x92`. Reset carry flag to 0. N flag is reset.             |
 
 ---
 

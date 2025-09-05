@@ -77,6 +77,7 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | ST.w (n16), r     | (0xC000), R0   | 3     | 16/20     | Stores the 16-bit word in R0 to the absolute address 0xC000.                                              |
 | PUSH r            | R0             | 1     | 12        | Pushes the value of a register onto the stack. Decrements SP by 2.                                        |
 | POP r             | R0             | 1     | 12        | Pops a value from the stack into a register. Increments SP by 2.                                          |
+| PUSH n16          | 0x1234         | 3     | 12        | Pushes an immediate 16-bit value onto the stack. Decrements SP by 2.                                      |
 | PUSH F            |                | 1     | 12        | Pushes the Flags register (F) onto the stack. Decrements SP by 2.                                         |
 | POP F             |                | 1     | 12        | Pops a value from the stack into the Flags register (F). Increments SP by 2.                                      |
 
