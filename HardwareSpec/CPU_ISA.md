@@ -169,19 +169,19 @@ All instruction cycle counts in this document are given in **T-cycles**.
 
 ### **Control Flow Instructions (Jumps, Calls, Returns)**
 
-| Mnemonic   | Operands  | Bytes | Cycles | Description                                                                                        |
-| :--------- | :-------- | :---- | :----- | :------------------------------------------------------------------------------------------------- |
-| JMP n16    | 0x1234    | 3     | 12     | Unconditional jump to absolute address n16.                                                        |
-| JMP (r)    | (R0)      | 1     | 4      | Unconditional jump to address stored in register r.                                                |
-| JR n8      | $10       | 2     | 8      | Unconditional relative jump by signed offset n8.                                                   |
-| Jcc n16    | Z, 0x1234 | 3     | 12     | Conditional jump to n16 if condition cc is met.                                                    |
-| JRcc n8    | NZ, -$4   | 2     | 8      | Conditional relative jump by n8 if condition cc is met.                                            |
-| DJNZ n8    | -$4       | 2     | 8      | Decrement R0 and jump relative if not zero.                                                        |
-| CALL n16   | 0x2000    | 3     | 20     | Call subroutine at address n16. Pushes PC+3 onto stack.                                            |
-| CALL (r)   | (R0)      | 1     | 12     | Call subroutine at address in register r. Pushes PC+1 onto stack.                                  |
-| CALLcc n16 | C, 0x2000 | 3     | 12/20  | Conditional call if condition cc is met.                                                           |
-| RET        |           | 1     | 12     | Return from subroutine. Pops PC from stack.                                                        |
-| RETI       |           | 1     | 12     | Return from interrupt. Pops PC from stack and enables interrupts. See `Interrupts.md` for details. |
+| Mnemonic   | Operands  | Bytes | Cycles | Description                                                                                                                        |
+| :--------- | :-------- | :---- | :----- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| JMP n16    | 0x1234    | 3     | 12     | Unconditional jump to absolute address n16.                                                                                        |
+| JMP (r)    | (R0)      | 1     | 4      | Unconditional jump to address stored in register r.                                                                                |
+| JR n8      | $10       | 2     | 8      | Unconditional relative jump by signed offset n8.                                                                                   |
+| Jcc n16    | Z, 0x1234 | 3     | 12     | Conditional jump to n16 if condition cc is met.                                                                                    |
+| JRcc n8    | NZ, -$4   | 2     | 8      | Conditional relative jump by n8 if condition cc is met.                                                                            |
+| DJNZ n8    | -$4       | 2     | 8      | Decrement R0 and jump relative if not zero.                                                                                        |
+| CALL n16   | 0x2000    | 3     | 20     | Call subroutine at address n16. Pushes PC+3 onto stack.                                                                            |
+| CALL (r)   | (R0)      | 1     | 12     | Call subroutine at address in register r. Pushes PC+1 onto stack.                                                                  |
+| CALLcc n16 | C, 0x2000 | 3     | 12/20  | Conditional call if condition cc is met.                                                                                           |
+| RET        |           | 1     | 12     | Return from subroutine. Pops PC from stack.                                                                                        |
+| RETI       |           | 1     | 12     | Return from interrupt. Pops flags from the stack, then pops PC from stack and enables interrupts. See `Interrupts.md` for details. |
 
 #### **Note on Condition Codes (cc)**
 
@@ -195,8 +195,9 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | HALT     |          | 1     | 4      | Halts CPU until an interrupt occurs. Low power mode. |
 | DI       |          | 1     | 4      | Disable interrupts.                                  |
 | EI       |          | 1     | 4      | Enable interrupts.                                   |
-| CCF      |          | 1     | 4      | Complement carry flag. N flag is reset.              |
-| SCF      | c        | 2     | 8      | Set carry flag to c. N flag is reset.                |
+| CCF      |          | 2     | 8      | Complement carry flag. N flag is reset.              |
+| SCF      |          | 2     | 8      | Set carry flag to 1. N flag is reset.                |
+| RCF      |          | 2     | 8      | Reset carry flag to 0. N flag is reset.              |
 
 ---
 
