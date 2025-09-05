@@ -25,34 +25,41 @@
 | 0D              | XORI r, n16   | 4     | r = r ^ n16. `(4 bytes) => 0x0D b'00000rrr n16_lo n16_hi`.                                               |
 | 0E              | CMPI r, n16   | 4     | Compares r with n16. `(4 bytes) => 0x0E b'00000rrr n16_lo n16_hi`.                                       |
 | 0F              | HALT          | 1     | Halt CPU.                                                                                                |
-| **<- 10-1F ->** | **-------**   | -     | **---Absolute Address Load/Store---**                                                                    |
-| 10-17           | LD.w r, (n16) | 3     | Load r from absolute address. `(3 bytes) => 0x10+r addr_lo addr_hi`                                      |
-| 18-1F           | ST.w (n16), r | 3     | Store r to absolute address. `(3 bytes) => 0x18+r addr_lo addr_hi`                                       |
-| **<- 20-3F ->** | **-------**   | -     | **---Control Flow---**                                                                                   |
-| 20              | JMP n16       | 3     | `(3 bytes) => 0x20 addr_lo addr_hi`.                                                                     |
-| 21-28           | JMP (r)       | 1     | `(1 byte) => 0x21+r`. Jump to address in register r.                                                     |
-| 29              | JR n8         | 2     | `(2 bytes) => 0x29 offset`. Relative jump by signed 8-bit offset.                                        |
-| 30-37           | Jcc n16       | 3     | `(3 bytes) => 30+cc addr_lo addr_hi`. Conditional jump.                                                  |
-| 38-3F           | JRcc n8       | 2     | `(2 bytes) => 38+cc offset`. Conditional relative jump.                                                  |
-| **<- 40-7F ->** | **-------**   | -     | **---Register-to-Register Load---**                                                                      |
-| 40-7F           | LD rd, rs     | 1     | `(1 byte) => b'01dddsss`. Copies value from rs to rd. (64 opcodes)                                       |
-| **<- 80-AF ->** | **-------**   | -     | **---16-bit Accumulator (R0) Arithmetic---**                                                             |
-| 80-87           | ADD rs        | 1     | `(1 byte) => 0x80+rs`. R0 = R0 + rs.                                                                     |
-| 88-8F           | SUB rs        | 1     | `(1 byte) => 0x88+rs`. R0 = R0 - rs.                                                                     |
-| 90-97           | AND rs        | 1     | `(1 byte) => 0x90+rs`. R0 = R0 & rs.                                                                     |
-| 98-9F           | OR rs         | 1     | `(1 byte) => 0x98+rs`. R0 = R0 or rs.                                                                    |
-| A0-A7           | XOR rs        | 1     | `(1 byte) => 0xA0+rs`. R0 = R0 ^ rs.                                                                     |
-| A8-AF           | CMP rs        | 1     | `(1 byte) => 0xA8+rs`. Compares R0 with rs.                                                              |
-| B0-B7           | NEG r         | 1     | `(1 byte) => 0xB0+r`. r = 0 - r.                                                                         |
-| **<- B8-BF ->** | **-------**   | -     | **---Register-to-Register Arithmetic---**                                                                |
-| B8              | ADD rd, rs    | 2     | rd = rd + rs. `(2 bytes) => 0xB8 b'00dddsss`.                                                            |
-| B9              | SUB rd, rs    | 2     | rd = rd - rs. `(2 bytes) => 0xB9 b'00dddsss`.                                                            |
-| BA              | AND rd, rs    | 2     | rd = rd & rs. `(2 bytes) => 0xBA b'00dddsss`.                                                            |
-| BB              | OR rd, rs     | 2     | rd = rd or rs. `(2 bytes) => BB b'00dddsss`.                                                             |
-| BC              | XOR rd, rs    | 2     | d = rd ^ rs. `(2 bytes) => 0xBC b'00dddsss`.                                                             |
-| BD              | CMP rd, rs    | 2     | Compares rd with rs. `(2 bytes) => 0xBD b'00dddsss`.                                                     |
-| BE              | ADC rd, rs    | 2     | `(2 bytes) => 0xBE b'00dddsss`. rd = rd + rs + C.                                                        |
-| BF              | SBC rd, rs    | 2     | `(2 bytes) => 0xBF b'00dddsss`. rd = rd - rs - C.                                                        |
+| **<- 10-17 ->** | **-------**   | -     | **---Register-to-Register Arithmetic---**                                                                |
+| 10              | ADD rd, rs    | 2     | rd = rd + rs. `(2 bytes) => 0x10 b'00dddsss`.                                                            |
+| 11              | SUB rd, rs    | 2     | rd = rd - rs. `(2 bytes) => 0x11 b'00dddsss`.                                                            |
+| 12              | AND rd, rs    | 2     | rd = rd & rs. `(2 bytes) => 0x12 b'00dddsss`.                                                            |
+| 13              | OR rd, rs     | 2     | rd = rd or rs. `(2 bytes) => 0x13 b'00dddsss`.                                                           |
+| 14              | XOR rd, rs    | 2     | d = rd ^ rs. `(2 bytes) => 0x14 b'00dddsss`.                                                             |
+| 15              | CMP rd, rs    | 2     | Compares rd with rs. `(2 bytes) => 0x15 b'00dddsss`.                                                     |
+| 16              | ADC rd, rs    | 2     | `(2 bytes) => 0x16 b'00dddsss`. rd = rd + rs + C.                                                        |
+| 17              | SBC rd, rs    | 2     | `(2 bytes) => 0x17 b'00dddsss`. rd = rd - rs - C.                                                        |
+| **<- 18-50 ->** | **-------**   | -     | **---16-bit Accumulator (R0) Arithmetic---**                                                             |
+| 18-1F           | ADD rs        | 1     | `(1 byte) => 0x18+rs`. R0 = R0 + rs.                                                                     |
+| 20-27           | SUB rs        | 1     | `(1 byte) => 0x20+rs`. R0 = R0 - rs.                                                                     |
+| 28-2F           | AND rs        | 1     | `(1 byte) => 0x28+rs`. R0 = R0 & rs.                                                                     |
+| 30-37           | OR rs         | 1     | `(1 byte) => 0x30+rs`. R0 = R0 or rs.                                                                    |
+| 38-3F           | XOR rs        | 1     | `(1 byte) => 0x38+rs`. R0 = R0 ^ rs.                                                                     |
+| 40-47           | CMP rs        | 1     | `(1 byte) => 0x40+rs`. Compares R0 with rs.                                                              |
+| 48-4F           | NEG r         | 1     | `(1 byte) => 0x48+r`. r = 0 - r.                                                                         |
+| 50              | NOT           | 1     | `(1 byte) => 0x50`. R0 = !R0.                                                                            |
+| **<- 51-52 ->** | **-------**   | -     | **---Flag Manipulation---**                                                                              |
+| 51              | CCF           | 1     | Complement carry flag. N flag is reset.                                                                  |
+| 52              | SCF           | 2     | `(2 bytes) => 0x52 b'0000000c`. Set carry flag to c. N flag is reset.                                    |
+| **<- 53-6D ->** | **-------**   | -     | **---Control Flow---**                                                                                   |
+| 53              | JMP n16       | 3     | `(3 bytes) => 0x53 addr_lo addr_hi`.                                                                     |
+| 54-5B           | JMP (r)       | 1     | `(1 byte) => 0x54+r`. Jump to address in register r.                                                     |
+| 5C              | JR n8         | 2     | `(2 bytes) => 0x5C offset`. Relative jump by signed 8-bit offset.                                        |
+| 5D-64           | Jcc n16       | 3     | `(3 bytes) => 0x5D+cc addr_lo addr_hi`. Conditional jump.                                                |
+| 65-6C           | JRcc n8       | 2     | `(2 bytes) => 0x65+cc offset`. Conditional relative jump.                                                |
+| 6D              | DJNZ n8       | 2     | `(2 bytes) => 0x6D offset`. Decrement the accumulator and jump to relative address if not zero.          |
+| **<- 6E-7F ->** | **-------**   | -     | **---Stack Operations---**                                                                               |
+| 6E-75           | POP r         | 1     | `(1 byte) => 0x6E+r`. Pop from stack into r.                                                             |
+| 76-7D           | PUSH r        | 1     | `(1 byte) => 0x76+r`. Push r onto stack.                                                                 |
+| 7E              | PUSH F        | 1     | `(1 byte) => 0x7E`. Push Flags register onto stack.                                                      |
+| 7F              | POP F         | 1     | `(1 byte) => 0x7F`. Pop Flags register from stack.                                                       |
+| **<- 80-BF ->** | **-------**   | -     | **---Register-to-Register Load---**                                                                      |
+| 80-BF           | LD rd, rs     | 1     | `(1 byte) => b'10dddsss`. Copies value from rs to rd. (64 opcodes)                                       |
 | **<- C0-C7 ->** | **-------**   | -     | **---Accumulator-Immediate Arithmetic (2 bytes)---**                                                     |
 | C0              | ADDI n16      | 3     | `(3 bytes) => 0xC0 n16_lo n16_hi`. R0 = R0 + imm16.                                                      |
 | C1              | SUBI n16      | 3     | `(3 bytes) => 0xC1 n16_lo n16_hi`. R0 = R0 - imm16.                                                      |
@@ -66,12 +73,13 @@
 | C8              | CALL n16      | 3     | `(3 bytes) => 0xC8 addr_lo addr_hi`.                                                                     |
 | C9-D0           | CALL (r)      | 1     | `(1 byte) => 0xC9+r`. Call subroutine at address in r.                                                   |
 | D1-D8           | CALLcc n16    | 3     | `(3 bytes) => 0xD1+cc addr_lo addr_hi`. Conditional call.                                                |
-| **<- D9-F8 ->** | **-------**   | -     | **---Stack Operations & inc/dec---**                                                                     |
+| **<- D9-E8 ->** | **-------**   | -     | **---Stack Operations & inc/dec---**                                                                     |
 | D9-E0           | DEC r         | 1     | `(1 byte) => 0xD9+r`. Decrement r.                                                                       |
 | E1-E8           | INC r         | 1     | `(1 byte) => 0xE1+r`. Increment r.                                                                       |
-| E9-F0           | POP r         | 1     | `(1 byte) => 0xE9+r`. Pop from stack into r.                                                             |
-| F1-F8           | PUSH r        | 1     | `(1 byte) => 0xF1+r`. Push r onto stack.                                                                 |
-| **<- FA-FF ->** | **-------**   | -     | **---Misc Control & Prefixes---**                                                                        |
+| **<- E9-F8 ->** | **-------**   | -     | **---Absolute Address Load/Store---**                                                                    |
+| E9-F0           | LD.w r, (n16) | 3     | Load r from absolute address. `(3 bytes) => 0xE9+r addr_lo addr_hi`                                      |
+| F1-F8           | ST.w (n16), r | 3     | Store r to absolute address. `(3 bytes) => 0xF1+r addr_lo addr_hi`                                       |
+| **<- F9-FF ->** | **-------**   | -     | **---Misc Control & Prefixes---**                                                                        |
 | F9              | RET           | 1     | Return from subroutine.                                                                                  |
 | FA              | RETI          | 1     | Return from interrupt.                                                                                   |
 | FB              | EI            | 1     | Enable Interrupts.                                                                                       |
@@ -104,8 +112,6 @@
 | 78-7F        | SET (n16), b | 4     | `(4 bytes) => 0xFD 0x78+b n16_lo n16_hi`. Set bit b of byte at address n16.   |
 | 80-87        | RES (n16), b | 4     | `(4 bytes) => 0xFD 0x80+b n16_lo n16_hi`. Reset bit b of byte at address n16. |
 | 88-8F        | SWAP r       | 2     | `(2 bytes) => 0xFD 0x88+r`. Swap the upper and lower bytes of r.              |
-| 90           | PUSH F       | 2     | `(2 bytes) => 0xFD 0x90`. Push Flags register onto stack.                     |
-| 91           | POP F        | 2     | `(2 bytes) => 0xFD 0x91`. Pop Flags register from stack.                      |
 
 ---
 
