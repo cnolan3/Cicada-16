@@ -11,6 +11,25 @@
 
 ---
 
+### Note on Conditional Instruction Encoding
+
+All conditional instructions (Jcc, JRcc, CALLcc) use the same encoding for the condition code (cc):
+
+| cc value | condition code    |
+| :------- | :---------------- |
+| 0        | V (overflow)      |
+| 1        | NV (Not overflow) |
+| 2        | N (negative)      |
+| 3        | NN (not negative) |
+| 4        | C (carry)         |
+| 5        | NC (not carry)    |
+| 6        | Z (zero)          |
+| 7        | NZ (not zero)     |
+
+ex) opcode 0x63 => Jump Zero (0x63 = 0x5D + **6**, cc = 6)
+
+---
+
 ## **Main Opcode Map (1-Byte Instructions)**
 
 | Opcode (Hex)    | Mnemonic      | Bytes | Description                                                                                              |
