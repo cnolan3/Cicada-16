@@ -2,6 +2,52 @@
 
 **Disclaimer:** This document contains thoughts and potential ideas for the Cicada-16 project. The notes here are **not** part of the official hardware specification unless explicitly integrated into the main `HardwareSpec` documents.
 
+---
+
+## Instruction Cycle Timing Calculation
+
+The total cycle count for any instruction is the sum of its **Fetch Cost** and its **Execution Cost**. All timings are measured in **T-cycles**.
+
+### Rule 1: Fetch Cost
+
+This is the baseline cost for the CPU to read the instruction itself from memory. The formula is straightforward:
+
+- **Fetch Cost = (Instruction Size in Bytes) × 4 T-cycles**
+
+For example, a 3-byte instruction like `LDI r, n16` has a fetch cost of $3 \times 4 = 12$ T-cycles.
+
+### Rule 2: Execution Cost
+
+This is the additional time an instruction takes to perform its specific job, such as accessing memory or doing complex internal work.
+
+- **Internal Operations:** Simple register-to-register operations (e.g., `LD rd, rs`, `ADD rs`, `NEG r`) are considered fast and have an execution cost of **0 T-cycles**. Their work is completed within the final fetch cycle.
+
+- **Memory Access:** Instructions that read from or write to memory during their execution phase incur the following costs:
+
+| Memory Access Type    | WRAM Cost   | HRAM Cost   |
+| :-------------------- | :---------- | :---------- |
+| **16-bit Read/Write** | +8 T-cycles | +4 T-cycles |
+| **8-bit Read/Write**  | +4 T-cycles | +2 T-cycles |
+
+Stack operations like `PUSH` and `POP` are treated as 16-bit memory accesses.
+
+### Rule 3: Control Flow Instructions
+
+The documented cycle counts for control flow instructions represent their intrinsic work, not the systemic cost of a pipeline stall.
+
+- **Jumps (`JMP`, `JR`, `Jcc`)**: These instructions only have a **Fetch Cost**. The work of changing the Program Counter is a fast internal operation with no extra cycle cost. Any delay from the pipeline stall is handled by the emulator, not included in the instruction's base time.
+
+- **Calls & Returns (`CALL`, `RET`)**: These instructions are more expensive because their execution phase involves a **memory access** (pushing or popping the return address on the stack).
+  - For example, `CALL n16` costs 12 cycles to fetch its 3 bytes, plus 8 cycles to execute the push of the Program Counter, for a total of 20 cycles.
+
+### The Final Formula
+
+The complete calculation for any instruction's documented cycle time is:
+
+**Total Cycles = (Fetch Cost) + (Execution Cost)**
+
+---
+
 ## Possible Sequel Console
 
 The following ideas are things that I think may be appropriate to add to a possible sequel console ("Cicada-16 pro"?).
