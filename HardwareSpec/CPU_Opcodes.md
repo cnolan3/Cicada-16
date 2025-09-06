@@ -41,7 +41,6 @@ The "Cycles" column in the tables below denotes the number of T-cycles required 
 These values are calculated based on the following rules:
 
 1.  **Fetch Cost (F):** The cost to read an instruction from memory is 4 T-cycles per byte.
-
     - `Fetch Cost = (Instruction Size in Bytes) * 4`
 
 2.  **Execution Cost (E):** This is the cost of any work done after fetching, primarily memory access. Simple internal register operations have an execution cost of 0.
@@ -84,10 +83,18 @@ For instructions with memory access, cycle counts may be presented as `HRAM/WRAM
 | 30-37           | OR rs         | 1     | 4 (4 : 0)        | `(1 byte) => 0x30+rs`. R0 = R0 or rs.                                                                    |
 | 38-3F           | XOR rs        | 1     | 4 (4 : 0)        | `(1 byte) => 0x38+rs`. R0 = R0 ^ rs.                                                                     |
 | 40-47           | CMP rs        | 1     | 4 (4 : 0)        | `(1 byte) => 0x40+rs`. Compares R0 with rs.                                                              |
-| 48-4F           | NEG r         | 1     | 4 (4 : 0)        | `(1 byte) => 0x48+r`. r = 0 - r.                                                                         |
-| 50              | NOT           | 1     | 4 (4 : 0)        | `(1 byte) => 0x50`. R0 = !R0.                                                                            |
-| **<- 51 ->**    | **-------**   | -     | **-------**      | **------**                                                                                               |
-| 51              | ---           | -     | ---              | Reserved                                                                                                 |
+| 48              | NEG           | 1     | 4 (4 : 0)        | R0 = 0 - R0.                                                                                             |
+| 49              | NOT           | 1     | 4 (4 : 0)        | R0 = !R0.                                                                                                |
+| 4A              | SWAP          | 1     | 4 (4 : 0)        | Swap the upper and lower bytes of R0.                                                                    |
+| **<- 4B-4D ->** | **-------**   | -     | **-------**      | **---Flag Manipulation---**                                                                              |
+| 4B              | CCF           | 1     | 4 (4 : 0)        | Complement carry flag. N flag is reset.                                                                  |
+| 4C              | SCF           | 1     | 4 (4 : 0)        | Set carry flag to 1. N flag is reset.                                                                    |
+| 4D              | RCF           | 1     | 4 (4 : 0)        | Reset carry flag to 0. N flag is reset.                                                                  |
+| **<- 4E-4F ->** | **-------**   | -     | **-------**      | **------**                                                                                               |
+| 4E-4F           | ---           | -     | ---              | Reserved                                                                                                 |
+| **<- 50-51 ->** | **-------**   | -     | **-------**      | **---Enter/Leave---**                                                                                    |
+| 50              | ENTER         | 1     | 12 (4 : 8)       | Enter a function, See [CPU_ISA.md](./CPU_ISA.md) for details.                                            |
+| 51              | LEAVE         | 1     | 12 (4 : 8)       | Leave a function, See [CPU_ISA.md](./CPU_ISA.md) for details.                                            |
 | **<- 52-6C ->** | **-------**   | -     | **-------**      | **---Control Flow---**                                                                                   |
 | 52              | JMP n16       | 3     | 12 (12 : 0)      | `(3 bytes) => 0x52 addr_lo addr_hi`.                                                                     |
 | 53-5A           | JMP (r)       | 1     | 4 (4 : 0)        | `(1 byte) => 0x53+r`. Jump to address in register r.                                                     |
@@ -99,11 +106,11 @@ For instructions with memory access, cycle counts may be presented as `HRAM/WRAM
 | 6D-74           | PUSH r        | 1     | 12 (4 : 8)       | `(1 byte) => 0x6D+r`. Push r onto stack.                                                                 |
 | 75-7C           | POP r         | 1     | 12 (4 : 8)       | `(1 byte) => 0x75+r`. Pop from stack into r.                                                             |
 | 7D              | PUSH n16      | 3     | 20 (12 : 8)      | `(1 byte) => 0x7D n16_lo n16_hi`. Push immediate value onto stack.                                       |
-| 7E              | PUSH F        | 1     | 12 (4 : 8)       | `(1 byte) => 0x7E`. Push Flags register onto stack.                                                      |
-| 7F              | POP F         | 1     | 12 (4 : 8)       | `(1 byte) => 0x7F`. Pop Flags register from stack.                                                       |
+| 7E              | PUSH F        | 1     | 12 (4 : 8)       | Push Flags register onto stack.                                                                          |
+| 7F              | POP F         | 1     | 12 (4 : 8)       | Pop Flags register from stack.                                                                           |
 | **<- 80-BF ->** | **-------**   | -     | **-------**      | **---Register-to-Register Load---**                                                                      |
 | 80-BF           | LD rd, rs     | 1     | 4 (4 : 0)        | `(1 byte) => b'10dddsss`. Copies value from rs to rd. (64 opcodes)                                       |
-| **<- C0-C7 ->** | **-------**   | -     | **-------**      | **---Accumulator-Immediate Arithmetic (2 bytes)---**                                                     |
+| **<- C0-C7 ->** | **-------**   | -     | **-------**      | **---Accumulator-Immediate Arithmetic---**                                                               |
 | C0              | ADDI n16      | 3     | 12 (12 : 0)      | `(3 bytes) => 0xC0 n16_lo n16_hi`. R0 = R0 + imm16.                                                      |
 | C1              | SUBI n16      | 3     | 12 (12 : 0)      | `(3 bytes) => 0xC1 n16_lo n16_hi`. R0 = R0 - imm16.                                                      |
 | C2              | ANDI n16      | 3     | 12 (12 : 0)      | `(3 bytes) => 0xC2 n16_lo n16_hi`. R0 = R0 & imm16.                                                      |
@@ -154,10 +161,6 @@ For instructions with memory access, cycle counts may be presented as `HRAM/WRAM
 | 70-77        | BIT (n16), b | 4     | 18/20 (16 : 2/4) | `(4 bytes) => 0xFD 0x70+b n16_lo n16_hi`. Test bit b of byte at address n16.  |
 | 78-7F        | SET (n16), b | 4     | 20/24 (16 : 4/8) | `(4 bytes) => 0xFD 0x78+b n16_lo n16_hi`. Set bit b of byte at address n16.   |
 | 80-87        | RES (n16), b | 4     | 20/24 (16 : 4/8) | `(4 bytes) => 0xFD 0x80+b n16_lo n16_hi`. Reset bit b of byte at address n16. |
-| 88-8F        | SWAP r       | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x88+r`. Swap the upper and lower bytes of r.              |
-| 90           | CCF          | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x90` Complement carry flag. N flag is reset.              |
-| 91           | SCF          | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x91`. Set carry flag to 1. N flag is reset.               |
-| 92           | RCF          | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x92`. Reset carry flag to 0. N flag is reset.             |
 
 ---
 

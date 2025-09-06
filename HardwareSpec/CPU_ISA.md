@@ -95,8 +95,9 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | OR rs    | R1       | 1     | 4      | R0 = R0 or R1. Affects Z, N flags.                                               |
 | XOR rs   | R1       | 1     | 4      | R0 = R0 ^ R1. Affects Z, N flags.                                                |
 | CMP rs   | R1       | 1     | 4      | Compares R0 and R1 (calculates R0 - R1) and sets flags, but discards the result. |
-| NEG r    | R1       | 1     | 4      | r = -r. Affects Z, N, C, V flags.                                                |
-| NOT      | R0       | 1     | 4      | R0 = !R0 (bitwise NOT). Affects Z, N flags.                                      |
+| NEG      |          | 1     | 4      | R0 = -R0 (two's complement). Affects Z, N, C, V flags.                           |
+| NOT      |          | 1     | 4      | R0 = !R0 (bitwise NOT). Affects Z, N flags.                                      |
+| SWAP     |          | 1     | 4      | Swaps the upper and lower bytes of R0. Affects Z, N flags.                       |
 
 #### **Register-to-Register Arithmetic**
 
@@ -159,7 +160,7 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | SRA r        | R0          | 2     | 8      | Shift Right Arithmetic. MSB -> MSB -> ... -> LSB -> C. (Prefixed)                       |
 | ROL r        | R0          | 2     | 8      | Rotate Left through Carry. C <- MSB <- ... <- LSB <- C. (Prefixed)                      |
 | ROR r        | R0          | 2     | 8      | Rotate Right through Carry. C -> MSB -> ... -> LSB -> C. (Prefixed)                     |
-| SWAP r       | R0          | 2     | 8      | Swap the upper and lower bytes of register r. Affects Z, N flags. (Prefixed)            |
+
 | BIT r, b     | R0, 7       | 3     | 12     | Test bit b (0-7) of register r's low byte. Sets Z flag if bit is 0. (Prefixed)          |
 | SET r, b     | R0, 7       | 3     | 12     | Set bit b (0-7) of register r's low byte to 1. (Prefixed)                               |
 | RES r, b     | R0, 7       | 3     | 12     | Reset bit b (0-7) of register r's low byte to 0. (Prefixed)                             |
@@ -182,6 +183,22 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | CALLcc n16 | C, 0x2000 | 3     | 12/20  | Conditional call if condition cc is met.                                                                                           |
 | RET        |           | 1     | 12     | Return from subroutine. Pops PC from stack.                                                                                        |
 | RETI       |           | 1     | 12     | Return from interrupt. Pops flags from the stack, then pops PC from stack and enables interrupts. See `Interrupts.md` for details. |
+| ENTER      |           | 1     | 12     | Creates a new stack frame. See explanation below.                                                                                  |
+| LEAVE      |           | 1     | 12     | Destroys the current stack frame and prepares for return.                                                                          |
+
+#### **Stack Frame Management (ENTER/LEAVE)**
+
+The `ENTER` and `LEAVE` instructions simplify the creation and destruction of stack frames for subroutines, a common practice in compiled languages like C. They automate the process of managing the frame pointer (R6).
+
+-   **`ENTER`**: This instruction creates a new stack frame. It performs two actions:
+    1.  It pushes the current value of the frame pointer (R6) onto the stack.
+    2.  It copies the current value of the stack pointer (R7) into the frame pointer (R6).
+    This is equivalent to `PUSH R6` followed by `LD R6, R7`. This establishes a new frame, and local variables for the subroutine can then be accessed via negative offsets from R6.
+
+-   **`LEAVE`**: This instruction destroys the current stack frame to return to the caller's frame. It performs two actions:
+    1.  It copies the value of the frame pointer (R6) into the stack pointer (R7). This deallocates any space used by local variables.
+    2.  It pops the previous frame pointer from the stack back into R6.
+    This is equivalent to `LD R7, R6` followed by `POP R6`. After a `LEAVE`, a `RET` instruction is typically used to return to the caller.
 
 #### **Note on Condition Codes (cc)**
 
@@ -195,9 +212,9 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | HALT     |          | 1     | 4      | Halts CPU until an interrupt occurs. Low power mode. |
 | DI       |          | 1     | 4      | Disable interrupts.                                  |
 | EI       |          | 1     | 4      | Enable interrupts.                                   |
-| CCF      |          | 2     | 8      | Complement carry flag. N flag is reset.              |
-| SCF      |          | 2     | 8      | Set carry flag to 1. N flag is reset.                |
-| RCF      |          | 2     | 8      | Reset carry flag to 0. N flag is reset.              |
+| CCF      |          | 1     | 4      | Complement carry flag. N flag is reset.              |
+| SCF      |          | 1     | 4      | Set carry flag to 1. N flag is reset.                |
+| RCF      |          | 1     | 4      | Reset carry flag to 0. N flag is reset.              |
 
 ---
 
