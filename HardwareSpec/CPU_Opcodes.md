@@ -33,6 +33,7 @@ ex) opcode 0x63 => Jump Zero (0x63 = 0x5D + **6**, cc = 6)
 ### **Note on Instruction Cycle Timing**
 
 The "Cycles" column in the tables below denotes the number of T-cycles required for each instruction, presented in the format **`T (F : E)`**:
+
 - **T**: Total cycles for the instruction.
 - **F**: Fetch cycles, the time taken to read the instruction from memory.
 - **E**: Execution cycles, the additional time for memory access or other internal operations.
@@ -40,6 +41,7 @@ The "Cycles" column in the tables below denotes the number of T-cycles required 
 These values are calculated based on the following rules:
 
 1.  **Fetch Cost (F):** The cost to read an instruction from memory is 4 T-cycles per byte.
+
     - `Fetch Cost = (Instruction Size in Bytes) * 4`
 
 2.  **Execution Cost (E):** This is the cost of any work done after fetching, primarily memory access. Simple internal register operations have an execution cost of 0.
@@ -108,13 +110,13 @@ For instructions with memory access, cycle counts may be presented as `HRAM/WRAM
 | C3              | ORI n16       | 3     | 12 (12 : 0)      | `(3 bytes) => 0xC3 n16_lo n16_hi`. R0 = R0 or imm16.                                                     |
 | C4              | XORI n16      | 3     | 12 (12 : 0)      | `(3 bytes) => 0xC4 n16_lo n16_hi`. R0 = R0 ^ imm16.                                                      |
 | C5              | CMPI n16      | 3     | 12 (12 : 0)      | `(3 bytes) => 0xC5 n16_lo n16_hi`. Compare R0 with imm16; flags only.                                    |
-| C6              | ADDCI n16     | 3     | 12 (12 : 0)      | `(3 bytes) => 0xC6 n16_lo n16_hi`. R0 = R0 + imm16 + C.                                                  |
-| C7              | SUBCI n16     | 3     | 12 (12 : 0)      | `(3 bytes) => 0xC7 n16_lo n16_hi`. R0 = R0 - imm16 - C.                                                  |
+| C6              | ADCI n16      | 3     | 12 (12 : 0)      | `(3 bytes) => 0xC6 n16_lo n16_hi`. R0 = R0 + imm16 + C.                                                  |
+| C7              | SBCI n16      | 3     | 12 (12 : 0)      | `(3 bytes) => 0xC7 n16_lo n16_hi`. R0 = R0 - imm16 - C.                                                  |
 | **<- C8-D8 ->** | **-------**   | -     | **-------**      | **---Subroutines---**                                                                                    |
 | C8              | CALL n16      | 3     | 20 (12 : 8)      | `(3 bytes) => 0xC8 addr_lo addr_hi`.                                                                     |
 | C9-D0           | CALL (r)      | 1     | 12 (4 : 8)       | `(1 byte) => 0xC9+r`. Call subroutine at address in r.                                                   |
 | D1-D8           | CALLcc n16    | 3     | 12/20 (12 : 0/8) | `(3 bytes) => 0xD1+cc addr_lo addr_hi`. Conditional call.                                                |
-| **<- D9-E8 ->** | **-------**   | -     | **-------**      | **---Stack Operations & inc/dec---**                                                                     |
+| **<- D9-E8 ->** | **-------**   | -     | **-------**      | **---Inc/Dec---**                                                                                        |
 | D9-E0           | DEC r         | 1     | 4 (4 : 0)        | `(1 byte) => 0xD9+r`. Decrement r.                                                                       |
 | E1-E8           | INC r         | 1     | 4 (4 : 0)        | `(1 byte) => 0xE1+r`. Increment r.                                                                       |
 | **<- E9-F8 ->** | **-------**   | -     | **-------**      | **---Absolute Address Load/Store---**                                                                    |
@@ -161,12 +163,12 @@ For instructions with memory access, cycle counts may be presented as `HRAM/WRAM
 
 ## FE Prefix Map (Advanced Addressing 1)
 
-| Opcode (Hex) | Mnemonic      | Bytes | Cycles           | Description                                                   |
-| :----------- | :------------ | :---- | :--------------- | :------------------------------------------------------------ |
-| 00-3F        | LD.w rd, (rs) | 2     | 12/16 (8 : 4/8)  | `(2 bytes) => 0xFE b'00dddsss`. Load word from address in rs. |
-| 40-7F        | ST.w (rd), rs | 2     | 12/16 (8 : 4/8)  | `(2 bytes) => 0xFE b'01dddsss`. Store word to address in rd.  |
-| 80-BF        | LD.b rd, (rs) | 2     | 10/12 (8 : 2/4)  | `(2 bytes) => 0xFE b'10dddsss`. Load byte from address in rs. |
-| C0-FF        | ST.b (rd), rs | 2     | 10/12 (8 : 2/4)  | `(2 bytes) => 0xFE b'11dddsss`. Store byte to address in rd.  |
+| Opcode (Hex) | Mnemonic      | Bytes | Cycles          | Description                                                   |
+| :----------- | :------------ | :---- | :-------------- | :------------------------------------------------------------ |
+| 00-3F        | LD.w rd, (rs) | 2     | 12/16 (8 : 4/8) | `(2 bytes) => 0xFE b'00dddsss`. Load word from address in rs. |
+| 40-7F        | ST.w (rd), rs | 2     | 12/16 (8 : 4/8) | `(2 bytes) => 0xFE b'01dddsss`. Store word to address in rd.  |
+| 80-BF        | LD.b rd, (rs) | 2     | 10/12 (8 : 2/4) | `(2 bytes) => 0xFE b'10dddsss`. Load byte from address in rs. |
+| C0-FF        | ST.b (rd), rs | 2     | 10/12 (8 : 2/4) | `(2 bytes) => 0xFE b'11dddsss`. Store byte to address in rd.  |
 
 ---
 
