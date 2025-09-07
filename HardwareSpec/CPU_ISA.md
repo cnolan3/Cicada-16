@@ -160,7 +160,6 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | SRA r        | R0          | 2     | 8      | Shift Right Arithmetic. MSB -> MSB -> ... -> LSB -> C. (Prefixed)                       |
 | ROL r        | R0          | 2     | 8      | Rotate Left through Carry. C <- MSB <- ... <- LSB <- C. (Prefixed)                      |
 | ROR r        | R0          | 2     | 8      | Rotate Right through Carry. C -> MSB -> ... -> LSB -> C. (Prefixed)                     |
-
 | BIT r, b     | R0, 7       | 3     | 12     | Test bit b (0-7) of register r's low byte. Sets Z flag if bit is 0. (Prefixed)          |
 | SET r, b     | R0, 7       | 3     | 12     | Set bit b (0-7) of register r's low byte to 1. (Prefixed)                               |
 | RES r, b     | R0, 7       | 3     | 12     | Reset bit b (0-7) of register r's low byte to 0. (Prefixed)                             |
@@ -190,15 +189,15 @@ All instruction cycle counts in this document are given in **T-cycles**.
 
 The `ENTER` and `LEAVE` instructions simplify the creation and destruction of stack frames for subroutines, a common practice in compiled languages like C. They automate the process of managing the frame pointer (R6).
 
--   **`ENTER`**: This instruction creates a new stack frame. It performs two actions:
-    1.  It pushes the current value of the frame pointer (R6) onto the stack.
-    2.  It copies the current value of the stack pointer (R7) into the frame pointer (R6).
-    This is equivalent to `PUSH R6` followed by `LD R6, R7`. This establishes a new frame, and local variables for the subroutine can then be accessed via negative offsets from R6.
+- **`ENTER`**: This instruction creates a new stack frame. It performs two actions:
+  1.  It pushes the current value of the frame pointer (R6) onto the stack.
+  2.  It copies the current value of the stack pointer (R7) into the frame pointer (R6).
+      This is equivalent to `PUSH R6` followed by `LD R6, R7`. This establishes a new frame, and local variables for the subroutine can then be accessed via negative offsets from R6.
 
--   **`LEAVE`**: This instruction destroys the current stack frame to return to the caller's frame. It performs two actions:
-    1.  It copies the value of the frame pointer (R6) into the stack pointer (R7). This deallocates any space used by local variables.
-    2.  It pops the previous frame pointer from the stack back into R6.
-    This is equivalent to `LD R7, R6` followed by `POP R6`. After a `LEAVE`, a `RET` instruction is typically used to return to the caller.
+- **`LEAVE`**: This instruction destroys the current stack frame to return to the caller's frame. It performs two actions:
+  1.  It copies the value of the frame pointer (R6) into the stack pointer (R7). This deallocates any space used by local variables.
+  2.  It pops the previous frame pointer from the stack back into R6.
+      This is equivalent to `LD R7, R6` followed by `POP R6`. After a `LEAVE`, a `RET` instruction is typically used to return to the caller.
 
 #### **Note on Condition Codes (cc)**
 
