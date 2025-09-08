@@ -71,19 +71,19 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | ST.w (rd), rs     | (R4), R5       | 2     | 12/16  | Stores the 16-bit word from R5 into the memory address pointed to by R4. (Prefixed)                       |
 | ST.b (rd), rs     | (R4), R5       | 2     | 10/12  | Stores the low 8-bit byte from R5 into the memory address pointed to by R4. (Prefixed)                    |
 | LD.w rd, (rs, n8) | R2, (R3, 0x10) | 3     | 16/20  | Loads the 16-bit word from the address in R3 + signed 8-bit offset into R2. (Prefixed)                    |
-| ST.w (rs, n8), rd | (R4, 0x10), R5 | 3     | 16/20  | Stores the 16-bit word from R5 into the memory address pointed to by R4 + signed 8-bit offset. (Prefixed) |
+| ST.w (rd, n8), rs | (R4, 0x10), R5 | 3     | 16/20  | Stores the 16-bit word from R5 into the memory address pointed to by R4 + signed 8-bit offset. (Prefixed) |
 | LEA rd, (rs, n8)  | R1, (R2, 0x10) | 3     | 12     | Calculates the address R2 + signed 8-bit offset and stores it in R1. (Prefixed)                           |
 | LD.w r, (n16)     | R0, (0xC000)   | 3     | 16/20  | Loads a 16-bit word from the absolute address 0xC000 into R0.                                             |
 | ST.w (n16), r     | (0xC000), R0   | 3     | 16/20  | Stores the 16-bit word in R0 to the absolute address 0xC000.                                              |
 | LDI.b rd, n8      | R0, 0xAB       | 3     | 12     | Loads the immediate 8-bit value into the low byte of rd, and zero-extends it. (Prefixed)                  |
 | LD.w rd, (rs)+    | R0, (R1)+      | 3     | 16/20  | Loads a word from the address in rs into rd, then increments rs by 2. (Prefixed)                          |
-| ST.w (rs)+, rd    | (R1)+, R0      | 3     | 16/20  | Stores the word from rd to the address in rs, then increments rs by 2. (Prefixed)                         |
-| LD.b rd, (rs)+    | R0, (R1)+      | 3     | 14/16  | Loads a byte from the address in rs into rd, zero-extends it, then increments rs by 1. (Prefixed)      |
-| ST.b (rs)+, rd    | (R1)+, R0      | 3     | 14/16  | Stores the low byte from rd to the address in rs, then increments rs by 1. (Prefixed)                     |
+| ST.w (rd)+, rs    | (R1)+, R0      | 3     | 16/20  | Stores the word from rs to the address in rd, then increments rd by 2. (Prefixed)                         |
+| LD.b rd, (rs)+    | R0, (R1)+      | 3     | 14/16  | Loads a byte from the address in rs into rd, zero-extends it, then increments rs by 1. (Prefixed)         |
+| ST.b (rd)+, rs    | (R1)+, R0      | 3     | 14/16  | Stores the low byte from rs to the address in rd, then increments rs by 1. (Prefixed)                     |
 | LD.w rd, -(rs)    | R0, -(R1)      | 3     | 16/20  | Decrements rs by 2, then loads a word from the new address in rs into rd. (Prefixed)                      |
-| ST.w -(rs), rd    | -(R1), R0      | 3     | 16/20  | Decrements rs by 2, then stores the word from rd to the new address in rs. (Prefixed)                     |
-| LD.b rd, -(rs)    | R0, -(R1)      | 3     | 14/16  | Decrements rs by 1, then loads a byte from the new address in rs into rd and zero-extends it. (Prefixed) |
-| ST.b -(rs), rd    | -(R1), R0      | 3     | 14/16  | Decrements rs by 1, then stores the low byte from rd to the new address in rs. (Prefixed)                 |
+| ST.w -(rd), rs    | -(R1), R0      | 3     | 16/20  | Decrements rd by 2, then stores the word from rs to the new address in rd. (Prefixed)                     |
+| LD.b rd, -(rs)    | R0, -(R1)      | 3     | 14/16  | Decrements rs by 1, then loads a byte from the new address in rs into rd and zero-extends it. (Prefixed)  |
+| ST.b -(rd), rs    | -(R1), R0      | 3     | 14/16  | Decrements rd by 1, then stores the low byte from rs to the new address in rd. (Prefixed)                 |
 | PUSH r            | R0             | 1     | 12     | Pushes the value of a register onto the stack. Decrements SP by 2.                                        |
 | POP r             | R0             | 1     | 12     | Pops a value from the stack into a register. Increments SP by 2.                                          |
 | PUSH n16          | 0x1234         | 3     | 20     | Pushes an immediate 16-bit value onto the stack. Decrements SP by 2.                                      |
@@ -95,7 +95,7 @@ All instruction cycle counts in this document are given in **T-cycles**.
 The post-increment and pre-decrement addressing modes are powerful features for iterating through data structures in memory.
 
 - **Post-increment `(rs)+`**: The instruction first uses the address currently in the register `rs` to perform the load or store operation. After the operation is complete, the value of `rs` is automatically incremented. For word operations (`.w`), it is incremented by 2, and for byte operations (`.b`), it is incremented by 1.
-- **Pre-decrement `-(rs)`**: The instruction first decrements the value in the register `rs`. For word operations (`.w`), it is decremented by 2, and for byte operations (`.b`), it is decremented by 1. The instruction then uses the *new* address in `rs` to perform the load or store operation.
+- **Pre-decrement `-(rs)`**: The instruction first decrements the value in the register `rs`. For word operations (`.w`), it is decremented by 2, and for byte operations (`.b`), it is decremented by 1. The instruction then uses the _new_ address in `rs` to perform the load or store operation.
 
 ### **16-Bit Arithmetic/Logic Instructions**
 
@@ -225,8 +225,9 @@ The `ENTER` and `LEAVE` instructions simplify the creation and destruction of st
 The `SYSCALL` instruction provides a standardized way for user programs to request services from the system library or operating system kernel. This is the primary mechanism for interacting with hardware peripherals, managing files, or performing other privileged operations.
 
 When `SYSCALL n8` is executed, the CPU performs the following sequence:
+
 1.  It pushes the 16-bit Flags register (F) onto the stack.
-2.  It pushes the address of the *next* instruction (PC) onto the stack. This allows the system routine to return control to the user program.
+2.  It pushes the address of the _next_ instruction (PC) onto the stack. This allows the system routine to return control to the user program.
 3.  It looks up the address of the system routine in a vector table located in low memory. The `n8` immediate value is an index into this table.
 4.  It sets the PC to the address fetched from the vector table, effectively transferring control to the system routine.
 
