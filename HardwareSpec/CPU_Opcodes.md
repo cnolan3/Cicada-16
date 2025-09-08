@@ -90,18 +90,20 @@ For instructions with memory access, cycle counts may be presented as `HRAM/WRAM
 | 4B              | CCF           | 1     | 4 (4 : 0)        | Complement carry flag. N flag is reset.                                                                  |
 | 4C              | SCF           | 1     | 4 (4 : 0)        | Set carry flag to 1. N flag is reset.                                                                    |
 | 4D              | RCF           | 1     | 4 (4 : 0)        | Reset carry flag to 0. N flag is reset.                                                                  |
-| **<- 4E-4F ->** | **-------**   | -     | **-------**      | **------**                                                                                               |
-| 4E-4F           | ---           | -     | ---              | Reserved                                                                                                 |
+| **<- 4E ->**    | **-------**   | -     | **-------**      | **---System Library Call---**                                                                            |
+| 4E              | SYSCALL n8    | 2     | 24 (8 : 16)      | `(2 bytes) => 0x4E n8`. Call system routine at index n8.                                                 |
+| **<- 4F ->**    | **-------**   | -     | **-------**      | **---Stack Pointer Immediate Arithmetic---**                                                             |
+| 4F              | ADD SP, n8s   | 2     | 8 (8 : 0)        | `(2 bytes) => 0x4F n8s`. SP = SP + n8s.                                                                  |
 | **<- 50-51 ->** | **-------**   | -     | **-------**      | **---Enter/Leave---**                                                                                    |
 | 50              | ENTER         | 1     | 12 (4 : 8)       | Enter a function, See [CPU_ISA.md](./CPU_ISA.md) for details.                                            |
 | 51              | LEAVE         | 1     | 12 (4 : 8)       | Leave a function, See [CPU_ISA.md](./CPU_ISA.md) for details.                                            |
 | **<- 52-6C ->** | **-------**   | -     | **-------**      | **---Control Flow---**                                                                                   |
 | 52              | JMP n16       | 3     | 12 (12 : 0)      | `(3 bytes) => 0x52 addr_lo addr_hi`.                                                                     |
 | 53-5A           | JMP (r)       | 1     | 4 (4 : 0)        | `(1 byte) => 0x53+r`. Jump to address in register r.                                                     |
-| 5B              | JR n8         | 2     | 8 (8 : 0)        | `(2 bytes) => 0x5B offset`. Relative jump by signed 8-bit offset.                                        |
+| 5B              | JR n8s        | 2     | 8 (8 : 0)        | `(2 bytes) => 0x5B offset`. Relative jump by signed 8-bit signed offset.                                 |
 | 5C-63           | Jcc n16       | 3     | 12 (12 : 0)      | `(3 bytes) => 0x5C+cc addr_lo addr_hi`. Conditional jump.                                                |
-| 64-6B           | JRcc n8       | 2     | 8 (8 : 0)        | `(2 bytes) => 0x64+cc offset`. Conditional relative jump.                                                |
-| 6C              | DJNZ n8       | 2     | 8 (8 : 0)        | `(2 bytes) => 0x6C offset`. Decrement the accumulator and jump to relative address if not zero.          |
+| 64-6B           | JRcc n8s      | 2     | 8 (8 : 0)        | `(2 bytes) => 0x64+cc offset`. Conditional relative jump.                                                |
+| 6C              | DJNZ n8s      | 2     | 8 (8 : 0)        | `(2 bytes) => 0x6C offset`. Decrement R5 and jump to relative address if not zero.                       |
 | **<- 6D-7F ->** | **-------**   | -     | **-------**      | **---Stack Operations---**                                                                               |
 | 6D-74           | PUSH r        | 1     | 12 (4 : 8)       | `(1 byte) => 0x6D+r`. Push r onto stack.                                                                 |
 | 75-7C           | POP r         | 1     | 12 (4 : 8)       | `(1 byte) => 0x75+r`. Pop from stack into r.                                                             |
@@ -142,25 +144,29 @@ For instructions with memory access, cycle counts may be presented as `HRAM/WRAM
 
 ## FD Prefix Map (Bit, Byte, and Shift Operations)
 
-| Opcode (Hex) | Mnemonic     | Bytes | Cycles           | Description                                                                   |
-| :----------- | :----------- | :---- | :--------------- | :---------------------------------------------------------------------------- |
-| 00-07        | SRA r        | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x00+r`. Shift Right Arithmetic.                           |
-| 08-0F        | SHL r        | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x08+r`. Shift Left Logical.                               |
-| 10-17        | SHR r        | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x10+r`. Shift Right Logical.                              |
-| 18-1F        | ROL r        | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x18+r`. Rotate Left through Carry.                        |
-| 20-27        | ROR r        | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x20+r`. Rotate Right through Carry.                       |
-| 28-2F        | ADD.b rs     | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x28+rs`. R0.b = R0.b + rs.b.                              |
-| 30-37        | SUB.b rs     | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x30+rs`. R0.b = R0.b - rs.b.                              |
-| 38-3F        | AND.b rs     | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x38+rs`. R0.b = R0.b & rs.b.                              |
-| 40-47        | OR.b rs      | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x40+rs`. R0.b = R0.b or rs.b.                             |
-| 48-4F        | XOR.b rs     | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x48+rs`. R0.b = R0.b ^ rs.b.                              |
-| 50-57        | CMP.b rs     | 2     | 8 (8 : 0)        | `(2 bytes) => 0xFD 0x50+rs`. Compares R0.b with rs.b.                         |
-| 58-5F        | BIT r, b     | 3     | 12 (12 : 0)      | `(3 bytes) => 0xFD 0x58+b b'00000rrr`. Test bit b of register r.              |
-| 60-67        | SET r, b     | 3     | 12 (12 : 0)      | `(3 bytes) => 0xFD 0x60+b b'00000rrr`. Set bit b of register r's low byte.    |
-| 68-6F        | RES r, b     | 3     | 12 (12 : 0)      | `(3 bytes) => 0xFD 0x68+b b'00000rrr`. Reset bit b of register r's low byte.  |
-| 70-77        | BIT (n16), b | 4     | 18/20 (16 : 2/4) | `(4 bytes) => 0xFD 0x70+b n16_lo n16_hi`. Test bit b of byte at address n16.  |
-| 78-7F        | SET (n16), b | 4     | 20/24 (16 : 4/8) | `(4 bytes) => 0xFD 0x78+b n16_lo n16_hi`. Set bit b of byte at address n16.   |
-| 80-87        | RES (n16), b | 4     | 20/24 (16 : 4/8) | `(4 bytes) => 0xFD 0x80+b n16_lo n16_hi`. Reset bit b of byte at address n16. |
+| Opcode (Hex) | Mnemonic     | Bytes | Cycles            | Description                                                                     |
+| :----------- | :----------- | :---- | :---------------- | :------------------------------------------------------------------------------ |
+| 00-07        | SRA r        | 2     | 8 (8 : 0)         | `(2 bytes) => 0xFD 0x00+r`. Shift Right Arithmetic.                             |
+| 08-0F        | SHL r        | 2     | 8 (8 : 0)         | `(2 bytes) => 0xFD 0x08+r`. Shift Left Logical.                                 |
+| 10-17        | SHR r        | 2     | 8 (8 : 0)         | `(2 bytes) => 0xFD 0x10+r`. Shift Right Logical.                                |
+| 18-1F        | ROL r        | 2     | 8 (8 : 0)         | `(2 bytes) => 0xFD 0x18+r`. Rotate Left through Carry.                          |
+| 20-27        | ROR r        | 2     | 8 (8 : 0)         | `(2 bytes) => 0xFD 0x20+r`. Rotate Right through Carry.                         |
+| 28-2F        | ADD.b rs     | 2     | 8 (8 : 0)         | `(2 bytes) => 0xFD 0x28+rs`. R0.b = R0.b + rs.b.                                |
+| 30-37        | SUB.b rs     | 2     | 8 (8 : 0)         | `(2 bytes) => 0xFD 0x30+rs`. R0.b = R0.b - rs.b.                                |
+| 38-3F        | AND.b rs     | 2     | 8 (8 : 0)         | `(2 bytes) => 0xFD 0x38+rs`. R0.b = R0.b & rs.b.                                |
+| 40-47        | OR.b rs      | 2     | 8 (8 : 0)         | `(2 bytes) => 0xFD 0x40+rs`. R0.b = R0.b or rs.b.                               |
+| 48-4F        | XOR.b rs     | 2     | 8 (8 : 0)         | `(2 bytes) => 0xFD 0x48+rs`. R0.b = R0.b ^ rs.b.                                |
+| 50-57        | CMP.b rs     | 2     | 8 (8 : 0)         | `(2 bytes) => 0xFD 0x50+rs`. Compares R0.b with rs.b.                           |
+| 58-5F        | BIT r, b     | 3     | 12 (12 : 0)       | `(3 bytes) => 0xFD 0x58+b b'00000rrr`. Test bit b of register r.                |
+| 60-67        | SET r, b     | 3     | 12 (12 : 0)       | `(3 bytes) => 0xFD 0x60+b b'00000rrr`. Set bit b of register r's low byte.      |
+| 68-6F        | RES r, b     | 3     | 12 (12 : 0)       | `(3 bytes) => 0xFD 0x68+b b'00000rrr`. Reset bit b of register r's low byte.    |
+| 70-77        | BIT (n16), b | 4     | 18/20 (16 : 2/4)  | `(4 bytes) => 0xFD 0x70+b n16_lo n16_hi`. Test bit b of byte at address n16.    |
+| 78-7F        | SET (n16), b | 4     | 20/24 (16 : 4/8)  | `(4 bytes) => 0xFD 0x78+b n16_lo n16_hi`. Set bit b of byte at address n16.     |
+| 80-87        | RES (n16), b | 4     | 20/24 (16 : 4/8)  | `(4 bytes) => 0xFD 0x80+b n16_lo n16_hi`. Reset bit b of byte at address n16.   |
+| 88-8F        | BIT (rs), b  | 3     | 16/20 (12 : 4/8)  | `(3 bytes) => 0xFD 0x88+b rs`. Test bit b of byte at address in rs.             |
+| 90-97        | SET (rs), b  | 3     | 20/28 (12 : 8/16) | `(3 bytes) => 0xFD 0x90+b rs`. Set bit b of byte at address in rs.              |
+| 98-9F        | RES (rs), b  | 3     | 20/28 (12 : 8/16) | `(3 bytes) => 0xFD 0x98+b rs`. Reset bit b of byte at address in rs.            |
+| A0-A7        | LDI.b rd, n8 | 3     | 12 (12 : 0)       | `(3 bytes) => 0xFD 0xA0+rd n8`. Load low byte of rd with immediate 8-bit value. |
 
 ---
 
@@ -177,13 +183,22 @@ For instructions with memory access, cycle counts may be presented as `HRAM/WRAM
 
 ## FF Prefix Map (Advanced Addressing 2)
 
-| Opcode (Hex) | Mnemonic          | Bytes | Cycles           | Description                                                                    |
-| :----------- | :---------------- | :---- | :--------------- | :----------------------------------------------------------------------------- |
-| 00-3F        | LD.w rd, (rs, n8) | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF b'00dddsss n8`. Load word from rs + offset.                 |
-| 40-7F        | ST.w (rs, n8), rd | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF b'01dddsss n8`. Store word to rs + offset.                  |
-| 80-BF        | LEA rd, (rs, n8)  | 3     | 12 (12 : 0)      | `(3 bytes) => 0xFF b'10dddsss n8`. Load effective address rs + offset into rd. |
+| Opcode (Hex) | Mnemonic          | Bytes | Cycles           | Description                                                                          |
+| :----------- | :---------------- | :---- | :--------------- | :----------------------------------------------------------------------------------- |
+| 00-3F        | LD.w rd, (rs, n8) | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF b'00dddsss n8`. Load word from rs + offset.                       |
+| 40-7F        | ST.w (rs, n8), rd | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF b'01dddsss n8`. Store word to rs + offset.                        |
+| 80-BF        | LEA rd, (rs, n8)  | 3     | 12 (12 : 0)      | `(3 bytes) => 0xFF b'10dddsss n8`. Load effective address rs + offset into rd.       |
+| C0-C7        | LD.w rd, (rs)+    | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xC0+rs b'00000ddd'`. Load word from (rs) into rd, then increments rs by 2. |
+| C8-CF        | ST.w (rs)+, rd    | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xC8+rs b'00000ddd'`. Store word from rd into (rs), then increments rs by 2.  |
+| D0-D7        | LD.w rd, -(rs)    | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xD0+rs b'00000ddd'`. Decrements rs by 2, then loads word from (rs) into rd. |
+| D8-DF        | ST.w -(rs), rd    | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xD8+rs b'00000ddd'`. Decrements rs by 2, then stores word from rd into (rs).  |
+| E0-E7        | LD.b rd, (rs)+    | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xE0+rs b'00000ddd'`. Load byte from (rs) into rd, then increments rs by 1.  |
+| E8-EF        | ST.b (rs)+, rd    | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xE8+rs b'00000ddd'`. Store byte from rd into (rs), then increments rs by 1.   |
+| F0-F7        | LD.b rd, -(rs)    | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xF0+rs b'00000ddd'`. Decrements rs by 1, then loads byte from (rs) into rd.  |
+| F8-FF        | ST.b -(rs), rd    | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xF8+rs b'00000ddd'`. Decrements rs by 1, then stores byte from rd into (rs). |
 
 ---
 
 © 2025 Connor Nolan. This work is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
+org/licenses/by-sa/4.0/).

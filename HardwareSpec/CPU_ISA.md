@@ -75,11 +75,27 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | LEA rd, (rs, n8)  | R1, (R2, 0x10) | 3     | 12     | Calculates the address R2 + signed 8-bit offset and stores it in R1. (Prefixed)                           |
 | LD.w r, (n16)     | R0, (0xC000)   | 3     | 16/20  | Loads a 16-bit word from the absolute address 0xC000 into R0.                                             |
 | ST.w (n16), r     | (0xC000), R0   | 3     | 16/20  | Stores the 16-bit word in R0 to the absolute address 0xC000.                                              |
+| LDI.b rd, n8      | R0, 0xAB       | 3     | 12     | Loads the immediate 8-bit value into the low byte of rd, and zero-extends it. (Prefixed)                  |
+| LD.w rd, (rs)+    | R0, (R1)+      | 3     | 16/20  | Loads a word from the address in rs into rd, then increments rs by 2. (Prefixed)                          |
+| ST.w (rs)+, rd    | (R1)+, R0      | 3     | 16/20  | Stores the word from rd to the address in rs, then increments rs by 2. (Prefixed)                         |
+| LD.b rd, (rs)+    | R0, (R1)+      | 3     | 14/16  | Loads a byte from the address in rs into rd, zero-extends it, then increments rs by 1. (Prefixed)      |
+| ST.b (rs)+, rd    | (R1)+, R0      | 3     | 14/16  | Stores the low byte from rd to the address in rs, then increments rs by 1. (Prefixed)                     |
+| LD.w rd, -(rs)    | R0, -(R1)      | 3     | 16/20  | Decrements rs by 2, then loads a word from the new address in rs into rd. (Prefixed)                      |
+| ST.w -(rs), rd    | -(R1), R0      | 3     | 16/20  | Decrements rs by 2, then stores the word from rd to the new address in rs. (Prefixed)                     |
+| LD.b rd, -(rs)    | R0, -(R1)      | 3     | 14/16  | Decrements rs by 1, then loads a byte from the new address in rs into rd and zero-extends it. (Prefixed) |
+| ST.b -(rs), rd    | -(R1), R0      | 3     | 14/16  | Decrements rs by 1, then stores the low byte from rd to the new address in rs. (Prefixed)                 |
 | PUSH r            | R0             | 1     | 12     | Pushes the value of a register onto the stack. Decrements SP by 2.                                        |
 | POP r             | R0             | 1     | 12     | Pops a value from the stack into a register. Increments SP by 2.                                          |
 | PUSH n16          | 0x1234         | 3     | 20     | Pushes an immediate 16-bit value onto the stack. Decrements SP by 2.                                      |
 | PUSH F            |                | 1     | 12     | Pushes the Flags register (F) onto the stack. Decrements SP by 2.                                         |
 | POP F             |                | 1     | 12     | Pops a value from the stack into the Flags register (F). Increments SP by 2.                              |
+
+#### **Post-Increment and Pre-Decrement Addressing**
+
+The post-increment and pre-decrement addressing modes are powerful features for iterating through data structures in memory.
+
+- **Post-increment `(rs)+`**: The instruction first uses the address currently in the register `rs` to perform the load or store operation. After the operation is complete, the value of `rs` is automatically incremented. For word operations (`.w`), it is incremented by 2, and for byte operations (`.b`), it is incremented by 1.
+- **Pre-decrement `-(rs)`**: The instruction first decrements the value in the register `rs`. For word operations (`.w`), it is decremented by 2, and for byte operations (`.b`), it is decremented by 1. The instruction then uses the *new* address in `rs` to perform the load or store operation.
 
 ### **16-Bit Arithmetic/Logic Instructions**
 
@@ -122,6 +138,7 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | ORI r, n16  | R1, 0xF0F0 | 4     | 16     | r = r or n16. Affects Z, N flags.                          |
 | XORI r, n16 | R1, 0xFFFF | 4     | 16     | r = r ^ n16. Affects Z, N flags.                           |
 | CMPI r, n16 | R1, 0x4000 | 4     | 16     | Compares r with n16 and sets flags, discarding the result. |
+| ADD SP, n8s | SP, -16    | 2     | 8      | Adds a signed 8-bit immediate to the stack pointer (R7).   |
 | INC r       | R2         | 1     | 4      | R2 = R2 + 1. Affects Z, N, V flags.                        |
 | DEC r       | R2         | 1     | 4      | R2 = R2 - 1. Affects Z, N, V flags.                        |
 
@@ -153,19 +170,22 @@ All instruction cycle counts in this document are given in **T-cycles**.
 
 ### **Rotate, Shift, and Bit Instructions**
 
-| Mnemonic     | Operands    | Bytes | Cycles | Description                                                                             |
-| :----------- | :---------- | :---- | :----- | :-------------------------------------------------------------------------------------- |
-| SHL r        | R0          | 2     | 8      | Shift Left Logical. C <- MSB <- ... <- LSB <- 0. (Prefixed)                             |
-| SHR r        | R0          | 2     | 8      | Shift Right Logical. 0 -> MSB -> ... -> LSB -> C. (Prefixed)                            |
-| SRA r        | R0          | 2     | 8      | Shift Right Arithmetic. MSB -> MSB -> ... -> LSB -> C. (Prefixed)                       |
-| ROL r        | R0          | 2     | 8      | Rotate Left through Carry. C <- MSB <- ... <- LSB <- C. (Prefixed)                      |
-| ROR r        | R0          | 2     | 8      | Rotate Right through Carry. C -> MSB -> ... -> LSB -> C. (Prefixed)                     |
-| BIT r, b     | R0, 7       | 3     | 12     | Test bit b (0-7) of register r's low byte. Sets Z flag if bit is 0. (Prefixed)          |
-| SET r, b     | R0, 7       | 3     | 12     | Set bit b (0-7) of register r's low byte to 1. (Prefixed)                               |
-| RES r, b     | R0, 7       | 3     | 12     | Reset bit b (0-7) of register r's low byte to 0. (Prefixed)                             |
-| BIT (n16), b | (0xC000), 7 | 4     | 18/20  | Test bit b (0-7) of the byte at memory address n16. Sets Z flag if bit is 0. (Prefixed) |
-| SET (n16), b | (0xC000), 7 | 4     | 22/24  | Set bit b (0-7) of the byte at memory address n16 to 1. (Prefixed)                      |
-| RES (n16), b | (0xC000), 7 | 4     | 22/24  | Reset bit b (0-7) of the byte at memory address n16 to 0. (Prefixed)                    |
+| Mnemonic     | Operands    | Bytes | Cycles | Description                                                                               |
+| :----------- | :---------- | :---- | :----- | :---------------------------------------------------------------------------------------- |
+| SHL r        | R0          | 2     | 8      | Shift Left Logical. C <- MSB <- ... <- LSB <- 0. (Prefixed)                               |
+| SHR r        | R0          | 2     | 8      | Shift Right Logical. 0 -> MSB -> ... -> LSB -> C. (Prefixed)                              |
+| SRA r        | R0          | 2     | 8      | Shift Right Arithmetic. MSB -> MSB -> ... -> LSB -> C. (Prefixed)                         |
+| ROL r        | R0          | 2     | 8      | Rotate Left through Carry. C <- MSB <- ... <- LSB <- C. (Prefixed)                        |
+| ROR r        | R0          | 2     | 8      | Rotate Right through Carry. C -> MSB -> ... -> LSB -> C. (Prefixed)                       |
+| BIT r, b     | R0, 7       | 3     | 12     | Test bit b (0-7) of register r's low byte. Sets Z flag if bit is 0. (Prefixed)            |
+| SET r, b     | R0, 7       | 3     | 12     | Set bit b (0-7) of register r's low byte to 1. (Prefixed)                                 |
+| RES r, b     | R0, 7       | 3     | 12     | Reset bit b (0-7) of register r's low byte to 0. (Prefixed)                               |
+| BIT (n16), b | (0xC000), 7 | 4     | 18/20  | Test bit b (0-7) of the byte at memory address n16. Sets Z flag if bit is 0. (Prefixed)   |
+| SET (n16), b | (0xC000), 7 | 4     | 22/24  | Set bit b (0-7) of the byte at memory address n16 to 1. (Prefixed)                        |
+| RES (n16), b | (0xC000), 7 | 4     | 22/24  | Reset bit b (0-7) of the byte at memory address n16 to 0. (Prefixed)                      |
+| BIT (rs), b  | (R0), 15    | 3     | 16/20  | Test bit b (0-7) of the byte at memory address in rs. Sets Z flag if bit is 0. (Prefixed) |
+| SET (rs), b  | (R0), 15    | 3     | 20/28  | Set bit b (0-7) of the byte at memory address in rs to 1. (Prefixed)                      |
+| RES (rs), b  | (R0), 15    | 3     | 20/28  | Reset bit b (0-7) of the byte at memory address in rs to 0. (Prefixed)                    |
 
 ### **Control Flow Instructions (Jumps, Calls, Returns)**
 
@@ -176,10 +196,11 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | JR n8      | $10       | 2     | 8      | Unconditional relative jump by signed offset n8.                                                                                   |
 | Jcc n16    | Z, 0x1234 | 3     | 12     | Conditional jump to n16 if condition cc is met.                                                                                    |
 | JRcc n8    | NZ, -$4   | 2     | 8      | Conditional relative jump by n8 if condition cc is met.                                                                            |
-| DJNZ n8    | -$4       | 2     | 8      | Decrement R0 and jump relative if not zero.                                                                                        |
+| DJNZ n8    | -$4       | 2     | 8      | Decrement R5 and jump relative if not zero.                                                                                        |
 | CALL n16   | 0x2000    | 3     | 20     | Call subroutine at address n16. Pushes PC+3 onto stack.                                                                            |
 | CALL (r)   | (R0)      | 1     | 12     | Call subroutine at address in register r. Pushes PC+1 onto stack.                                                                  |
 | CALLcc n16 | C, 0x2000 | 3     | 12/20  | Conditional call if condition cc is met.                                                                                           |
+| SYSCALL n8 | 0x1A      | 2     | 24     | Calls a system library routine. Pushes F, then pushes PC, then jumps to the address from the system vector table at index n8.      |
 | RET        |           | 1     | 12     | Return from subroutine. Pops PC from stack.                                                                                        |
 | RETI       |           | 1     | 12     | Return from interrupt. Pops flags from the stack, then pops PC from stack and enables interrupts. See `Interrupts.md` for details. |
 | ENTER      |           | 1     | 12     | Creates a new stack frame. See explanation below.                                                                                  |
@@ -198,6 +219,18 @@ The `ENTER` and `LEAVE` instructions simplify the creation and destruction of st
   1.  It copies the value of the frame pointer (R6) into the stack pointer (R7). This deallocates any space used by local variables.
   2.  It pops the previous frame pointer from the stack back into R6.
       This is equivalent to `LD R7, R6` followed by `POP R6`. After a `LEAVE`, a `RET` instruction is typically used to return to the caller.
+
+#### **System Calls (SYSCALL)**
+
+The `SYSCALL` instruction provides a standardized way for user programs to request services from the system library or operating system kernel. This is the primary mechanism for interacting with hardware peripherals, managing files, or performing other privileged operations.
+
+When `SYSCALL n8` is executed, the CPU performs the following sequence:
+1.  It pushes the 16-bit Flags register (F) onto the stack.
+2.  It pushes the address of the *next* instruction (PC) onto the stack. This allows the system routine to return control to the user program.
+3.  It looks up the address of the system routine in a vector table located in low memory. The `n8` immediate value is an index into this table.
+4.  It sets the PC to the address fetched from the vector table, effectively transferring control to the system routine.
+
+System routines are expected to finish with a `RETI` (Return from Interrupt) instruction, which restores the flags and the program counter, resuming the user program.
 
 #### **Note on Condition Codes (cc)**
 

@@ -4,6 +4,36 @@
 
 ---
 
+## Idea: Instruction Set Modifications
+
+1. Change DJNZ Target Register:
+   Instead of decrementing R0 (the accumulator), the DJNZ instruction should decrement R5.
+
+2. Add Indirect Bit Manipulation:
+   Add three new Indirect Bit Manipulation instructions, `BIT (rs), b`, `SET (rs), b` and `RES (rs), b` where `rs` is the register containing the memory address to manipulate and `b` is the bit number within that word
+   to manipulate (0-15). Add these instructions to the `FD` prefix block. Each of these instructions are three bytes long and occupy eight sub-opcodes (24 sub-opcodes in total for all three instructions), each
+   sub-opcode corresponds to one source register.
+
+3. Add 8-bit Immediate Load:
+   Add a `LDI.b rd, n8` instruction that loads an immediate-8 value into the lower byte of a register. Add this instruction to the `FD` prefix block. A three byte instruction occupying eight sub-opcodes, each sub-opcode
+   corresponds to one destination register.
+
+4. Add a SYSCALL instruction:
+   Add a dedicated instruction for calling system library functions: `SYSCALL n8`. This instruction takes an index into the system library vector table as an argument and automatically gets the system library function
+   address, saves current flags and jumps to that address (saves current PC, sets PC to function address). This instruction will take one of the currently reserved opcodes in the main opcode map (0x4E or 0x4F) and will
+   be two bytes long.
+
+5. Add Stack Pointer Immediate Arithmetic:
+   Add `ADD SP, n8s` which takes a signed 8-bit value (`n8s`) and increments/decrements the stack pointer `R7` by that value. This instruction will take one of the currently reserved opcodes in the main opcode map (0x4E
+   or 0x4F) and will be two bytes long.
+
+6. Add Post-Increment/Pre-Decrement Addressing Instructions:
+   Add four new LD/ST instructions: `LD rd, (rs)+`, `ST (rs)+, rd`, `LD rd, -(rs)` and `ST -(rs), rd`. The "Post-Increment" instructions (`(rs)+`) perform their LD/ST operations and then increment the address stored in
+   the source address by 2. The "Pre-Decrement" instructions (`-(rs)`) decrement the address stored in the source register by 2 and then perform their LD/ST operation. Add these instructions to the `FF` prefix block.
+   Each of these instructions are three bytes long and occupy eight sub-opcodes (32 sub-opcodes in total for all four instructions), each sub-opcode corresponds to one destination register.
+
+---
+
 ## Instruction Cycle Timing Calculation
 
 The total cycle count for any instruction is the sum of its **Fetch Cost** and its **Execution Cost**. All timings are measured in **T-cycles**.
