@@ -1,0 +1,105 @@
+use crate::ast::{AssemblyLine, Instruction, Operand};
+use std::collections::HashMap;
+
+// The symbol table stores label names and their calculated addresses.
+type SymbolTable = HashMap<String, u16>;
+
+/// Pass 1: Build the symbol table.
+pub fn build_symbol_table(lines: &[AssemblyLine]) -> Result<SymbolTable, String> {
+    let mut symbol_table = SymbolTable::new();
+    let mut current_address: u16 = 0x0100; // Start address after cartridge header
+
+    for line in lines {
+        // If a label exists on this line, record its current address.
+        if let Some(label) = &line.label {
+            if symbol_table.contains_key(label) {
+                return Err(format!("Duplicate label definition: {}", label));
+            }
+            symbol_table.insert(label.clone(), current_address);
+        }
+
+        // Increment current_address by the size of the instruction.
+        if let Some(instruction) = &line.instruction {
+            current_address += calculate_instruction_size(instruction)?;
+        }
+    }
+    Ok(symbol_table)
+}
+
+/// Helper function to determine instruction size in bytes during Pass 1.
+fn calculate_instruction_size(instruction: &Instruction) -> Result<u16, String> {
+    match instruction {
+        Instruction::Nop | Instruction::Halt | Instruction::Ret => Ok(1),
+
+        Instruction::Ld(Operand::Register(_), Operand::Register(_)) => {
+            // Check if this form maps to the 1-byte LD rd, rs (opcodes 0x80-0xBF)
+            Ok(1)
+        }
+        Instruction::Ld(_, Operand::Immediate(val)) => {
+            // LDI r, n16 (3 bytes) or LDI.b r, n8 (3 bytes, prefixed)
+            // For simplicity in early stages, assume LDI r, n16.
+            Ok(3)
+        }
+        Instruction::Ld(_, Operand::Label(_)) => {
+            // LD r, (n16) where n16 comes from a label. Size is 3 bytes.
+            Ok(3)
+        }
+        Instruction::Jmp(Operand::Label(_)) => Ok(3), // JMP n16
+        Instruction::Jr(Operand::Label(_)) => Ok(2),  // JR n8s
+
+        // ... add logic for every instruction variant based on your opcode map ...
+        _ => Err(format!(
+            "Size calculation not implemented for: {:?}",
+            instruction
+        )),
+    }
+}
+
+/// Pass 2: Generate machine code.
+pub fn generate_bytecode(
+    lines: &[AssemblyLine],
+    symbol_table: &SymbolTable,
+) -> Result<Vec<u8>, String> {
+    let mut bytecode = Vec::new();
+
+    for line in lines {
+        if let Some(instruction) = &line.instruction {
+            let instruction_bytes = encode_instruction(instruction, symbol_table)?;
+            bytecode.extend(instruction_bytes);
+        }
+    }
+    Ok(bytecode)
+}
+
+/// Helper function to translate a single instruction into bytes during Pass 2.
+fn encode_instruction(
+    instruction: &Instruction,
+    symbol_table: &SymbolTable,
+) -> Result<Vec<u8>, String> {
+    match instruction {
+        Instruction::Nop => Ok(vec![0x00]),
+        // Example: LDI R1, 0xABCD (Opcode: 0x01 + register index)
+        Instruction::Ld(Operand::Register(reg), Operand::Immediate(value)) => {
+            let base_opcode = 0x01;
+            let reg_index = match reg {
+                Register::R0 => 0,
+                Register::R1 => 1,
+                // ... and so on for R2-R7
+                _ => 7, // Default case for R7
+            };
+            let [low, high] = value.to_le_bytes();
+            Ok(vec![base_opcode + reg_index, low, high])
+        }
+        // Example: JMP my_label
+        Instruction::Jmp(Operand::Label(label_name)) => {
+            let target_address = symbol_table
+                .get(label_name)
+                .ok_or_else(|| format!("Undefined label: {}", label_name))?;
+            let [low, high] = target_address.to_le_bytes();
+            Ok(vec![0x51, low, high]) // Opcode for JMP n16
+        }
+
+        // ... add encoding logic for every instruction variant based on your opcode map ...
+        _ => Err(format!("Encoding not implemented for: {:?}", instruction)),
+    }
+}
