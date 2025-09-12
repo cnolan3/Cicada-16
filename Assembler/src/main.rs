@@ -1,4 +1,5 @@
 use clap::Parser as clap_parser;
+use clap::Subcommand;
 use std::fs;
 use std::path::PathBuf;
 
@@ -19,10 +20,27 @@ struct Opts {
     input: PathBuf,
     #[clap(short, long)]
     output: PathBuf,
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Assemble program as a boot ROM (no header, starts at 0x0000, interrupt vector table at
+    /// 0x3FE0)
+    Boot,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opts: Opts = Opts::parse();
+    let mut start_addr: u16 = 0x0100;
+
+    match &opts.command {
+        Some(Commands::Boot) => {
+            start_addr = 0x0000;
+        }
+        None => {}
+    }
 
     // 1. Read source file
     let source_code = fs::read_to_string(&opts.input)?;
@@ -35,7 +53,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // --- Assembly Stage (UNCHANGED) ---
     // Pass 1: Build symbol table
     println!("Running pass 1...");
-    let start_addr: u16 = 0x0100;
     let symbol_table = assembler::build_symbol_table(&parsed_lines, &start_addr)
         .map_err(|e| format!("Pass 1 error: {}", e))?;
     println!("Symbol table built: {:?}", symbol_table);
