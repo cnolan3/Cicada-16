@@ -26,18 +26,20 @@ struct Opts {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Assemble program as a boot ROM (no header, starts at 0x0000, interrupt vector table at
-    /// 0x3FE0)
+    /// Assemble program as a boot ROM (no header, starts at 0x0000, 16 KiB max, must have
+    /// interrupt vector table at 0x3FE0-0x3FFF)
     Boot,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opts: Opts = Opts::parse();
     let mut start_addr: u16 = 0x0100;
+    let mut max_rom_size: usize = 4_210_688; // max allowable size of the rom in bytes
 
     match &opts.command {
         Some(Commands::Boot) => {
             start_addr = 0x0000;
+            max_rom_size = 16_384;
         }
         None => {}
     }
@@ -67,12 +69,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     final_rom.resize(start_addr as usize, 0x00); // Pad header area
     final_rom.extend(machine_code);
 
-    fs::write(&opts.output, final_rom)?;
-    println!(
-        "Successfully assembled {} to {}",
-        opts.input.display(),
-        opts.output.display()
-    );
+    if final_rom.len() > max_rom_size {
+        let msg = format!(
+            "Assembled ROM is over the size threshold.\nROM size: {}\nlimit: {}",
+            final_rom.len(),
+            max_rom_size
+        );
+        Err(msg.into())
+    } else {
+        fs::write(&opts.output, final_rom)?;
+        println!(
+            "Successfully assembled {} to {}",
+            opts.input.display(),
+            opts.output.display()
+        );
 
-    Ok(())
+        Ok(())
+    }
 }

@@ -44,8 +44,13 @@ fn calculate_instruction_size(instruction: &Instruction) -> Result<u16, String> 
             // LD r, (n16) where n16 comes from a label. Size is 3 bytes.
             Ok(3)
         }
-        Instruction::Jmp(Operand::Label(_)) => Ok(3), // JMP n16
-        Instruction::Jr(Operand::Label(_)) => Ok(2),  // JR n8s
+        Instruction::Jmp(Operand::Label(_)) | Instruction::Jmp(Operand::Immediate(_)) => Ok(3), // JMP n16
+        Instruction::Jmp(Operand::Indirect(_)) => Ok(1),
+        Instruction::Jr(Operand::Label(_)) => Ok(2), // JR n8s
+        Instruction::Add(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
+        Instruction::Add(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
+        Instruction::Add(Operand::Register(_), None) => Ok(1),
+        Instruction::Add(Operand::Immediate(_), None) => Ok(3),
 
         // ... add logic for every instruction variant based on your opcode map ...
         _ => Err(format!(
@@ -108,12 +113,35 @@ fn encode_instruction(
             let [low, high] = target_address.to_le_bytes();
             Ok(vec![0x51, low, high]) // Opcode for JMP n16
         }
+        // jump address
+        Instruction::Jmp(Operand::Immediate(addr)) => {
+            let [low, high] = addr.to_le_bytes();
+            Ok(vec![0x51, low, high]) // Opcode for JMP n16
+        }
+        // jump register
+        Instruction::Jmp(Operand::Register(reg)) => {
+            let reg_index = encode_register_operand(reg);
+            Ok(vec![0x52 + reg_index]) // Opcode for JMP n16
+        }
         // register-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Register(rs)) => {
             let rd_index = encode_register_operand(rd);
             let rs_index = encode_register_operand(rs);
             let opcode = 0x80 | ((rd_index & 0x07) << 3) | (rs_index & 0x07);
             Ok(vec![opcode])
+        }
+        // add reg to reg
+        Instruction::Add(Operand::Register(rd), Some(Operand::Register(rs))) => {
+            let rd_index = encode_register_operand(rd);
+            let rs_index = encode_register_operand(rs);
+            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            Ok(vec![0x09, byte0])
+        }
+        // add immediate
+        Instruction::Add(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
+            let rd_index = encode_register_operand(rd);
+            let [low, high] = imm.to_le_bytes();
+            Ok(vec![0x09, rd_index, low, high])
         }
 
         // ... add encoding logic for every instruction variant based on your opcode map ...

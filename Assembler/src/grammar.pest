@@ -18,7 +18,9 @@ identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 
 // --- Operands ---
 
-operand = { immediate | register | identifier }
+operand = { indirect | immediate | register | identifier }
+
+indirect = @{ "(" ~ register ~ ")" }
 
 register = @{ ("r" | "R") ~ ASCII_DIGIT }
 
@@ -30,13 +32,15 @@ immediate = @{ ("0x" | "$") ~ ASCII_HEX_DIGIT+ }
 instruction = {
 nop
 | ld
-// | add
-// | jmp
+| add
+| jmp
 // ... add all other instruction mnemonics here
 }
 
 nop = @{ ^"nop" }
 ld =  { ^"ld" ~ operand ~ "," ~ operand }
+add = { ^"add" ~ operand ~ ("," ~ operand)? }
+jmp = { ^"jmp" ~ operand }
 
 // --- Core Rules ---
 

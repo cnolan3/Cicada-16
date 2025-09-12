@@ -66,6 +66,17 @@ fn build_instruction(pair: Pair<Rule>) -> Instruction {
             let src = build_operand(inner.next().unwrap());
             Instruction::Ld(dest, src)
         }
+        Rule::add => {
+            let mut inner = pair.into_inner();
+            let dest = build_operand(inner.next().unwrap());
+            let src = build_operand(inner.next().unwrap());
+            Instruction::Add(dest, Some(src))
+        }
+        Rule::jmp => {
+            let mut inner = pair.into_inner();
+            let addr = build_operand(inner.next().unwrap());
+            Instruction::Jmp(addr)
+        }
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
@@ -75,27 +86,56 @@ fn build_instruction(pair: Pair<Rule>) -> Instruction {
 fn build_operand(pair: Pair<Rule>) -> Operand {
     let inner_pair = pair.into_inner().next().unwrap();
     match inner_pair.as_rule() {
-        Rule::register => {
-            let reg_char = inner_pair.as_str().chars().nth(1).unwrap();
-            let reg = match reg_char {
-                '0' => Register::R0,
-                '1' => Register::R1,
-                '2' => Register::R2,
-                '3' => Register::R3,
-                '4' => Register::R4,
-                '5' => Register::R5,
-                '6' => Register::R6,
-                '7' => Register::R7,
-                _ => unreachable!("Invalid register"),
-            };
-            Operand::Register(reg)
-        }
-        Rule::immediate => {
-            let hex_str = &inner_pair.as_str()[2..];
-            let value = u16::from_str_radix(hex_str, 16).unwrap();
-            Operand::Immediate(value)
-        }
-        Rule::identifier => Operand::Label(inner_pair.as_str().to_string()),
+        Rule::register => build_register(inner_pair),
+        Rule::immediate => build_immediate(inner_pair),
+        Rule::identifier => build_identifier(inner_pair),
+        Rule::indirect => build_indirect(inner_pair),
         _ => unreachable!("Unknown operand rule: {:?}", inner_pair.as_rule()),
     }
+}
+
+// build a register object from a pair
+fn build_register(pair: Pair<Rule>) -> Operand {
+    let reg_char = pair.as_str().chars().nth(1).unwrap();
+    let reg = match reg_char {
+        '0' => Register::R0,
+        '1' => Register::R1,
+        '2' => Register::R2,
+        '3' => Register::R3,
+        '4' => Register::R4,
+        '5' => Register::R5,
+        '6' => Register::R6,
+        '7' => Register::R7,
+        _ => unreachable!("Invalid register"),
+    };
+    Operand::Register(reg)
+}
+
+// build an immediate object
+fn build_immediate(pair: Pair<Rule>) -> Operand {
+    let hex_str = &pair.as_str()[2..];
+    let value = u16::from_str_radix(hex_str, 16).unwrap();
+    Operand::Immediate(value)
+}
+
+// build an identifier object
+fn build_identifier(pair: Pair<Rule>) -> Operand {
+    Operand::Label(pair.as_str().to_string())
+}
+
+// build an indirect object
+fn build_indirect(pair: Pair<Rule>) -> Operand {
+    let reg_char = pair.as_str().chars().nth(1).unwrap();
+    let reg = match reg_char {
+        '0' => Register::R0,
+        '1' => Register::R1,
+        '2' => Register::R2,
+        '3' => Register::R3,
+        '4' => Register::R4,
+        '5' => Register::R5,
+        '6' => Register::R6,
+        '7' => Register::R7,
+        _ => unreachable!("Invalid register"),
+    };
+    Operand::Indirect(reg)
 }
