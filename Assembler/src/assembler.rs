@@ -1,13 +1,13 @@
-use crate::ast::{AssemblyLine, Instruction, Operand};
+use crate::ast::{AssemblyLine, Instruction, Operand, Register};
 use std::collections::HashMap;
 
 // The symbol table stores label names and their calculated addresses.
 type SymbolTable = HashMap<String, u16>;
 
 /// Pass 1: Build the symbol table.
-pub fn build_symbol_table(lines: &[AssemblyLine]) -> Result<SymbolTable, String> {
+pub fn build_symbol_table(lines: &[AssemblyLine], start_addr: &u16) -> Result<SymbolTable, String> {
     let mut symbol_table = SymbolTable::new();
-    let mut current_address: u16 = 0x0100; // Start address after cartridge header
+    let mut current_address: u16 = start_addr.clone(); // Start address after cartridge header
 
     for line in lines {
         // If a label exists on this line, record its current address.
@@ -35,7 +35,7 @@ fn calculate_instruction_size(instruction: &Instruction) -> Result<u16, String> 
             // Check if this form maps to the 1-byte LD rd, rs (opcodes 0x80-0xBF)
             Ok(1)
         }
-        Instruction::Ld(_, Operand::Immediate(val)) => {
+        Instruction::Ld(_, Operand::Immediate(_)) => {
             // LDI r, n16 (3 bytes) or LDI.b r, n8 (3 bytes, prefixed)
             // For simplicity in early stages, assume LDI r, n16.
             Ok(3)
@@ -71,22 +71,32 @@ pub fn generate_bytecode(
     Ok(bytecode)
 }
 
+// helper function to encode a register operand
+fn encode_register_operand(reg: &Register) -> u8 {
+    match reg {
+        Register::R0 => 0,
+        Register::R1 => 1,
+        Register::R2 => 2,
+        Register::R3 => 3,
+        Register::R4 => 4,
+        Register::R5 => 5,
+        Register::R6 => 6,
+        Register::R7 => 7,
+    }
+}
+
 /// Helper function to translate a single instruction into bytes during Pass 2.
 fn encode_instruction(
     instruction: &Instruction,
     symbol_table: &SymbolTable,
 ) -> Result<Vec<u8>, String> {
     match instruction {
+        // no op (0x00)
         Instruction::Nop => Ok(vec![0x00]),
         // Example: LDI R1, 0xABCD (Opcode: 0x01 + register index)
         Instruction::Ld(Operand::Register(reg), Operand::Immediate(value)) => {
             let base_opcode = 0x01;
-            let reg_index = match reg {
-                Register::R0 => 0,
-                Register::R1 => 1,
-                // ... and so on for R2-R7
-                _ => 7, // Default case for R7
-            };
+            let reg_index = encode_register_operand(reg);
             let [low, high] = value.to_le_bytes();
             Ok(vec![base_opcode + reg_index, low, high])
         }
@@ -97,6 +107,13 @@ fn encode_instruction(
                 .ok_or_else(|| format!("Undefined label: {}", label_name))?;
             let [low, high] = target_address.to_le_bytes();
             Ok(vec![0x51, low, high]) // Opcode for JMP n16
+        }
+        // register-to-register load
+        Instruction::Ld(Operand::Register(rd), Operand::Register(rs)) => {
+            let rd_index = encode_register_operand(rd);
+            let rs_index = encode_register_operand(rs);
+            let opcode = 0x80 | ((rd_index & 0x07) << 3) | (rs_index & 0x07);
+            Ok(vec![opcode])
         }
 
         // ... add encoding logic for every instruction variant based on your opcode map ...

@@ -1,98 +1,101 @@
-use nom::{
-    IResult,
-    branch::alt,
-    bytes::complete::{tag, tag_no_case},
-    character::complete::{alpha1, alphanumeric1, char, hex_digit1, multispace0, multispace1},
-    combinator::{map, map_res, opt, recognize},
-    sequence::{delimited, pair, preceded, terminated, tuple},
-};
-// Import your AST structures
 use crate::ast::*;
+use pest::Parser;
+use pest::iterators::{Pair, Pairs};
+use pest_derive::Parser;
 
-// --- Basic Building Blocks ---
+// Derive the parser from our grammar file.
+#[derive(Parser)]
+#[grammar = "./grammar.pest"]
+pub struct CicadaParser;
 
-// Parse a register like "R0", "r1", "R7"
-fn parse_register(input: &str) -> IResult<&str, Register> {
-    map_res(preceded(tag_no_case("r"), one_of("01234567")), |s: char| {
-        match s {
-            '0' => Ok(Register::R0),
-            '1' => Ok(Register::R1),
-            '2' => Ok(Register::R2),
-            '3' => Ok(Register::R3),
-            '4' => Ok(Register::R4),
-            '5' => Ok(Register::R5),
-            '6' => Ok(Register::R6),
-            '7' => Ok(Register::R7),
-            _ => Err("Invalid register number"), // Should be unreachable due to one_of
+// Main parsing function that takes the entire source code string.
+pub fn parse_source(source: &str) -> Result<Vec<AssemblyLine>, pest::error::Error<Rule>> {
+    let pairs = CicadaParser::parse(Rule::program, source)?;
+    let mut ast = Vec::new();
+
+    for line_pair in pairs
+        .flatten()
+        .filter(|p| p.as_rule() == Rule::line_content)
+    {
+        let mut inner = line_pair.into_inner();
+        let mut assembly_line = AssemblyLine::default();
+
+        // Check for a label first
+        if let Some(pair) = inner.peek() {
+            if pair.as_rule() == Rule::label {
+                assembly_line.label = Some(
+                    inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string(),
+                );
+            }
         }
-    })(input)
+
+        // Check for an instruction
+        if let Some(pair) = inner.peek() {
+            // let t = inner.next().unwrap().into_inner().next().unwrap();
+            // println!("{}", inner.next().unwrap().into_inner().next().unwrap());
+            if pair.as_rule() == Rule::instruction {
+                assembly_line.instruction = Some(build_instruction(
+                    inner.next().unwrap().into_inner().next().unwrap(),
+                ));
+            }
+        }
+
+        // Only add non-empty lines to our AST
+        if assembly_line.label.is_some() || assembly_line.instruction.is_some() {
+            ast.push(assembly_line);
+        }
+    }
+
+    Ok(ast)
 }
 
-// Parse a hexadecimal number like "0x1A" or "$FF"
-fn parse_hex_number(input: &str) -> IResult<&str, u16> {
-    map_res(
-        preceded(alt((tag("0x"), tag("$"))), hex_digit1),
-        |s: &str| u16::from_str_radix(s, 16),
-    )(input)
+// Helper to build an Instruction from a pest Pair
+fn build_instruction(pair: Pair<Rule>) -> Instruction {
+    match pair.as_rule() {
+        Rule::nop => Instruction::Nop,
+        Rule::ld => {
+            let mut inner = pair.into_inner();
+            let dest = build_operand(inner.next().unwrap());
+            let src = build_operand(inner.next().unwrap());
+            Instruction::Ld(dest, src)
+        }
+        // ... add cases for all other instructions
+        _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
+    }
 }
 
-// Parse a label name (e.g., "loop_start")
-fn parse_label_name(input: &str) -> IResult<&str, String> {
-    map(
-        recognize(pair(alpha1, many0(alt((alphanumeric1, tag("_")))))),
-        |s: &str| s.to_string(),
-    )(input)
-}
-
-// --- Operand Parser ---
-
-fn parse_operand(input: &str) -> IResult<&str, Operand> {
-    alt((
-        // 1. Register direct: R1
-        map(parse_register, Operand::Register),
-        // 2. Immediate value: 0x1234
-        map(parse_hex_number, Operand::Immediate),
-        // 3. Label reference: my_label
-        map(parse_label_name, Operand::Label),
-        // 4. Indirect: (R1) - Add this later
-        // 5. Indexed: (R1, 0x10) - Add this later
-    ))(input)
-}
-
-// --- Instruction Parsers ---
-
-// Example: Parse "NOP"
-fn parse_nop(input: &str) -> IResult<&str, Instruction> {
-    map(tag_no_case("nop"), |_| Instruction::Nop)(input)
-}
-
-// Example: Parse "LD R0, R1" or "LDI R0, 0x1234"
-fn parse_ld(input: &str) -> IResult<&str, Instruction> {
-    map(
-        tuple((
-            tag_no_case("ld"), // Mnemonic (LDI is handled by operand type)
-            multispace1,
-            parse_operand,                                  // Destination operand
-            delimited(multispace0, char(','), multispace0), // Comma separator
-            parse_operand,                                  // Source operand
-        )),
-        |(_, _, dest, _, src)| Instruction::Ld(dest, src),
-    )(input)
-}
-
-// --- Line Parser ---
-
-// Parse an entire line: [label:] [instruction] [comment]
-pub fn parse_line(input: &str) -> IResult<&str, AssemblyLine> {
-    // 1. Parse optional label "my_label:"
-    let (input, label) = opt(terminated(parse_label_name, char(':')))(input)?;
-
-    // 2. Eat whitespace
-    let (input, _) = multispace0(input)?;
-
-    // 3. Parse optional instruction
-    let (input, instruction) = opt(alt((parse_nop, parse_ld)))(input)?;
-    // TODO: Add parsers for comments and directives
-
-    Ok((input, AssemblyLine { label, instruction }))
+// Helper to build an Operand from a pest Pair
+fn build_operand(pair: Pair<Rule>) -> Operand {
+    let inner_pair = pair.into_inner().next().unwrap();
+    match inner_pair.as_rule() {
+        Rule::register => {
+            let reg_char = inner_pair.as_str().chars().nth(1).unwrap();
+            let reg = match reg_char {
+                '0' => Register::R0,
+                '1' => Register::R1,
+                '2' => Register::R2,
+                '3' => Register::R3,
+                '4' => Register::R4,
+                '5' => Register::R5,
+                '6' => Register::R6,
+                '7' => Register::R7,
+                _ => unreachable!("Invalid register"),
+            };
+            Operand::Register(reg)
+        }
+        Rule::immediate => {
+            let hex_str = &inner_pair.as_str()[2..];
+            let value = u16::from_str_radix(hex_str, 16).unwrap();
+            Operand::Immediate(value)
+        }
+        Rule::identifier => Operand::Label(inner_pair.as_str().to_string()),
+        _ => unreachable!("Unknown operand rule: {:?}", inner_pair.as_rule()),
+    }
 }

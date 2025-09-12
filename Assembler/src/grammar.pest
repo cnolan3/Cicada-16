@@ -1,0 +1,49 @@
+// Pest Grammar for Cicada-16 Assembly
+
+// --- Silent Rules (ignored in the parse tree) ---
+
+WHITESPACE = _{ " " | "\t" }
+
+COMMENT = _{ ";" ~ (!NEWLINE ~ ANY)* }
+
+// A line end is an optional comment followed by a required newline.
+// It is silent as we don't need to see it in the final parse tree.
+LINE_END = _{ (COMMENT)? ~ NEWLINE }
+
+// --- Components ---
+
+label = { identifier ~ ":" }
+
+identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+
+// --- Operands ---
+
+operand = { immediate | register | identifier }
+
+register = @{ ("r" | "R") ~ ASCII_DIGIT }
+
+immediate = @{ ("0x" | "$") ~ ASCII_HEX_DIGIT+ }
+
+// --- Instructions ---
+
+// The @ makes the rule "atomic", so it appears as a single token in the tree.
+instruction = {
+nop
+| ld
+// | add
+// | jmp
+// ... add all other instruction mnemonics here
+}
+
+nop = @{ ^"nop" }
+ld =  { ^"ld" ~ operand ~ "," ~ operand }
+
+// --- Core Rules ---
+
+// This represents the actual content on a line, if any.
+line_content = { (label | instruction) }
+
+// A program is zero or more lines ending with a newline, followed by an
+// optional final line that may not have a newline. This is a robust pattern
+// that handles most source file conventions.
+program = { SOI ~ (line_content? ~ LINE_END)* ~ EOI }
