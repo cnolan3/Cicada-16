@@ -186,6 +186,33 @@ fn build_add_1_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Add(src, None))
 }
 
+// build and check operands for a 2 operand sub instruction
+fn build_sub_2_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = sub_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = sub_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    match (&dest, &src) {
+        (Operand::Label(_), _) | (_, Operand::Label(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "A label is not a valid operand to a SUB instruction.".to_string(),
+            });
+        }
+        (Operand::Register(_), Operand::Register(_)) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Invalid operands to SUB instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Sub(dest, Some(src)))
+}
+
 // build and check operands for a jump instruction
 fn build_jmp(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = jmp_pair.as_span().start_pos().line_col().0;
@@ -216,8 +243,10 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::ld_2_op => build_ld_2_op(pair),
         Rule::add_2_op => build_add_2_op(pair),
         Rule::add_1_op => build_add_1_op(pair),
+        Rule::sub_2_op => build_sub_2_op(pair),
         Rule::jmp => build_jmp(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
 }
+''

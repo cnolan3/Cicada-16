@@ -61,6 +61,7 @@ fn calculate_instruction_size(
         Instruction::Add(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
         Instruction::Add(Operand::Register(_), None) => Ok(1),
         Instruction::Add(Operand::Immediate(_), None) => Ok(3),
+        Instruction::Sub(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
 
         // ... add logic for every instruction variant based on your opcode map ...
         _ => Err(AssemblyError::SemanticError {
@@ -148,13 +149,26 @@ fn encode_instruction(
             let rd_index = encode_register_operand(rd);
             let rs_index = encode_register_operand(rs);
             let byte0 = (rd_index << 3) | (rs_index & 0x07);
-            Ok(vec![0x09, byte0])
+            Ok(vec![0x10, byte0])
         }
         // add immediate
         Instruction::Add(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
             let rd_index = encode_register_operand(rd);
             let [low, high] = imm.to_le_bytes();
             Ok(vec![0x09, rd_index, low, high])
+        }
+        // add accumulator
+        Instruction::Add(Operand::Register(rs), None) => {
+            let base_opcode = 0x18;
+            let rs_index = encode_register_operand(rs);
+            Ok(vec![base_opcode + rs_index])
+        }
+        // sub reg to reg
+        Instruction::Sub(Operand::Register(rd), Some(Operand::Register(rs))) => {
+            let rd_index = encode_register_operand(rd);
+            let rs_index = encode_register_operand(rs);
+            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            Ok(vec![0x11, byte0])
         }
         // absolute-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Indirect(rs)) => {
