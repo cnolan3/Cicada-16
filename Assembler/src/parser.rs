@@ -232,6 +232,168 @@ fn build_sub_1_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Sub(src, None))
 }
 
+// build and check operands for a 2 operand and instruction
+fn build_and_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    match (&dest, &src) {
+        (Operand::Label(_), _) | (_, Operand::Label(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "A label is not a valid operand to an AND instruction.".to_string(),
+            });
+        }
+        (Operand::Register(_), Operand::Register(_)) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Invalid operands to AND instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::And(dest, Some(src)))
+}
+
+// build and check operands for a 2 operand or instruction
+fn build_or_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    match (&dest, &src) {
+        (Operand::Label(_), _) | (_, Operand::Label(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "A label is not a valid operand to an OR instruction.".to_string(),
+            });
+        }
+        (Operand::Register(_), Operand::Register(_)) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Invalid operands to OR instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Or(dest, Some(src)))
+}
+
+// build and check operands for a 2 operand xor instruction
+fn build_xor_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    match (&dest, &src) {
+        (Operand::Label(_), _) | (_, Operand::Label(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "A label is not a valid operand to a XOR instruction.".to_string(),
+            });
+        }
+        (Operand::Register(_), Operand::Register(_)) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Invalid operands to XOR instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Xor(dest, Some(src)))
+}
+
+// build and check operands for a 2 operand cmp instruction
+fn build_cmp_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    match (&dest, &src) {
+        (Operand::Label(_), _) | (_, Operand::Label(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "A label is not a valid operand to a CMP instruction.".to_string(),
+            });
+        }
+        (Operand::Register(_), Operand::Register(_)) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Invalid operands to CMP instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Cmp(dest, Some(src)))
+}
+
+// build and check operands for a 2 operand adc instruction
+fn build_adc_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    match (&dest, &src) {
+        (Operand::Label(_), _) | (_, Operand::Label(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "A label is not a valid operand to an ADC instruction.".to_string(),
+            });
+        }
+        (Operand::Register(_), Operand::Register(_)) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Invalid operands to ADC instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Adc(dest, Some(src)))
+}
+
+// build and check operands for a 2 operand sbc instruction
+fn build_sbc_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    match (&dest, &src) {
+        (Operand::Label(_), _) | (_, Operand::Label(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "A label is not a valid operand to an SBC instruction.".to_string(),
+            });
+        }
+        (Operand::Register(_), Operand::Register(_)) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Invalid operands to SBC instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Sbc(dest, Some(src)))
+}
+
 // build and check operands for a jump instruction
 fn build_jmp(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = jmp_pair.as_span().start_pos().line_col().0;
@@ -264,6 +426,12 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::add_1_op => build_add_1_op(pair),
         Rule::sub_2_op => build_sub_2_op(pair),
         Rule::sub_1_op => build_sub_1_op(pair),
+        Rule::and_2_op => build_and_2_op(pair),
+        Rule::or_2_op => build_or_2_op(pair),
+        Rule::xor_2_op => build_xor_2_op(pair),
+        Rule::cmp_2_op => build_cmp_2_op(pair),
+        Rule::adc_2_op => build_adc_2_op(pair),
+        Rule::sbc_2_op => build_sbc_2_op(pair),
         Rule::jmp => build_jmp(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),

@@ -63,6 +63,12 @@ fn calculate_instruction_size(
         Instruction::Add(Operand::Immediate(_), None) => Ok(3),
         Instruction::Sub(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Sub(Operand::Register(_), None) => Ok(1),
+        Instruction::And(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
+        Instruction::Or(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
+        Instruction::Xor(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
+        Instruction::Cmp(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
+        Instruction::Adc(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
+        Instruction::Sbc(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
 
         // ... add logic for every instruction variant based on your opcode map ...
         _ => Err(AssemblyError::SemanticError {
@@ -176,6 +182,48 @@ fn encode_instruction(
             let base_opcode = 0x20;
             let rs_index = encode_register_operand(rs);
             Ok(vec![base_opcode + rs_index])
+        }
+        // and reg to reg
+        Instruction::And(Operand::Register(rd), Some(Operand::Register(rs))) => {
+            let rd_index = encode_register_operand(rd);
+            let rs_index = encode_register_operand(rs);
+            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            Ok(vec![0x12, byte0])
+        }
+        // or reg to reg
+        Instruction::Or(Operand::Register(rd), Some(Operand::Register(rs))) => {
+            let rd_index = encode_register_operand(rd);
+            let rs_index = encode_register_operand(rs);
+            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            Ok(vec![0x13, byte0])
+        }
+        // xor reg to reg
+        Instruction::Xor(Operand::Register(rd), Some(Operand::Register(rs))) => {
+            let rd_index = encode_register_operand(rd);
+            let rs_index = encode_register_operand(rs);
+            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            Ok(vec![0x14, byte0])
+        }
+        // cmp reg to reg
+        Instruction::Cmp(Operand::Register(rd), Some(Operand::Register(rs))) => {
+            let rd_index = encode_register_operand(rd);
+            let rs_index = encode_register_operand(rs);
+            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            Ok(vec![0x15, byte0])
+        }
+        // adc reg to reg
+        Instruction::Adc(Operand::Register(rd), Some(Operand::Register(rs))) => {
+            let rd_index = encode_register_operand(rd);
+            let rs_index = encode_register_operand(rs);
+            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            Ok(vec![0x16, byte0])
+        }
+        // sbc reg to reg
+        Instruction::Sbc(Operand::Register(rd), Some(Operand::Register(rs))) => {
+            let rd_index = encode_register_operand(rd);
+            let rs_index = encode_register_operand(rs);
+            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            Ok(vec![0x17, byte0])
         }
         // absolute-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Indirect(rs)) => {

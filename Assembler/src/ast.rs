@@ -46,6 +46,8 @@ pub enum Instruction {
     Or(Operand, Option<Operand>),
     Xor(Operand, Option<Operand>),
     Cmp(Operand, Option<Operand>),
+    Adc(Operand, Option<Operand>),
+    Sbc(Operand, Option<Operand>),
     Inc(Operand),
     Dec(Operand),
 
