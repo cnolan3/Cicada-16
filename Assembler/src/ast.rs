@@ -79,6 +79,7 @@ pub enum ConditionCode {
 // Represents a single line of code, which can have a label, an instruction, or both.
 #[derive(Debug, Clone, Default)]
 pub struct AssemblyLine {
+    pub line_number: usize,
     pub label: Option<String>,
     pub instruction: Option<Instruction>,
     // Add directives later: pub directive: Option<Directive>,

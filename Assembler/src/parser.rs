@@ -1,4 +1,5 @@
 use crate::ast::*;
+use crate::errors::AssemblyError;
 use pest::Parser;
 use pest::iterators::{Pair, Pairs};
 use pest_derive::Parser;
@@ -9,7 +10,7 @@ use pest_derive::Parser;
 pub struct CicadaParser;
 
 // Main parsing function that takes the entire source code string.
-pub fn parse_source(source: &str) -> Result<Vec<AssemblyLine>, pest::error::Error<Rule>> {
+pub fn parse_source(source: &str) -> Result<Vec<AssemblyLine>, AssemblyError> {
     let pairs = CicadaParser::parse(Rule::program, source)?;
     let mut ast = Vec::new();
 
@@ -43,7 +44,7 @@ pub fn parse_source(source: &str) -> Result<Vec<AssemblyLine>, pest::error::Erro
             if pair.as_rule() == Rule::instruction {
                 assembly_line.instruction = Some(build_instruction(
                     inner.next().unwrap().into_inner().next().unwrap(),
-                ));
+                )?);
             }
         }
 
@@ -56,31 +57,7 @@ pub fn parse_source(source: &str) -> Result<Vec<AssemblyLine>, pest::error::Erro
     Ok(ast)
 }
 
-// Helper to build an Instruction from a pest Pair
-fn build_instruction(pair: Pair<Rule>) -> Instruction {
-    match pair.as_rule() {
-        Rule::nop => Instruction::Nop,
-        Rule::ld => {
-            let mut inner = pair.into_inner();
-            let dest = build_operand(inner.next().unwrap());
-            let src = build_operand(inner.next().unwrap());
-            Instruction::Ld(dest, src)
-        }
-        Rule::add => {
-            let mut inner = pair.into_inner();
-            let dest = build_operand(inner.next().unwrap());
-            let src = build_operand(inner.next().unwrap());
-            Instruction::Add(dest, Some(src))
-        }
-        Rule::jmp => {
-            let mut inner = pair.into_inner();
-            let addr = build_operand(inner.next().unwrap());
-            Instruction::Jmp(addr)
-        }
-        // ... add cases for all other instructions
-        _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
-    }
-}
+// ------------- operand builder helpers -------------
 
 // Helper to build an Operand from a pest Pair
 fn build_operand(pair: Pair<Rule>) -> Operand {
@@ -125,7 +102,8 @@ fn build_identifier(pair: Pair<Rule>) -> Operand {
 
 // build an indirect object
 fn build_indirect(pair: Pair<Rule>) -> Operand {
-    let reg_char = pair.as_str().chars().nth(1).unwrap();
+    let reg_char = pair.as_str().chars().nth(2).unwrap();
+    println!("{}", reg_char);
     let reg = match reg_char {
         '0' => Register::R0,
         '1' => Register::R1,
@@ -138,4 +116,108 @@ fn build_indirect(pair: Pair<Rule>) -> Operand {
         _ => unreachable!("Invalid register"),
     };
     Operand::Indirect(reg)
+}
+
+// ------------- instruction builder helpers -------------
+
+// build and check operands for a load instruction
+fn build_ld_2_op(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = ld_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = ld_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = dest {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The destination of an LD instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    Ok(Instruction::Ld(dest, src))
+}
+
+// build and check operands for a 2 operand add instruction
+fn build_add_2_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = add_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = add_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    match (&dest, &src) {
+        (Operand::Label(_), _) | (_, Operand::Label(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "A label is not a valid operand to an ADD instruction.".to_string(),
+            });
+        }
+        (Operand::Register(_), Operand::Register(_)) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Invalid operands to ADD instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Add(dest, Some(src)))
+}
+
+// build and check operands for a 1 operand add instruction
+fn build_add_1_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = add_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = add_pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = src {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to an ADD Accumulator instruction must be a register (R0-R7)."
+                .to_string(),
+        });
+    }
+
+    Ok(Instruction::Add(src, None))
+}
+
+// build and check operands for a jump instruction
+fn build_jmp(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = jmp_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = jmp_pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    match op {
+        Operand::Indirect(_) | Operand::Label(_) | Operand::Immediate(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Operand to a JMP instruction must be an indirect address ((R0-R7)), label or immediate address."
+                    .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Jmp(op))
+}
+
+// ------------- build instruction -------------
+
+// Helper to build an Instruction from a pest Pair
+fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    match pair.as_rule() {
+        Rule::nop => Ok(Instruction::Nop),
+        Rule::ld_2_op => build_ld_2_op(pair),
+        Rule::add_2_op => build_add_2_op(pair),
+        Rule::add_1_op => build_add_1_op(pair),
+        Rule::jmp => build_jmp(pair),
+        // ... add cases for all other instructions
+        _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
+    }
 }

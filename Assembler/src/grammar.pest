@@ -31,15 +31,17 @@ immediate = @{ ("0x" | "$") ~ ASCII_HEX_DIGIT+ }
 // The @ makes the rule "atomic", so it appears as a single token in the tree.
 instruction = {
 nop
-| ld
-| add
+| ld_2_op
+| add_2_op
+| add_1_op
 | jmp
 // ... add all other instruction mnemonics here
 }
 
 nop = @{ ^"nop" }
-ld =  { ^"ld" ~ operand ~ "," ~ operand }
-add = { ^"add" ~ operand ~ ("," ~ operand)? }
+ld_2_op =  { ^"ld" ~ operand ~ "," ~ operand }
+add_2_op = { ^"add" ~ operand ~ "," ~ operand }
+add_1_op = { ^"add" ~ operand }
 jmp = { ^"jmp" ~ operand }
 
 // --- Core Rules ---

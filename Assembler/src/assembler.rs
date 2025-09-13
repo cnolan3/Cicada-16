@@ -1,11 +1,15 @@
 use crate::ast::{AssemblyLine, Instruction, Operand, Register};
+use crate::errors::AssemblyError;
 use std::collections::HashMap;
 
 // The symbol table stores label names and their calculated addresses.
 type SymbolTable = HashMap<String, u16>;
 
 /// Pass 1: Build the symbol table.
-pub fn build_symbol_table(lines: &[AssemblyLine], start_addr: &u16) -> Result<SymbolTable, String> {
+pub fn build_symbol_table(
+    lines: &[AssemblyLine],
+    start_addr: &u16,
+) -> Result<SymbolTable, AssemblyError> {
     let mut symbol_table = SymbolTable::new();
     let mut current_address: u16 = start_addr.clone(); // Start address after cartridge header
 
@@ -13,21 +17,27 @@ pub fn build_symbol_table(lines: &[AssemblyLine], start_addr: &u16) -> Result<Sy
         // If a label exists on this line, record its current address.
         if let Some(label) = &line.label {
             if symbol_table.contains_key(label) {
-                return Err(format!("Duplicate label definition: {}", label));
+                return Err(AssemblyError::SemanticError {
+                    line: line.line_number,
+                    reason: format!("Duplicate label definition: {}", label),
+                });
             }
             symbol_table.insert(label.clone(), current_address);
         }
 
         // Increment current_address by the size of the instruction.
         if let Some(instruction) = &line.instruction {
-            current_address += calculate_instruction_size(instruction)?;
+            current_address += calculate_instruction_size(instruction, line.line_number)?;
         }
     }
     Ok(symbol_table)
 }
 
 /// Helper function to determine instruction size in bytes during Pass 1.
-fn calculate_instruction_size(instruction: &Instruction) -> Result<u16, String> {
+fn calculate_instruction_size(
+    instruction: &Instruction,
+    line_num: usize,
+) -> Result<u16, AssemblyError> {
     match instruction {
         Instruction::Nop | Instruction::Halt | Instruction::Ret => Ok(1),
 
@@ -53,10 +63,10 @@ fn calculate_instruction_size(instruction: &Instruction) -> Result<u16, String> 
         Instruction::Add(Operand::Immediate(_), None) => Ok(3),
 
         // ... add logic for every instruction variant based on your opcode map ...
-        _ => Err(format!(
-            "Size calculation not implemented for: {:?}",
-            instruction
-        )),
+        _ => Err(AssemblyError::SemanticError {
+            line: line_num,
+            reason: "Invalid Instruction.".to_string(),
+        }),
     }
 }
 
@@ -64,7 +74,7 @@ fn calculate_instruction_size(instruction: &Instruction) -> Result<u16, String> 
 pub fn generate_bytecode(
     lines: &[AssemblyLine],
     symbol_table: &SymbolTable,
-) -> Result<Vec<u8>, String> {
+) -> Result<Vec<u8>, AssemblyError> {
     let mut bytecode = Vec::new();
 
     for line in lines {
@@ -94,7 +104,7 @@ fn encode_register_operand(reg: &Register) -> u8 {
 fn encode_instruction(
     instruction: &Instruction,
     symbol_table: &SymbolTable,
-) -> Result<Vec<u8>, String> {
+) -> Result<Vec<u8>, AssemblyError> {
     match instruction {
         // no op (0x00)
         Instruction::Nop => Ok(vec![0x00]),
@@ -107,9 +117,12 @@ fn encode_instruction(
         }
         // Example: JMP my_label
         Instruction::Jmp(Operand::Label(label_name)) => {
-            let target_address = symbol_table
-                .get(label_name)
-                .ok_or_else(|| format!("Undefined label: {}", label_name))?;
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticErrorNoLine {
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
             let [low, high] = target_address.to_le_bytes();
             Ok(vec![0x51, low, high]) // Opcode for JMP n16
         }
@@ -118,8 +131,8 @@ fn encode_instruction(
             let [low, high] = addr.to_le_bytes();
             Ok(vec![0x51, low, high]) // Opcode for JMP n16
         }
-        // jump register
-        Instruction::Jmp(Operand::Register(reg)) => {
+        // jump indirect
+        Instruction::Jmp(Operand::Indirect(reg)) => {
             let reg_index = encode_register_operand(reg);
             Ok(vec![0x52 + reg_index]) // Opcode for JMP n16
         }
@@ -143,8 +156,17 @@ fn encode_instruction(
             let [low, high] = imm.to_le_bytes();
             Ok(vec![0x09, rd_index, low, high])
         }
+        // absolute-to-register load
+        Instruction::Ld(Operand::Register(rd), Operand::Indirect(rs)) => {
+            let rd_index = encode_register_operand(rd);
+            let rs_index = encode_register_operand(rs);
+            let sub_opcode = 0x00 | ((rd_index & 0x07) << 3) | (rs_index & 0x07);
+            Ok(vec![0xFE, sub_opcode])
+        }
 
         // ... add encoding logic for every instruction variant based on your opcode map ...
-        _ => Err(format!("Encoding not implemented for: {:?}", instruction)),
+        _ => Err(AssemblyError::SemanticErrorNoLine {
+            reason: "Invalid Instruction".to_string(),
+        }),
     }
 }
