@@ -69,6 +69,13 @@ fn calculate_instruction_size(
         Instruction::Cmp(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Adc(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Sbc(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
+        Instruction::And(Operand::Register(_), None) => Ok(1),
+        Instruction::Or(Operand::Register(_), None) => Ok(1),
+        Instruction::Xor(Operand::Register(_), None) => Ok(1),
+        Instruction::Cmp(Operand::Register(_), None) => Ok(1),
+        Instruction::Neg => Ok(1),
+        Instruction::Not => Ok(1),
+        Instruction::Swap => Ok(1),
 
         // ... add logic for every instruction variant based on your opcode map ...
         _ => Err(AssemblyError::SemanticError {
@@ -225,6 +232,36 @@ fn encode_instruction(
             let byte0 = (rd_index << 3) | (rs_index & 0x07);
             Ok(vec![0x17, byte0])
         }
+        // and accumulator
+        Instruction::And(Operand::Register(rs), None) => {
+            let base_opcode = 0x28;
+            let rs_index = encode_register_operand(rs);
+            Ok(vec![base_opcode + rs_index])
+        }
+        // or accumulator
+        Instruction::Or(Operand::Register(rs), None) => {
+            let base_opcode = 0x30;
+            let rs_index = encode_register_operand(rs);
+            Ok(vec![base_opcode + rs_index])
+        }
+        // xor accumulator
+        Instruction::Xor(Operand::Register(rs), None) => {
+            let base_opcode = 0x38;
+            let rs_index = encode_register_operand(rs);
+            Ok(vec![base_opcode + rs_index])
+        }
+        // cmp accumulator
+        Instruction::Cmp(Operand::Register(rs), None) => {
+            let base_opcode = 0x40;
+            let rs_index = encode_register_operand(rs);
+            Ok(vec![base_opcode + rs_index])
+        }
+        // neg
+        Instruction::Neg => Ok(vec![0x48]),
+        // not
+        Instruction::Not => Ok(vec![0x49]),
+        // swap
+        Instruction::Swap => Ok(vec![0x4A]),
         // absolute-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Indirect(rs)) => {
             let rd_index = encode_register_operand(rd);

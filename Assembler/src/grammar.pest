@@ -37,11 +37,18 @@ nop
 | sub_2_op
 | sub_1_op
 | and_2_op
+| and_1_op
 | or_2_op
+| or_1_op
 | xor_2_op
+| xor_1_op
 | cmp_2_op
+| cmp_1_op
 | adc_2_op
 | sbc_2_op
+| neg
+| not
+| swap
 | jmp
 // ... add all other instruction mnemonics here
 }
@@ -53,11 +60,18 @@ add_1_op = { ^"add" ~ operand }
 sub_2_op = { ^"sub" ~ operand ~ "," ~ operand }
 sub_1_op = { ^"sub" ~ operand }
 and_2_op = { ^"and" ~ operand ~ "," ~ operand }
+and_1_op = { ^"and" ~ operand }
 or_2_op = { ^"or" ~ operand ~ "," ~ operand }
+or_1_op = { ^"or" ~ operand }
 xor_2_op = { ^"xor" ~ operand ~ "," ~ operand }
+xor_1_op = { ^"xor" ~ operand }
 cmp_2_op = { ^"cmp" ~ operand ~ "," ~ operand }
+cmp_1_op = { ^"cmp" ~ operand }
 adc_2_op = { ^"adc" ~ operand ~ "," ~ operand }
 sbc_2_op = { ^"sbc" ~ operand ~ "," ~ operand }
+neg = @{ ^"neg" }
+not = @{ ^"not" }
+swap = @{ ^"swap" }
 jmp = { ^"jmp" ~ operand }
 
 // --- Core Rules ---

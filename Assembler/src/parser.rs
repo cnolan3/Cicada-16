@@ -39,8 +39,6 @@ pub fn parse_source(source: &str) -> Result<Vec<AssemblyLine>, AssemblyError> {
 
         // Check for an instruction
         if let Some(pair) = inner.peek() {
-            // let t = inner.next().unwrap().into_inner().next().unwrap();
-            // println!("{}", inner.next().unwrap().into_inner().next().unwrap());
             if pair.as_rule() == Rule::instruction {
                 assembly_line.instruction = Some(build_instruction(
                     inner.next().unwrap().into_inner().next().unwrap(),
@@ -259,6 +257,25 @@ fn build_and_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::And(dest, Some(src)))
 }
 
+// build and check operands for a 1 operand and instruction
+fn build_and_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = src {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to an AND Accumulator instruction must be a register (R0-R7)."
+                .to_string(),
+        });
+    }
+
+    Ok(Instruction::And(src, None))
+}
+
 // build and check operands for a 2 operand or instruction
 fn build_or_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = pair.as_span().start_pos().line_col().0;
@@ -284,6 +301,25 @@ fn build_or_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     Ok(Instruction::Or(dest, Some(src)))
+}
+
+// build and check operands for a 1 operand or instruction
+fn build_or_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = src {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to an OR Accumulator instruction must be a register (R0-R7)."
+                .to_string(),
+        });
+    }
+
+    Ok(Instruction::Or(src, None))
 }
 
 // build and check operands for a 2 operand xor instruction
@@ -313,6 +349,25 @@ fn build_xor_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Xor(dest, Some(src)))
 }
 
+// build and check operands for a 1 operand xor instruction
+fn build_xor_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = src {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to a XOR Accumulator instruction must be a register (R0-R7)."
+                .to_string(),
+        });
+    }
+
+    Ok(Instruction::Xor(src, None))
+}
+
 // build and check operands for a 2 operand cmp instruction
 fn build_cmp_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = pair.as_span().start_pos().line_col().0;
@@ -338,6 +393,25 @@ fn build_cmp_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     Ok(Instruction::Cmp(dest, Some(src)))
+}
+
+// build and check operands for a 1 operand cmp instruction
+fn build_cmp_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = src {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to a CMP Accumulator instruction must be a register (R0-R7)."
+                .to_string(),
+        });
+    }
+
+    Ok(Instruction::Cmp(src, None))
 }
 
 // build and check operands for a 2 operand adc instruction
@@ -427,14 +501,20 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::sub_2_op => build_sub_2_op(pair),
         Rule::sub_1_op => build_sub_1_op(pair),
         Rule::and_2_op => build_and_2_op(pair),
+        Rule::and_1_op => build_and_1_op(pair),
         Rule::or_2_op => build_or_2_op(pair),
+        Rule::or_1_op => build_or_1_op(pair),
         Rule::xor_2_op => build_xor_2_op(pair),
+        Rule::xor_1_op => build_xor_1_op(pair),
         Rule::cmp_2_op => build_cmp_2_op(pair),
+        Rule::cmp_1_op => build_cmp_1_op(pair),
         Rule::adc_2_op => build_adc_2_op(pair),
         Rule::sbc_2_op => build_sbc_2_op(pair),
+        Rule::neg => Ok(Instruction::Neg),
+        Rule::not => Ok(Instruction::Not),
+        Rule::swap => Ok(Instruction::Swap),
         Rule::jmp => build_jmp(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
 }
-

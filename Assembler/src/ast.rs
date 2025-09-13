@@ -48,6 +48,9 @@ pub enum Instruction {
     Cmp(Operand, Option<Operand>),
     Adc(Operand, Option<Operand>),
     Sbc(Operand, Option<Operand>),
+    Neg,
+    Not,
+    Swap,
     Inc(Operand),
     Dec(Operand),
 
