@@ -55,7 +55,7 @@ pub fn parse_source(source: &str) -> Result<Vec<AssemblyLine>, AssemblyError> {
     Ok(ast)
 }
 
-// ------------- operand builder helpers -------------
+// ------------- operand builder helpers –------------
 
 // Helper to build an Operand from a pest Pair
 fn build_operand(pair: Pair<Rule>) -> Operand {
@@ -116,7 +116,7 @@ fn build_indirect(pair: Pair<Rule>) -> Operand {
     Operand::Indirect(reg)
 }
 
-// ------------- instruction builder helpers -------------
+// ------------- instruction builder helpers –------------
 
 // build and check operands for a load instruction
 fn build_ld_2_op(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
@@ -476,7 +476,7 @@ fn build_jmp(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let op = build_operand(inner.next().unwrap());
 
     match op {
-        Operand::Indirect(_) | Operand::Label(_) | Operand::Immediate(_) => {}
+        Operand::Indirect(_) | Operand::Label(_) | Operand::Immediate(_) => {} // Corrected: Removed unnecessary escape for underscore
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -489,7 +489,7 @@ fn build_jmp(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Jmp(op))
 }
 
-// ------------- build instruction -------------
+// ------------- build instruction –------------
 
 // Helper to build an Instruction from a pest Pair
 fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
@@ -518,3 +518,227 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
 }
+
+// ------------- unit tests –------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_nop() {
+        let source = "nop\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Nop));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_sub_reg() {
+        let source = "sub r1\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Sub(Operand::Register(Register::R1), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_and_reg_reg() {
+        let source = "and r2, r3\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::And(
+                Operand::Register(Register::R2),
+                Some(Operand::Register(Register::R3))
+            ))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_or_reg_reg() {
+        let source = "or r4, r5\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Or(
+                Operand::Register(Register::R4),
+                Some(Operand::Register(Register::R5))
+            ))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_xor_reg_reg() {
+        let source = "xor r6, r7\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Xor(
+                Operand::Register(Register::R6),
+                Some(Operand::Register(Register::R7))
+            ))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_cmp_reg_reg() {
+        let source = "cmp r0, r1\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Cmp(
+                Operand::Register(Register::R0),
+                Some(Operand::Register(Register::R1))
+            ))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_adc_reg_reg() {
+        let source = "adc r2, r3\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Adc(
+                Operand::Register(Register::R2),
+                Some(Operand::Register(Register::R3))
+            ))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_sbc_reg_reg() {
+        let source = "sbc r4, r5\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Sbc(
+                Operand::Register(Register::R4),
+                Some(Operand::Register(Register::R5))
+            ))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_and_reg() {
+        let source = "and r1\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::And(Operand::Register(Register::R1), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_or_reg() {
+        let source = "or r2\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Or(Operand::Register(Register::R2), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_xor_reg() {
+        let source = "xor r3\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Xor(Operand::Register(Register::R3), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_cmp_reg() {
+        let source = "cmp r4\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Cmp(Operand::Register(Register::R4), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_neg() {
+        let source = "neg\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Neg));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_not() {
+        let source = "not\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Not));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_swap() {
+        let source = "swap\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Swap));
+        assert_eq!(lines[0].label, None);
+    }
+}
+

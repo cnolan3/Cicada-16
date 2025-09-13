@@ -276,3 +276,257 @@ fn encode_instruction(
         }),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_instruction_size_nop() {
+        let instruction = Instruction::Nop;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_nop() {
+        let instruction = Instruction::Nop;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(encode_instruction(&instruction, &symbol_table).unwrap(), vec![0x00]);
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_sub_reg() {
+        let instruction = Instruction::Sub(Operand::Register(Register::R1), None);
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_sub_reg() {
+        let instruction = Instruction::Sub(Operand::Register(Register::R1), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(encode_instruction(&instruction, &symbol_table).unwrap(), vec![0x21]);
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_and_reg_reg() {
+        let instruction = Instruction::And(
+            Operand::Register(Register::R2),
+            Some(Operand::Register(Register::R3)),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_and_reg_reg() {
+        let instruction = Instruction::And(
+            Operand::Register(Register::R2),
+            Some(Operand::Register(Register::R3)),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table).unwrap(),
+            vec![0x12, (2 << 3) | 3]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_or_reg_reg() {
+        let instruction = Instruction::Or(
+            Operand::Register(Register::R4),
+            Some(Operand::Register(Register::R5)),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_or_reg_reg() {
+        let instruction = Instruction::Or(
+            Operand::Register(Register::R4),
+            Some(Operand::Register(Register::R5)),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table).unwrap(),
+            vec![0x13, (4 << 3) | 5]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_xor_reg_reg() {
+        let instruction = Instruction::Xor(
+            Operand::Register(Register::R6),
+            Some(Operand::Register(Register::R7)),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_xor_reg_reg() {
+        let instruction = Instruction::Xor(
+            Operand::Register(Register::R6),
+            Some(Operand::Register(Register::R7)),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table).unwrap(),
+            vec![0x14, (6 << 3) | 7]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_cmp_reg_reg() {
+        let instruction = Instruction::Cmp(
+            Operand::Register(Register::R0),
+            Some(Operand::Register(Register::R1)),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_cmp_reg_reg() {
+        let instruction = Instruction::Cmp(
+            Operand::Register(Register::R0),
+            Some(Operand::Register(Register::R1)),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table).unwrap(),
+            vec![0x15, (0 << 3) | 1]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_adc_reg_reg() {
+        let instruction = Instruction::Adc(
+            Operand::Register(Register::R2),
+            Some(Operand::Register(Register::R3)),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_adc_reg_reg() {
+        let instruction = Instruction::Adc(
+            Operand::Register(Register::R2),
+            Some(Operand::Register(Register::R3)),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table).unwrap(),
+            vec![0x16, (2 << 3) | 3]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_sbc_reg_reg() {
+        let instruction = Instruction::Sbc(
+            Operand::Register(Register::R4),
+            Some(Operand::Register(Register::R5)),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_sbc_reg_reg() {
+        let instruction = Instruction::Sbc(
+            Operand::Register(Register::R4),
+            Some(Operand::Register(Register::R5)),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table).unwrap(),
+            vec![0x17, (4 << 3) | 5]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_and_reg() {
+        let instruction = Instruction::And(Operand::Register(Register::R1), None);
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_and_reg() {
+        let instruction = Instruction::And(Operand::Register(Register::R1), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(encode_instruction(&instruction, &symbol_table).unwrap(), vec![0x29]);
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_or_reg() {
+        let instruction = Instruction::Or(Operand::Register(Register::R2), None);
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_or_reg() {
+        let instruction = Instruction::Or(Operand::Register(Register::R2), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(encode_instruction(&instruction, &symbol_table).unwrap(), vec![0x32]);
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_xor_reg() {
+        let instruction = Instruction::Xor(Operand::Register(Register::R3), None);
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_xor_reg() {
+        let instruction = Instruction::Xor(Operand::Register(Register::R3), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(encode_instruction(&instruction, &symbol_table).unwrap(), vec![0x3B]);
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_cmp_reg() {
+        let instruction = Instruction::Cmp(Operand::Register(Register::R4), None);
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_cmp_reg() {
+        let instruction = Instruction::Cmp(Operand::Register(Register::R4), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(encode_instruction(&instruction, &symbol_table).unwrap(), vec![0x44]);
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_neg() {
+        let instruction = Instruction::Neg;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_neg() {
+        let instruction = Instruction::Neg;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(encode_instruction(&instruction, &symbol_table).unwrap(), vec![0x48]);
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_not() {
+        let instruction = Instruction::Not;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_not() {
+        let instruction = Instruction::Not;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(encode_instruction(&instruction, &symbol_table).unwrap(), vec![0x49]);
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_swap() {
+        let instruction = Instruction::Swap;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_swap() {
+        let instruction = Instruction::Swap;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(encode_instruction(&instruction, &symbol_table).unwrap(), vec![0x4A]);
+    }
+}
