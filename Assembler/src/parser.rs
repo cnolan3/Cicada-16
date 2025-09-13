@@ -213,6 +213,25 @@ fn build_sub_2_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Sub(dest, Some(src)))
 }
 
+// build and check operands for a 1 operand sub instruction
+fn build_sub_1_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = sub_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = sub_pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = src {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to a SUB Accumulator instruction must be a register (R0-R7)."
+                .to_string(),
+        });
+    }
+
+    Ok(Instruction::Sub(src, None))
+}
+
 // build and check operands for a jump instruction
 fn build_jmp(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = jmp_pair.as_span().start_pos().line_col().0;
@@ -244,9 +263,10 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::add_2_op => build_add_2_op(pair),
         Rule::add_1_op => build_add_1_op(pair),
         Rule::sub_2_op => build_sub_2_op(pair),
+        Rule::sub_1_op => build_sub_1_op(pair),
         Rule::jmp => build_jmp(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
 }
-''
+

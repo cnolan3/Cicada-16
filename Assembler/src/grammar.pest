@@ -35,6 +35,7 @@ nop
 | add_2_op
 | add_1_op
 | sub_2_op
+| sub_1_op
 | jmp
 // ... add all other instruction mnemonics here
 }
@@ -44,6 +45,7 @@ ld_2_op =  { ^"ld" ~ operand ~ "," ~ operand }
 add_2_op = { ^"add" ~ operand ~ "," ~ operand }
 add_1_op = { ^"add" ~ operand }
 sub_2_op = { ^"sub" ~ operand ~ "," ~ operand }
+sub_1_op = { ^"sub" ~ operand }
 jmp = { ^"jmp" ~ operand }
 
 // --- Core Rules ---
