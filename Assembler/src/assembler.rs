@@ -59,6 +59,11 @@ fn calculate_instruction_size(
         Instruction::Jr(Operand::Label(_)) => Ok(2), // JR n8s
         Instruction::Add(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Add(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
+        Instruction::Sub(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
+        Instruction::And(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
+        Instruction::Or(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
+        Instruction::Xor(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
+        Instruction::Cmp(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
         Instruction::Add(Operand::Register(_), None) => Ok(1),
         Instruction::Add(Operand::Immediate(_), None) => Ok(3),
         Instruction::Sub(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
@@ -125,10 +130,9 @@ fn encode_instruction(
         Instruction::Nop => Ok(vec![0x00]),
         // Example: LDI R1, 0xABCD (Opcode: 0x01 + register index)
         Instruction::Ld(Operand::Register(reg), Operand::Immediate(value)) => {
-            let base_opcode = 0x01;
-            let reg_index = encode_register_operand(reg);
+            let opcode = encode_reg_opcode(0x01, reg);
             let [low, high] = value.to_le_bytes();
-            Ok(vec![base_opcode + reg_index, low, high])
+            Ok(vec![opcode, low, high])
         }
         // Example: JMP my_label
         Instruction::Jmp(Operand::Label(label_name)) => {
@@ -148,21 +152,17 @@ fn encode_instruction(
         }
         // jump indirect
         Instruction::Jmp(Operand::Indirect(reg)) => {
-            let reg_index = encode_register_operand(reg);
-            Ok(vec![0x52 + reg_index]) // Opcode for JMP n16
+            let opcode = encode_reg_opcode(0x52, reg);
+            Ok(vec![opcode]) // Opcode for JMP n16
         }
         // register-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Register(rs)) => {
-            let rd_index = encode_register_operand(rd);
-            let rs_index = encode_register_operand(rs);
-            let opcode = 0x80 | ((rd_index & 0x07) << 3) | (rs_index & 0x07);
+            let opcode = encode_rd_rs_byte(0x80, rd, rs);
             Ok(vec![opcode])
         }
         // add reg to reg
         Instruction::Add(Operand::Register(rd), Some(Operand::Register(rs))) => {
-            let rd_index = encode_register_operand(rd);
-            let rs_index = encode_register_operand(rs);
-            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0x10, byte0])
         }
         // add immediate
@@ -173,88 +173,98 @@ fn encode_instruction(
         }
         // add accumulator
         Instruction::Add(Operand::Register(rs), None) => {
-            let base_opcode = 0x18;
-            let rs_index = encode_register_operand(rs);
-            Ok(vec![base_opcode + rs_index])
+            let opcode = encode_reg_opcode(0x18, rs);
+            Ok(vec![opcode])
         }
         // sub reg to reg
         Instruction::Sub(Operand::Register(rd), Some(Operand::Register(rs))) => {
-            let rd_index = encode_register_operand(rd);
-            let rs_index = encode_register_operand(rs);
-            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0x11, byte0])
         }
         // sub accumulator
         Instruction::Sub(Operand::Register(rs), None) => {
-            let base_opcode = 0x20;
-            let rs_index = encode_register_operand(rs);
-            Ok(vec![base_opcode + rs_index])
+            let opcode = encode_reg_opcode(0x20, rs);
+            Ok(vec![opcode])
+        }
+        // sub immediate
+        Instruction::Sub(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
+            let rd_index = encode_register_operand(rd);
+            let [low, high] = imm.to_le_bytes();
+            Ok(vec![0x0A, rd_index, low, high])
         }
         // and reg to reg
         Instruction::And(Operand::Register(rd), Some(Operand::Register(rs))) => {
-            let rd_index = encode_register_operand(rd);
-            let rs_index = encode_register_operand(rs);
-            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0x12, byte0])
+        }
+        // and immediate
+        Instruction::And(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
+            let rd_index = encode_register_operand(rd);
+            let [low, high] = imm.to_le_bytes();
+            Ok(vec![0x0B, rd_index, low, high])
         }
         // or reg to reg
         Instruction::Or(Operand::Register(rd), Some(Operand::Register(rs))) => {
-            let rd_index = encode_register_operand(rd);
-            let rs_index = encode_register_operand(rs);
-            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0x13, byte0])
+        }
+        // or immediate
+        Instruction::Or(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
+            let rd_index = encode_register_operand(rd);
+            let [low, high] = imm.to_le_bytes();
+            Ok(vec![0x0C, rd_index, low, high])
         }
         // xor reg to reg
         Instruction::Xor(Operand::Register(rd), Some(Operand::Register(rs))) => {
-            let rd_index = encode_register_operand(rd);
-            let rs_index = encode_register_operand(rs);
-            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0x14, byte0])
+        }
+        // xor immediate
+        Instruction::Xor(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
+            let rd_index = encode_register_operand(rd);
+            let [low, high] = imm.to_le_bytes();
+            Ok(vec![0x0D, rd_index, low, high])
         }
         // cmp reg to reg
         Instruction::Cmp(Operand::Register(rd), Some(Operand::Register(rs))) => {
-            let rd_index = encode_register_operand(rd);
-            let rs_index = encode_register_operand(rs);
-            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0x15, byte0])
+        }
+        // cmp immediate
+        Instruction::Cmp(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
+            let rd_index = encode_register_operand(rd);
+            let [low, high] = imm.to_le_bytes();
+            Ok(vec![0x0E, rd_index, low, high])
         }
         // adc reg to reg
         Instruction::Adc(Operand::Register(rd), Some(Operand::Register(rs))) => {
-            let rd_index = encode_register_operand(rd);
-            let rs_index = encode_register_operand(rs);
-            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0x16, byte0])
         }
         // sbc reg to reg
         Instruction::Sbc(Operand::Register(rd), Some(Operand::Register(rs))) => {
-            let rd_index = encode_register_operand(rd);
-            let rs_index = encode_register_operand(rs);
-            let byte0 = (rd_index << 3) | (rs_index & 0x07);
+            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0x17, byte0])
         }
         // and accumulator
         Instruction::And(Operand::Register(rs), None) => {
-            let base_opcode = 0x28;
-            let rs_index = encode_register_operand(rs);
-            Ok(vec![base_opcode + rs_index])
+            let opcode = encode_reg_opcode(0x28, rs);
+            Ok(vec![opcode])
         }
         // or accumulator
         Instruction::Or(Operand::Register(rs), None) => {
-            let base_opcode = 0x30;
-            let rs_index = encode_register_operand(rs);
-            Ok(vec![base_opcode + rs_index])
+            let opcode = encode_reg_opcode(0x30, rs);
+            Ok(vec![opcode])
         }
         // xor accumulator
         Instruction::Xor(Operand::Register(rs), None) => {
-            let base_opcode = 0x38;
-            let rs_index = encode_register_operand(rs);
-            Ok(vec![base_opcode + rs_index])
+            let opcode = encode_reg_opcode(0x38, rs);
+            Ok(vec![opcode])
         }
         // cmp accumulator
         Instruction::Cmp(Operand::Register(rs), None) => {
-            let base_opcode = 0x40;
-            let rs_index = encode_register_operand(rs);
-            Ok(vec![base_opcode + rs_index])
+            let opcode = encode_reg_opcode(0x40, rs);
+            Ok(vec![opcode])
         }
         // neg
         Instruction::Neg => Ok(vec![0x48]),
@@ -264,9 +274,7 @@ fn encode_instruction(
         Instruction::Swap => Ok(vec![0x4A]),
         // absolute-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Indirect(rs)) => {
-            let rd_index = encode_register_operand(rd);
-            let rs_index = encode_register_operand(rs);
-            let sub_opcode = 0x00 | ((rd_index & 0x07) << 3) | (rs_index & 0x07);
+            let sub_opcode = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0xFE, sub_opcode])
         }
 
@@ -275,6 +283,16 @@ fn encode_instruction(
             reason: "Invalid Instruction".to_string(),
         }),
     }
+}
+
+fn encode_rd_rs_byte(base_val: u8, rd: &Register, rs: &Register) -> u8 {
+    let rd_index = encode_register_operand(rd);
+    let rs_index = encode_register_operand(rs);
+    base_val | ((rd_index & 0x07) << 3) | (rs_index & 0x07)
+}
+
+fn encode_reg_opcode(base_opcode: u8, r: &Register) -> u8 {
+    base_opcode + encode_register_operand(r)
 }
 
 #[cfg(test)]

@@ -215,6 +215,38 @@ fn build_add_2_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Add(dest, Some(src)))
 }
 
+// build and check operands for a add immediate instruction
+fn build_addi_2_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = add_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = add_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = dest {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The destination of an ADDI instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    match src {
+        Operand::Immediate(_) | Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The source operand of an ADDI instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Add(dest, Some(src)))
+}
+
 // build and check operands for a 1 operand add instruction
 fn build_add_1_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = add_pair.as_span().start_pos().line_col().0;
@@ -261,6 +293,38 @@ fn build_sub_2_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason: "Invalid operands to SUB instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Sub(dest, Some(src)))
+}
+
+// build and check operands for a sub immediate instruction
+fn build_subi_2_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = sub_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = sub_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = dest {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The destination of an SUBI instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    match src {
+        Operand::Immediate(_) | Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The source operand of an SUBI instruction must be an immediate value or a label."
+                        .to_string(),
             });
         }
     }
@@ -321,6 +385,38 @@ fn build_and_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::And(dest, Some(src)))
 }
 
+// build and check operands for a and immediate instruction
+fn build_andi_2_op(and_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = and_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = and_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = dest {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The destination of an ANDI instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    match src {
+        Operand::Immediate(_) | Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The source operand of an ANDI instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::And(dest, Some(src)))
+}
+
 // build and check operands for a 1 operand and instruction
 fn build_and_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = pair.as_span().start_pos().line_col().0;
@@ -367,6 +463,38 @@ fn build_or_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason: "Invalid operands to OR instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Or(dest, Some(src)))
+}
+
+// build and check operands for a or immediate instruction
+fn build_ori_2_op(or_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = or_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = or_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = dest {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The destination of an ORI instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    match src {
+        Operand::Immediate(_) | Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The source operand of an ORI instruction must be an immediate value or a label."
+                        .to_string(),
             });
         }
     }
@@ -427,6 +555,38 @@ fn build_xor_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Xor(dest, Some(src)))
 }
 
+// build and check operands for a xor immediate instruction
+fn build_xori_2_op(xor_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = xor_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = xor_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = dest {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The destination of an XORI instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    match src {
+        Operand::Immediate(_) | Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The source operand of an XORI instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Xor(dest, Some(src)))
+}
+
 // build and check operands for a 1 operand xor instruction
 fn build_xor_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = pair.as_span().start_pos().line_col().0;
@@ -473,6 +633,38 @@ fn build_cmp_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason: "Invalid operands to CMP instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Cmp(dest, Some(src)))
+}
+
+// build and check operands for a cmp immediate instruction
+fn build_cmpi_2_op(cmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = cmp_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = cmp_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = dest {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The destination of an CMPI instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    match src {
+        Operand::Immediate(_) | Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The source operand of an CMPI instruction must be an immediate value or a label."
+                        .to_string(),
             });
         }
     }
@@ -597,16 +789,22 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::ld_2_op => build_ld_2_op(pair),
         Rule::ldi_2_op => build_ldi_2_op(pair),
         Rule::add_2_op => build_add_2_op(pair),
+        Rule::addi_2_op => build_addi_2_op(pair),
         Rule::add_1_op => build_add_1_op(pair),
         Rule::sub_2_op => build_sub_2_op(pair),
+        Rule::subi_2_op => build_subi_2_op(pair),
         Rule::sub_1_op => build_sub_1_op(pair),
         Rule::and_2_op => build_and_2_op(pair),
+        Rule::andi_2_op => build_andi_2_op(pair),
         Rule::and_1_op => build_and_1_op(pair),
         Rule::or_2_op => build_or_2_op(pair),
+        Rule::ori_2_op => build_ori_2_op(pair),
         Rule::or_1_op => build_or_1_op(pair),
         Rule::xor_2_op => build_xor_2_op(pair),
+        Rule::xori_2_op => build_xori_2_op(pair),
         Rule::xor_1_op => build_xor_1_op(pair),
         Rule::cmp_2_op => build_cmp_2_op(pair),
+        Rule::cmpi_2_op => build_cmpi_2_op(pair),
         Rule::cmp_1_op => build_cmp_1_op(pair),
         Rule::adc_2_op => build_adc_2_op(pair),
         Rule::sbc_2_op => build_sbc_2_op(pair),
