@@ -135,6 +135,49 @@ fn build_ld_2_op(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         });
     }
 
+    match src {
+        Operand::Immediate(_) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The source operand of a LD instruction cannot be an immediate value."
+                    .to_string(),
+            });
+        }
+        _ => {}
+    }
+
+    Ok(Instruction::Ld(dest, src))
+}
+
+// build and check operands for a load immediate instruction
+fn build_ldi_2_op(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = ld_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = ld_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = dest {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The destination of an LD instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    match src {
+        Operand::Immediate(_) | Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The source operand of an LD instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
+    }
+
     Ok(Instruction::Ld(dest, src))
 }
 
@@ -147,13 +190,20 @@ fn build_add_2_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let src = build_operand(inner.next().unwrap());
 
     match (&dest, &src) {
+        (_, Operand::Immediate(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The source operand of an ADD instruction cannot be an immediate value."
+                    .to_string(),
+            });
+        }
         (Operand::Label(_), _) | (_, Operand::Label(_)) => {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason: "A label is not a valid operand to an ADD instruction.".to_string(),
             });
         }
-        (Operand::Register(_), Operand::Register(_)) => {}
+        (Operand::Register(_), _) => { /* success */ }
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -193,13 +243,20 @@ fn build_sub_2_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let src = build_operand(inner.next().unwrap());
 
     match (&dest, &src) {
+        (_, Operand::Immediate(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The source operand of a SUB instruction cannot be an immediate value."
+                    .to_string(),
+            });
+        }
         (Operand::Label(_), _) | (_, Operand::Label(_)) => {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason: "A label is not a valid operand to a SUB instruction.".to_string(),
             });
         }
-        (Operand::Register(_), Operand::Register(_)) => {}
+        (Operand::Register(_), _) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -239,13 +296,20 @@ fn build_and_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let src = build_operand(inner.next().unwrap());
 
     match (&dest, &src) {
+        (_, Operand::Immediate(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The source operand of an AND instruction cannot be an immediate value."
+                    .to_string(),
+            });
+        }
         (Operand::Label(_), _) | (_, Operand::Label(_)) => {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason: "A label is not a valid operand to an AND instruction.".to_string(),
             });
         }
-        (Operand::Register(_), Operand::Register(_)) => {}
+        (Operand::Register(_), _) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -285,13 +349,20 @@ fn build_or_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let src = build_operand(inner.next().unwrap());
 
     match (&dest, &src) {
+        (_, Operand::Immediate(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The source operand of an OR instruction cannot be an immediate value."
+                    .to_string(),
+            });
+        }
         (Operand::Label(_), _) | (_, Operand::Label(_)) => {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason: "A label is not a valid operand to an OR instruction.".to_string(),
             });
         }
-        (Operand::Register(_), Operand::Register(_)) => {}
+        (Operand::Register(_), _) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -331,13 +402,20 @@ fn build_xor_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let src = build_operand(inner.next().unwrap());
 
     match (&dest, &src) {
+        (_, Operand::Immediate(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The source operand of an XOR instruction cannot be an immediate value."
+                    .to_string(),
+            });
+        }
         (Operand::Label(_), _) | (_, Operand::Label(_)) => {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason: "A label is not a valid operand to a XOR instruction.".to_string(),
             });
         }
-        (Operand::Register(_), Operand::Register(_)) => {}
+        (Operand::Register(_), _) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -377,13 +455,20 @@ fn build_cmp_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let src = build_operand(inner.next().unwrap());
 
     match (&dest, &src) {
+        (_, Operand::Immediate(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The source operand of a CMP instruction cannot be an immediate value."
+                    .to_string(),
+            });
+        }
         (Operand::Label(_), _) | (_, Operand::Label(_)) => {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason: "A label is not a valid operand to a CMP instruction.".to_string(),
             });
         }
-        (Operand::Register(_), Operand::Register(_)) => {}
+        (Operand::Register(_), _) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -423,13 +508,20 @@ fn build_adc_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let src = build_operand(inner.next().unwrap());
 
     match (&dest, &src) {
+        (_, Operand::Immediate(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The source operand of an ADC instruction cannot be an immediate value."
+                    .to_string(),
+            });
+        }
         (Operand::Label(_), _) | (_, Operand::Label(_)) => {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason: "A label is not a valid operand to an ADC instruction.".to_string(),
             });
         }
-        (Operand::Register(_), Operand::Register(_)) => {}
+        (Operand::Register(_), _) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -450,13 +542,20 @@ fn build_sbc_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let src = build_operand(inner.next().unwrap());
 
     match (&dest, &src) {
+        (_, Operand::Immediate(_)) => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The source operand of an SBC instruction cannot be an immediate value."
+                    .to_string(),
+            });
+        }
         (Operand::Label(_), _) | (_, Operand::Label(_)) => {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason: "A label is not a valid operand to an SBC instruction.".to_string(),
             });
         }
-        (Operand::Register(_), Operand::Register(_)) => {}
+        (Operand::Register(_), _) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -496,6 +595,7 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     match pair.as_rule() {
         Rule::nop => Ok(Instruction::Nop),
         Rule::ld_2_op => build_ld_2_op(pair),
+        Rule::ldi_2_op => build_ldi_2_op(pair),
         Rule::add_2_op => build_add_2_op(pair),
         Rule::add_1_op => build_add_1_op(pair),
         Rule::sub_2_op => build_sub_2_op(pair),
@@ -741,4 +841,3 @@ mod tests {
         assert_eq!(lines[0].label, None);
     }
 }
-
