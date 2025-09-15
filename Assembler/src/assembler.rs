@@ -60,6 +60,9 @@ fn calculate_instruction_size(
         Instruction::Jcc(_, Operand::Label(_)) | Instruction::Jcc(_, Operand::Immediate(_)) => {
             Ok(3)
         }
+        Instruction::Jrcc(_, Operand::Label(_)) | Instruction::Jrcc(_, Operand::Immediate(_)) => {
+            Ok(2)
+        }
         Instruction::Add(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Add(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
         Instruction::Sub(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
@@ -179,15 +182,6 @@ fn encode_instruction(
         }
         // jump address
         Instruction::Jmp(Operand::Immediate(addr)) => {
-            if *addr > u16::MAX as i32 || *addr < 0 {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Jump address must be an unsigned 16 bit value (max: {}, min: 0)",
-                        u16::MAX
-                    ),
-                });
-            };
             let [low, high] = (*addr as u16).to_le_bytes();
             Ok(vec![0x51, low, high]) // Opcode for JMP n16
         }
@@ -225,15 +219,6 @@ fn encode_instruction(
         }
         // conditional jump immediate
         Instruction::Jcc(cc, Operand::Immediate(addr)) => {
-            if *addr > u16::MAX as i32 || *addr < 0 {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Jump address must be an unsigned 16 bit value (max: {}, min: 0)",
-                        u16::MAX
-                    ),
-                });
-            };
             let [low, high] = (*addr as u16).to_le_bytes();
             let opcode = encode_condition_code_opcode(0x5B, cc);
             Ok(vec![opcode, low, high]) // Opcode for JMP n16
@@ -250,6 +235,35 @@ fn encode_instruction(
             let [low, high] = (*target_address as u16).to_le_bytes();
             let opcode = encode_condition_code_opcode(0x5B, cc);
             Ok(vec![opcode, low, high]) // Opcode for JMP n16
+        }
+        // conditional jump relative immediate
+        Instruction::Jrcc(cc, Operand::Immediate(imm)) => {
+            let rel = *imm as i8;
+            let opcode = encode_condition_code_opcode(0x63, cc);
+            Ok(vec![opcode, rel as u8]) // Opcode for JMP n16
+        }
+        // conditional jump relative label
+        Instruction::Jrcc(cc, Operand::Label(label_name)) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let rel: i32 = *target_address as i32 - *current_address as i32;
+            if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Label \"{}\" too far away for relative jump, must be within {} bytes of JRcc instruction",
+                        label_name,
+                        i8::MAX
+                    ),
+                });
+            };
+            let opcode = encode_condition_code_opcode(0x63, cc);
+            Ok(vec![opcode, rel as u8]) // Opcode for JMP n16
         }
         // register-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Register(rs)) => {

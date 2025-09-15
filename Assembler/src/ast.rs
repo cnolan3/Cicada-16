@@ -59,6 +59,8 @@ pub enum Instruction {
     Jr(Operand),
     Call(Operand),
     Jcc(ConditionCode, Operand), // Jcc cc, target
+    Jrcc(ConditionCode, Operand),
+    Callcc(ConditionCode, Operand),
     Syscall(u8),
 
     // Stack operations

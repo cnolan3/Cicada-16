@@ -144,8 +144,6 @@ fn build_condition_code(pair: Pair<Rule>) -> ConditionCode {
         .next()
         .unwrap();
 
-    println!("{}", cc);
-
     match cc.as_rule() {
         Rule::zero => ConditionCode::Z,
         Rule::not_zero => ConditionCode::Nz,
@@ -901,7 +899,18 @@ fn build_jmp(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let op = build_operand(inner.next().unwrap());
 
     match op {
-        Operand::Indirect(_) | Operand::Label(_) | Operand::Immediate(_) => {} // Corrected: Removed unnecessary escape for underscore
+        Operand::Indirect(_) | Operand::Label(_) => {} // Corrected: Removed unnecessary escape for underscore
+        Operand::Immediate(imm) => {
+            if imm > (u16::MAX as i32) || imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "JMP immediate address must be an unsigned 16 bit value (max: {}, min: 0).",
+                        u16::MAX,
+                    ),
+                });
+            }
+        }
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -956,7 +965,18 @@ fn build_jcc(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let op = build_operand(inner.next().unwrap());
 
     match op {
-        Operand::Label(_) | Operand::Immediate(_) => {} // Corrected: Removed unnecessary escape for underscore
+        Operand::Label(_) => {} // Corrected: Removed unnecessary escape for underscore
+        Operand::Immediate(imm) => {
+            if imm > (u16::MAX as i32) || imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "Jcc immediate address must be an unsigned 16 bit value (max: {}, min: 0).",
+                        u16::MAX,
+                    ),
+                });
+            }
+        }
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -967,6 +987,40 @@ fn build_jcc(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     Ok(Instruction::Jcc(cc, op))
+}
+
+// build and check operands for a conditional jump relative instruction
+fn build_jrcc(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = jmp_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = jmp_pair.into_inner();
+    let cc = build_condition_code(inner.next().unwrap());
+    let op = build_operand(inner.next().unwrap());
+
+    match op {
+        Operand::Immediate(imm) => {
+            if imm > (i8::MAX as i32) || imm < (i8::MIN as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "JRcc immediate relative value must be 8 bits (max: {}, min: {}).",
+                        i8::MAX,
+                        i8::MIN
+                    ),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Operand to a JRcc instruction must be an immediate relative value."
+                    .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Jrcc(cc, op))
 }
 
 // ------------- build instruction –------------
@@ -1004,6 +1058,7 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::jmp => build_jmp(pair),
         Rule::jr => build_jr(pair),
         Rule::jmp_con => build_jcc(pair),
+        Rule::jr_con => build_jrcc(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
