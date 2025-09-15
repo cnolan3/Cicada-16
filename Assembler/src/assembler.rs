@@ -350,7 +350,7 @@ mod tests {
         let instruction = Instruction::Nop;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x00]
         );
     }
@@ -366,7 +366,7 @@ mod tests {
         let instruction = Instruction::Sub(Operand::Register(Register::R1), None);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x21]
         );
     }
@@ -388,7 +388,7 @@ mod tests {
         );
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x12, (2 << 3) | 3]
         );
     }
@@ -410,7 +410,7 @@ mod tests {
         );
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x13, (4 << 3) | 5]
         );
     }
@@ -432,7 +432,7 @@ mod tests {
         );
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x14, (6 << 3) | 7]
         );
     }
@@ -454,7 +454,7 @@ mod tests {
         );
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x15, (0 << 3) | 1]
         );
     }
@@ -476,7 +476,7 @@ mod tests {
         );
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x16, (2 << 3) | 3]
         );
     }
@@ -498,7 +498,7 @@ mod tests {
         );
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x17, (4 << 3) | 5]
         );
     }
@@ -514,7 +514,7 @@ mod tests {
         let instruction = Instruction::And(Operand::Register(Register::R1), None);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x29]
         );
     }
@@ -530,7 +530,7 @@ mod tests {
         let instruction = Instruction::Or(Operand::Register(Register::R2), None);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x32]
         );
     }
@@ -546,7 +546,7 @@ mod tests {
         let instruction = Instruction::Xor(Operand::Register(Register::R3), None);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x3B]
         );
     }
@@ -562,7 +562,7 @@ mod tests {
         let instruction = Instruction::Cmp(Operand::Register(Register::R4), None);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x44]
         );
     }
@@ -578,7 +578,7 @@ mod tests {
         let instruction = Instruction::Neg;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x48]
         );
     }
@@ -594,7 +594,7 @@ mod tests {
         let instruction = Instruction::Not;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x49]
         );
     }
@@ -610,7 +610,7 @@ mod tests {
         let instruction = Instruction::Swap;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x4A]
         );
     }
