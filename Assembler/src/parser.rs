@@ -121,7 +121,6 @@ fn build_identifier(pair: Pair<Rule>) -> Operand {
 // build an indirect object
 fn build_indirect(pair: Pair<Rule>) -> Operand {
     let reg_char = pair.as_str().chars().nth(2).unwrap();
-    println!("{}", reg_char);
     let reg = match reg_char {
         '0' => Register::R0,
         '1' => Register::R1,
@@ -134,6 +133,30 @@ fn build_indirect(pair: Pair<Rule>) -> Operand {
         _ => unreachable!("Invalid register"),
     };
     Operand::Indirect(reg)
+}
+
+fn build_condition_code(pair: Pair<Rule>) -> ConditionCode {
+    let cc = pair
+        .into_inner()
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap();
+
+    println!("{}", cc);
+
+    match cc.as_rule() {
+        Rule::zero => ConditionCode::Z,
+        Rule::not_zero => ConditionCode::Nz,
+        Rule::carry => ConditionCode::C,
+        Rule::not_carry => ConditionCode::Nc,
+        Rule::negative => ConditionCode::N,
+        Rule::not_negative => ConditionCode::Nn,
+        Rule::overflow => ConditionCode::V,
+        Rule::not_overflow => ConditionCode::Nv,
+        _ => unreachable!("Invalid condition code"),
+    }
 }
 
 // ------------- instruction builder helpers –------------
@@ -924,6 +947,28 @@ fn build_jr(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Jr(op))
 }
 
+// build and check operands for a conditional jump instruction
+fn build_jcc(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = jmp_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = jmp_pair.into_inner();
+    let cc = build_condition_code(inner.next().unwrap());
+    let op = build_operand(inner.next().unwrap());
+
+    match op {
+        Operand::Label(_) | Operand::Immediate(_) => {} // Corrected: Removed unnecessary escape for underscore
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Operand to a Jcc instruction must be an label or immediate address."
+                    .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Jcc(cc, op))
+}
+
 // ------------- build instruction –------------
 
 // Helper to build an Instruction from a pest Pair
@@ -958,6 +1003,7 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::swap => Ok(Instruction::Swap),
         Rule::jmp => build_jmp(pair),
         Rule::jr => build_jr(pair),
+        Rule::jmp_con => build_jcc(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }

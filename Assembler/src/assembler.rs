@@ -1,4 +1,4 @@
-use crate::ast::{AssemblyLine, Instruction, Operand, Register};
+use crate::ast::{AssemblyLine, ConditionCode, Instruction, Operand, Register};
 use crate::errors::AssemblyError;
 use std::collections::HashMap;
 
@@ -57,6 +57,9 @@ fn calculate_instruction_size(
         Instruction::Jmp(Operand::Label(_)) | Instruction::Jmp(Operand::Immediate(_)) => Ok(3), // JMP n16
         Instruction::Jmp(Operand::Indirect(_)) => Ok(1),
         Instruction::Jr(Operand::Label(_)) | Instruction::Jr(Operand::Immediate(_)) => Ok(2), // JR n8s
+        Instruction::Jcc(_, Operand::Label(_)) | Instruction::Jcc(_, Operand::Immediate(_)) => {
+            Ok(3)
+        }
         Instruction::Add(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Add(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
         Instruction::Sub(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
@@ -128,6 +131,22 @@ fn encode_register_operand(reg: &Register) -> u8 {
     }
 }
 
+// help function to encode condition code opcode
+fn encode_condition_code_opcode(base_opcode: u8, cc: &ConditionCode) -> u8 {
+    let cc_offset = match cc {
+        ConditionCode::V => 0,
+        ConditionCode::Nv => 1,
+        ConditionCode::N => 2,
+        ConditionCode::Nn => 3,
+        ConditionCode::C => 4,
+        ConditionCode::Nc => 5,
+        ConditionCode::Z => 6,
+        ConditionCode::Nz => 7,
+    };
+
+    base_opcode + cc_offset
+}
+
 /// Helper function to translate a single instruction into bytes during Pass 2.
 fn encode_instruction(
     instruction: &Instruction,
@@ -160,6 +179,15 @@ fn encode_instruction(
         }
         // jump address
         Instruction::Jmp(Operand::Immediate(addr)) => {
+            if *addr > u16::MAX as i32 || *addr < 0 {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Jump address must be an unsigned 16 bit value (max: {}, min: 0)",
+                        u16::MAX
+                    ),
+                });
+            };
             let [low, high] = (*addr as u16).to_le_bytes();
             Ok(vec![0x51, low, high]) // Opcode for JMP n16
         }
@@ -194,6 +222,34 @@ fn encode_instruction(
                 });
             };
             Ok(vec![0x5A, rel as u8]) // Opcode for JMP n16
+        }
+        // conditional jump immediate
+        Instruction::Jcc(cc, Operand::Immediate(addr)) => {
+            if *addr > u16::MAX as i32 || *addr < 0 {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Jump address must be an unsigned 16 bit value (max: {}, min: 0)",
+                        u16::MAX
+                    ),
+                });
+            };
+            let [low, high] = (*addr as u16).to_le_bytes();
+            let opcode = encode_condition_code_opcode(0x5B, cc);
+            Ok(vec![opcode, low, high]) // Opcode for JMP n16
+        }
+        // conditional jump label
+        Instruction::Jcc(cc, Operand::Label(label_name)) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            let opcode = encode_condition_code_opcode(0x5B, cc);
+            Ok(vec![opcode, low, high]) // Opcode for JMP n16
         }
         // register-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Register(rs)) => {

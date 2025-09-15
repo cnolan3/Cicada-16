@@ -28,6 +28,32 @@ immediate_hex = @{ ("0x" | "$") ~ ASCII_HEX_DIGIT+ }
 
 immediate_dec = @{ ("-")? ~ ASCII_DIGIT+ }
 
+// --- Condition Codes ---
+
+cc = {
+not_overflow
+| not_negative
+| not_carry
+| not_zero
+| overflow
+| negative
+| carry
+| zero
+}
+
+overflow = @{ ^"V" }
+not_overflow = @{ ^"NV" }
+negative = @{ ^"N" }
+not_negative = @{ ^"NN" }
+carry = @{ ^"C" }
+not_carry = @{ ^"NC" }
+zero = @{ ^"Z" }
+not_zero = @{ ^"NZ" }
+
+jcc = ${ ^"j" ~ cc }
+jrcc = ${ ^"jr" ~ cc }
+callcc = ${ ^"call" ~ cc }
+
 // --- Instructions ---
 
 // The @ makes the rule "atomic", so it appears as a single token in the tree.
@@ -67,8 +93,11 @@ nop
 | neg
 | not
 | swap
+| jr_con
 | jr
+| jmp_con
 | jmp
+| call_con
 // ... add all other instruction mnemonics here
 }
 
@@ -108,7 +137,10 @@ neg = @{ ^"neg" }
 not = @{ ^"not" }
 swap = @{ ^"swap" }
 jmp = { ^"jmp" ~ operand }
+jr_con = { jrcc ~ operand }
 jr = { ^"jr" ~ operand }
+jmp_con = { jcc ~ operand }
+call_con = { callcc ~ operand}
 
 // --- Core Rules ---
 
