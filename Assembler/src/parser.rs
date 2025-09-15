@@ -1096,6 +1096,9 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::jmp_con => build_jcc(pair),
         Rule::jr_con => build_jrcc(pair),
         Rule::djnz => build_djnz(pair),
+        Rule::ccf => Ok(Instruction::Ccf),
+        Rule::scf => Ok(Instruction::Scf),
+        Rule::rcf => Ok(Instruction::Rcf),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
@@ -1320,6 +1323,39 @@ mod tests {
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].instruction, Some(Instruction::Swap));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_ccf() {
+        let source = "ccf\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Ccf));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_scf() {
+        let source = "scf\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Scf));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_rcf() {
+        let source = "rcf\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Rcf));
         assert_eq!(lines[0].label, None);
     }
 }

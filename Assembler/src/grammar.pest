@@ -99,6 +99,9 @@ nop
 | jmp_con
 | jmp
 | call_con
+| ccf
+| scf
+| rcf
 // ... add all other instruction mnemonics here
 }
 
@@ -143,6 +146,9 @@ jr_con = { jrcc ~ operand }
 jr = { ^"jr" ~ operand }
 jmp_con = { jcc ~ operand }
 call_con = { callcc ~ operand}
+ccf = @{ ^"ccf" }
+scf = @{ ^"scf" }
+rcf = @{ ^"rcf" }
 
 // --- Core Rules ---
 

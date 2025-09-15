@@ -39,7 +39,12 @@ fn calculate_instruction_size(
     line_num: usize,
 ) -> Result<u16, AssemblyError> {
     match instruction {
-        Instruction::Nop | Instruction::Halt | Instruction::Ret => Ok(1),
+        Instruction::Nop
+        | Instruction::Halt
+        | Instruction::Ret
+        | Instruction::Ccf
+        | Instruction::Scf
+        | Instruction::Rcf => Ok(1),
 
         Instruction::Ld(Operand::Register(_), Operand::Register(_)) => {
             // Check if this form maps to the 1-byte LD rd, rs (opcodes 0x80-0xBF)
@@ -163,6 +168,12 @@ fn encode_instruction(
         Instruction::Nop => Ok(vec![0x00]),
         // Halt
         Instruction::Halt => Ok(vec![0x0F]),
+        // Ccf
+        Instruction::Ccf => Ok(vec![0x4B]),
+        // Scf
+        Instruction::Scf => Ok(vec![0x4C]),
+        // Rcf
+        Instruction::Rcf => Ok(vec![0x4D]),
         // Example: LDI R1, 0xABCD (Opcode: 0x01 + register index)
         Instruction::Ld(Operand::Register(reg), Operand::Immediate(value)) => {
             let opcode = encode_reg_opcode(0x01, reg);
@@ -710,6 +721,54 @@ mod tests {
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x4A]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_ccf() {
+        let instruction = Instruction::Ccf;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_ccf() {
+        let instruction = Instruction::Ccf;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x4B]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_scf() {
+        let instruction = Instruction::Scf;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_scf() {
+        let instruction = Instruction::Scf;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x4C]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_rcf() {
+        let instruction = Instruction::Rcf;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_rcf() {
+        let instruction = Instruction::Rcf;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x4D]
         );
     }
 }

@@ -35,6 +35,9 @@ pub enum Instruction {
     Ei,
     Di,
     Ret,
+    Ccf,
+    Scf,
+    Rcf,
 
     // Load instructions
     Ld(Operand, Operand), // Covers LD rd, rs; LDI r, n16; LD r, (n16); etc.
