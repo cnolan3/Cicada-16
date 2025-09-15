@@ -49,7 +49,9 @@ fn calculate_instruction_size(
         | Instruction::Leave
         | Instruction::Reti
         | Instruction::Ei
-        | Instruction::Di => Ok(1),
+        | Instruction::Di
+        | Instruction::Inc(_)
+        | Instruction::Dec(_) => Ok(1),
 
         Instruction::Ld(Operand::Register(_), Operand::Register(_)) => {
             // Check if this form maps to the 1-byte LD rd, rs (opcodes 0x80-0xBF)
@@ -185,6 +187,16 @@ fn encode_instruction(
         Instruction::Reti => Ok(vec![0xFA]),
         Instruction::Ei => Ok(vec![0xFB]),
         Instruction::Di => Ok(vec![0xFC]),
+        // inc
+        Instruction::Inc(Operand::Register(reg)) => {
+            let opcode = encode_reg_opcode(0xE1, reg);
+            Ok(vec![opcode])
+        }
+        // dec
+        Instruction::Dec(Operand::Register(reg)) => {
+            let opcode = encode_reg_opcode(0xD9, reg);
+            Ok(vec![opcode])
+        }
         // Example: LDI R1, 0xABCD (Opcode: 0x01 + register index)
         Instruction::Ld(Operand::Register(reg), Operand::Immediate(value)) => {
             let opcode = encode_reg_opcode(0x01, reg);
@@ -876,6 +888,38 @@ mod tests {
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0xFC]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_inc() {
+        let instruction = Instruction::Inc(Operand::Register(Register::R1));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_inc() {
+        let instruction = Instruction::Inc(Operand::Register(Register::R1));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xE2]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_dec() {
+        let instruction = Instruction::Dec(Operand::Register(Register::R2));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_dec() {
+        let instruction = Instruction::Dec(Operand::Register(Register::R2));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xDB]
         );
     }
 }

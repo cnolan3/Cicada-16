@@ -1059,6 +1059,42 @@ fn build_djnz(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Djnz(op))
 }
 
+// build and check operands for a 1 operand inc instruction
+fn build_inc(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = src {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to an INC instruction must be a register (R0-R7).".to_string(),
+        });
+    }
+
+    Ok(Instruction::Inc(src))
+}
+
+// build and check operands for a 1 operand dec instruction
+fn build_dec(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = src {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to a DEC instruction must be a register (R0-R7).".to_string(),
+        });
+    }
+
+    Ok(Instruction::Dec(src))
+}
+
 // ------------- build instruction –------------
 
 // Helper to build an Instruction from a pest Pair
@@ -1105,6 +1141,8 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::reti => Ok(Instruction::Reti),
         Rule::ei => Ok(Instruction::Ei),
         Rule::di => Ok(Instruction::Di),
+        Rule::inc => build_inc(pair),
+        Rule::dec => build_dec(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
@@ -1417,6 +1455,34 @@ mod tests {
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].instruction, Some(Instruction::Di));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_inc() {
+        let source = "inc r1\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Inc(Operand::Register(Register::R1)))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_dec() {
+        let source = "dec r2\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Dec(Operand::Register(Register::R2)))
+        );
         assert_eq!(lines[0].label, None);
     }
 }

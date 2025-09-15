@@ -108,6 +108,8 @@ nop
 | ret
 | ei
 | di
+| inc
+| dec
 // ... add all other instruction mnemonics here
 }
 
@@ -161,6 +163,8 @@ ret = @{ ^"ret" }
 reti = @{ ^"reti" }
 ei = @{ ^"ei" }
 di = @{ ^"di" }
+inc = { ^"inc" ~ operand }
+dec = { ^"dec" ~ operand }
 
 // --- Core Rules ---
 
