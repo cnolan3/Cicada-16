@@ -18,19 +18,22 @@ identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 
 // --- Operands ---
 
-operand = { indirect | immediate | register | identifier }
+operand = { indirect | immediate_hex | immediate_dec | register | identifier }
 
 indirect = @{ "(" ~ register ~ ")" }
 
 register = @{ ("r" | "R") ~ ASCII_DIGIT }
 
-immediate = @{ ("0x" | "$") ~ ASCII_HEX_DIGIT+ }
+immediate_hex = @{ ("0x" | "$") ~ ASCII_HEX_DIGIT+ }
+
+immediate_dec = @{ ("-")? ~ ASCII_DIGIT+ }
 
 // --- Instructions ---
 
 // The @ makes the rule "atomic", so it appears as a single token in the tree.
 instruction = {
 nop
+| halt
 | ldi_2_op
 | ld_2_op
 | addi_2_op
@@ -64,11 +67,13 @@ nop
 | neg
 | not
 | swap
+| jr
 | jmp
 // ... add all other instruction mnemonics here
 }
 
 nop = @{ ^"nop" }
+halt = @{ ^"halt" }
 ld_2_op =  { ^"ld" ~ operand ~ "," ~ operand }
 ldi_2_op =  { ^"ldi" ~ operand ~ "," ~ operand }
 add_2_op = { ^"add" ~ operand ~ "," ~ operand }
@@ -103,6 +108,7 @@ neg = @{ ^"neg" }
 not = @{ ^"not" }
 swap = @{ ^"swap" }
 jmp = { ^"jmp" ~ operand }
+jr = { ^"jr" ~ operand }
 
 // --- Core Rules ---
 

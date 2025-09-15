@@ -18,7 +18,7 @@ pub enum Register {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operand {
     Register(Register),
-    Immediate(u16),
+    Immediate(i32),
     Indirect(Register),    // e.g., (R1)
     Indexed(Register, i8), // e.g., (R1, 0x10) or (R1, -2)
     Label(String),         // e.g., my_label

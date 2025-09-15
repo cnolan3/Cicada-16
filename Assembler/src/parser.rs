@@ -1,3 +1,5 @@
+use std::u16;
+
 use crate::ast::*;
 use crate::errors::AssemblyError;
 use pest::Parser;
@@ -62,7 +64,8 @@ fn build_operand(pair: Pair<Rule>) -> Operand {
     let inner_pair = pair.into_inner().next().unwrap();
     match inner_pair.as_rule() {
         Rule::register => build_register(inner_pair),
-        Rule::immediate => build_immediate(inner_pair),
+        Rule::immediate_hex => build_immediate_hex(inner_pair),
+        Rule::immediate_dec => build_immediate_dec(inner_pair),
         Rule::identifier => build_identifier(inner_pair),
         Rule::indirect => build_indirect(inner_pair),
         _ => unreachable!("Unknown operand rule: {:?}", inner_pair.as_rule()),
@@ -87,9 +90,26 @@ fn build_register(pair: Pair<Rule>) -> Operand {
 }
 
 // build an immediate object
-fn build_immediate(pair: Pair<Rule>) -> Operand {
-    let hex_str = &pair.as_str()[2..];
-    let value = u16::from_str_radix(hex_str, 16).unwrap();
+fn build_immediate_hex(pair: Pair<Rule>) -> Operand {
+    let mut hex_str: &str = "";
+    match &pair.as_str().chars().nth(0) {
+        Some('$') => {
+            hex_str = &pair.as_str()[1..];
+        }
+        Some('0') => {
+            hex_str = &pair.as_str()[2..];
+        }
+        _ => {}
+    }
+
+    let value = i32::from_str_radix(hex_str, 16).unwrap();
+    Operand::Immediate(value)
+}
+
+// build an immediate object
+fn build_immediate_dec(pair: Pair<Rule>) -> Operand {
+    let dec_str = &pair.as_str();
+    let value = dec_str.parse::<i32>().unwrap();
     Operand::Immediate(value)
 }
 
@@ -167,7 +187,20 @@ fn build_ldi_2_op(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     match src {
-        Operand::Immediate(_) | Operand::Label(_) => {}
+        Operand::Immediate(imm) => {
+            if imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "LDI immediate value must be unsigned.".to_string(),
+                });
+            } else if imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("LDI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -233,7 +266,20 @@ fn build_addi_2_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     match src {
-        Operand::Immediate(_) | Operand::Label(_) => {}
+        Operand::Immediate(imm) => {
+            if imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "ADDI immediate value must be unsigned.".to_string(),
+                });
+            } else if imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("ADDI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -318,7 +364,20 @@ fn build_subi_2_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     match src {
-        Operand::Immediate(_) | Operand::Label(_) => {}
+        Operand::Immediate(imm) => {
+            if imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "SUBI immediate value must be unsigned.".to_string(),
+                });
+            } else if imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("SUBI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -403,7 +462,20 @@ fn build_andi_2_op(and_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     match src {
-        Operand::Immediate(_) | Operand::Label(_) => {}
+        Operand::Immediate(imm) => {
+            if imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "ANDI immediate value must be unsigned.".to_string(),
+                });
+            } else if imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("ANDI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -488,7 +560,20 @@ fn build_ori_2_op(or_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     match src {
-        Operand::Immediate(_) | Operand::Label(_) => {}
+        Operand::Immediate(imm) => {
+            if imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "ORI immediate value must be unsigned.".to_string(),
+                });
+            } else if imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("ORI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -573,7 +658,20 @@ fn build_xori_2_op(xor_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     match src {
-        Operand::Immediate(_) | Operand::Label(_) => {}
+        Operand::Immediate(imm) => {
+            if imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "XORI immediate value must be unsigned.".to_string(),
+                });
+            } else if imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("XORI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -658,7 +756,20 @@ fn build_cmpi_2_op(cmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     match src {
-        Operand::Immediate(_) | Operand::Label(_) => {}
+        Operand::Immediate(imm) => {
+            if imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "CMPI immediate value must be unsigned.".to_string(),
+                });
+            } else if imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("CMPI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -780,12 +891,46 @@ fn build_jmp(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Jmp(op))
 }
 
+// build and check operands for a jump relative instruction
+fn build_jr(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = jmp_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = jmp_pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    match op {
+        Operand::Immediate(imm) => {
+            if imm > (i8::MAX as i32) || imm < (i8::MIN as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "JR immediate relative value must be 8 bits (max: {}, min: {}).",
+                        i8::MAX,
+                        i8::MIN
+                    ),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Operand to a JR instruction must be an immediate relative value."
+                    .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Jr(op))
+}
+
 // ------------- build instruction –------------
 
 // Helper to build an Instruction from a pest Pair
 fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     match pair.as_rule() {
         Rule::nop => Ok(Instruction::Nop),
+        Rule::halt => Ok(Instruction::Halt),
         Rule::ld_2_op => build_ld_2_op(pair),
         Rule::ldi_2_op => build_ldi_2_op(pair),
         Rule::add_2_op => build_add_2_op(pair),
@@ -812,6 +957,7 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::not => Ok(Instruction::Not),
         Rule::swap => Ok(Instruction::Swap),
         Rule::jmp => build_jmp(pair),
+        Rule::jr => build_jr(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }

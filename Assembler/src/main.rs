@@ -63,7 +63,7 @@ fn main() -> Result<()> {
 
     // Pass 2: Generate bytecode
     println!("Running pass 2...");
-    let machine_code = assembler::generate_bytecode(&parsed_lines, &symbol_table)
+    let machine_code = assembler::generate_bytecode(&parsed_lines, &symbol_table, &start_addr)
         .context("Failed during assembler phase 2")?;
 
     // --- Output Stage (UNCHANGED) ---

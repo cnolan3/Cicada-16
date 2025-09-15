@@ -56,7 +56,7 @@ fn calculate_instruction_size(
         }
         Instruction::Jmp(Operand::Label(_)) | Instruction::Jmp(Operand::Immediate(_)) => Ok(3), // JMP n16
         Instruction::Jmp(Operand::Indirect(_)) => Ok(1),
-        Instruction::Jr(Operand::Label(_)) => Ok(2), // JR n8s
+        Instruction::Jr(Operand::Label(_)) | Instruction::Jr(Operand::Immediate(_)) => Ok(2), // JR n8s
         Instruction::Add(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Add(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
         Instruction::Sub(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
@@ -94,12 +94,20 @@ fn calculate_instruction_size(
 pub fn generate_bytecode(
     lines: &[AssemblyLine],
     symbol_table: &SymbolTable,
+    start_addr: &u16,
 ) -> Result<Vec<u8>, AssemblyError> {
     let mut bytecode = Vec::new();
+    let mut current_address: u16 = start_addr.clone(); // Start address after cartridge header
 
     for line in lines {
         if let Some(instruction) = &line.instruction {
-            let instruction_bytes = encode_instruction(instruction, symbol_table)?;
+            let instruction_bytes = encode_instruction(
+                instruction,
+                symbol_table,
+                &current_address,
+                line.line_number,
+            )?;
+            current_address += calculate_instruction_size(instruction, line.line_number)?;
             bytecode.extend(instruction_bytes);
         }
     }
@@ -124,14 +132,18 @@ fn encode_register_operand(reg: &Register) -> u8 {
 fn encode_instruction(
     instruction: &Instruction,
     symbol_table: &SymbolTable,
+    current_address: &u16,
+    line_num: usize,
 ) -> Result<Vec<u8>, AssemblyError> {
     match instruction {
         // no op (0x00)
         Instruction::Nop => Ok(vec![0x00]),
+        // Halt
+        Instruction::Halt => Ok(vec![0x0F]),
         // Example: LDI R1, 0xABCD (Opcode: 0x01 + register index)
         Instruction::Ld(Operand::Register(reg), Operand::Immediate(value)) => {
             let opcode = encode_reg_opcode(0x01, reg);
-            let [low, high] = value.to_le_bytes();
+            let [low, high] = (*value as u16).to_le_bytes();
             Ok(vec![opcode, low, high])
         }
         // Example: JMP my_label
@@ -139,21 +151,49 @@ fn encode_instruction(
             let target_address =
                 symbol_table
                     .get(label_name)
-                    .ok_or_else(|| AssemblyError::SemanticErrorNoLine {
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
                         reason: format!("Undefined label: {}", label_name),
                     })?;
-            let [low, high] = target_address.to_le_bytes();
+            let [low, high] = (*target_address as u16).to_le_bytes();
             Ok(vec![0x51, low, high]) // Opcode for JMP n16
         }
         // jump address
         Instruction::Jmp(Operand::Immediate(addr)) => {
-            let [low, high] = addr.to_le_bytes();
+            let [low, high] = (*addr as u16).to_le_bytes();
             Ok(vec![0x51, low, high]) // Opcode for JMP n16
         }
         // jump indirect
         Instruction::Jmp(Operand::Indirect(reg)) => {
             let opcode = encode_reg_opcode(0x52, reg);
             Ok(vec![opcode]) // Opcode for JMP n16
+        }
+        // jump relative immediate
+        Instruction::Jr(Operand::Immediate(imm)) => {
+            let rel = *imm as i8;
+            Ok(vec![0x5A, rel as u8]) // Opcode for JMP n16
+        }
+        // jump relative label
+        Instruction::Jr(Operand::Label(label_name)) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let rel: i32 = *target_address as i32 - *current_address as i32;
+            if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Label \"{}\" too far away for relative jump, must be within {} bytes of JR instruction",
+                        label_name,
+                        i8::MAX
+                    ),
+                });
+            };
+            Ok(vec![0x5A, rel as u8]) // Opcode for JMP n16
         }
         // register-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Register(rs)) => {
@@ -168,7 +208,7 @@ fn encode_instruction(
         // add immediate
         Instruction::Add(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
             let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
+            let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x09, rd_index, low, high])
         }
         // add accumulator
@@ -189,7 +229,7 @@ fn encode_instruction(
         // sub immediate
         Instruction::Sub(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
             let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
+            let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x0A, rd_index, low, high])
         }
         // and reg to reg
@@ -200,7 +240,7 @@ fn encode_instruction(
         // and immediate
         Instruction::And(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
             let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
+            let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x0B, rd_index, low, high])
         }
         // or reg to reg
@@ -211,7 +251,7 @@ fn encode_instruction(
         // or immediate
         Instruction::Or(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
             let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
+            let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x0C, rd_index, low, high])
         }
         // xor reg to reg
@@ -222,7 +262,7 @@ fn encode_instruction(
         // xor immediate
         Instruction::Xor(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
             let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
+            let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x0D, rd_index, low, high])
         }
         // cmp reg to reg
@@ -233,7 +273,7 @@ fn encode_instruction(
         // cmp immediate
         Instruction::Cmp(Operand::Register(rd), Some(Operand::Immediate(imm))) => {
             let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
+            let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x0E, rd_index, low, high])
         }
         // adc reg to reg
