@@ -63,6 +63,7 @@ fn calculate_instruction_size(
         Instruction::Jrcc(_, Operand::Label(_)) | Instruction::Jrcc(_, Operand::Immediate(_)) => {
             Ok(2)
         }
+        Instruction::djnz(Operand::Label(_)) | Instruction::djnz(Operand::Immediate(_)) => Ok(2),
         Instruction::Add(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Add(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
         Instruction::Sub(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
@@ -264,6 +265,33 @@ fn encode_instruction(
             };
             let opcode = encode_condition_code_opcode(0x63, cc);
             Ok(vec![opcode, rel as u8]) // Opcode for JMP n16
+        }
+        // DJNZ immediate
+        Instruction::djnz(Operand::Immediate(imm)) => {
+            let rel = *imm as i8;
+            Ok(vec![0x6B, rel as u8]) // Opcode for JMP n16
+        }
+        // DJNZ label
+        Instruction::djnz(Operand::Label(label_name)) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let rel: i32 = *target_address as i32 - *current_address as i32;
+            if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Label \"{}\" too far away for relative jump, must be within {} bytes of DJNZ instruction",
+                        label_name,
+                        i8::MAX
+                    ),
+                });
+            };
+            Ok(vec![0x6B, rel as u8]) // Opcode for JMP n16
         }
         // register-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Register(rs)) => {

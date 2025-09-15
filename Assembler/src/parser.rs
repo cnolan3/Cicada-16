@@ -947,8 +947,9 @@ fn build_jr(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason: "Operand to a JR instruction must be an immediate relative value."
-                    .to_string(),
+                reason:
+                    "Operand to a JR instruction must be an immediate relative value or a label."
+                        .to_string(),
             });
         }
     }
@@ -980,7 +981,7 @@ fn build_jcc(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason: "Operand to a Jcc instruction must be an label or immediate address."
+                reason: "Operand to a Jcc instruction must be a label or immediate address."
                     .to_string(),
             });
         }
@@ -1014,13 +1015,48 @@ fn build_jrcc(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason: "Operand to a JRcc instruction must be an immediate relative value."
-                    .to_string(),
+                reason:
+                    "Operand to a JRcc instruction must be an immediate relative value or a label."
+                        .to_string(),
             });
         }
     }
 
     Ok(Instruction::Jrcc(cc, op))
+}
+
+// build and check operands for a DJNZ instruction
+fn build_djnz(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = jmp_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = jmp_pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    match op {
+        Operand::Immediate(imm) => {
+            if imm > (i8::MAX as i32) || imm < (i8::MIN as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "DJNZ immediate relative value must be 8 bits (max: {}, min: {}).",
+                        i8::MAX,
+                        i8::MIN
+                    ),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "Operand to a DJNZ instruction must be an immediate relative value or a label."
+                        .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::djnz(op))
 }
 
 // ------------- build instruction –------------
@@ -1059,6 +1095,7 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::jr => build_jr(pair),
         Rule::jmp_con => build_jcc(pair),
         Rule::jr_con => build_jrcc(pair),
+        Rule::djnz => build_djnz(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }

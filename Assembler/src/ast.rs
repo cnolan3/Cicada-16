@@ -60,6 +60,7 @@ pub enum Instruction {
     Call(Operand),
     Jcc(ConditionCode, Operand), // Jcc cc, target
     Jrcc(ConditionCode, Operand),
+    djnz(Operand),
     Callcc(ConditionCode, Operand),
     Syscall(u8),
 

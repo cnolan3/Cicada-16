@@ -60,6 +60,7 @@ callcc = ${ ^"call" ~ cc }
 instruction = {
 nop
 | halt
+| djnz
 | ldi_2_op
 | ld_2_op
 | addi_2_op
@@ -103,6 +104,7 @@ nop
 
 nop = @{ ^"nop" }
 halt = @{ ^"halt" }
+djnz = { ^"djnz" ~ operand }
 ld_2_op =  { ^"ld" ~ operand ~ "," ~ operand }
 ldi_2_op =  { ^"ldi" ~ operand ~ "," ~ operand }
 add_2_op = { ^"add" ~ operand ~ "," ~ operand }
