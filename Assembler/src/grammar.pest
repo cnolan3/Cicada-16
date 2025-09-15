@@ -102,6 +102,12 @@ nop
 | ccf
 | scf
 | rcf
+| enter
+| leave
+| reti
+| ret
+| ei
+| di
 // ... add all other instruction mnemonics here
 }
 
@@ -149,6 +155,12 @@ call_con = { callcc ~ operand}
 ccf = @{ ^"ccf" }
 scf = @{ ^"scf" }
 rcf = @{ ^"rcf" }
+enter = @{ ^"enter" }
+leave = @{ ^"leave" }
+ret = @{ ^"ret" }
+reti = @{ ^"reti" }
+ei = @{ ^"ei" }
+di = @{ ^"di" }
 
 // --- Core Rules ---
 

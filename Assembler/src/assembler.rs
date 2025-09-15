@@ -44,7 +44,12 @@ fn calculate_instruction_size(
         | Instruction::Ret
         | Instruction::Ccf
         | Instruction::Scf
-        | Instruction::Rcf => Ok(1),
+        | Instruction::Rcf
+        | Instruction::Enter
+        | Instruction::Leave
+        | Instruction::Reti
+        | Instruction::Ei
+        | Instruction::Di => Ok(1),
 
         Instruction::Ld(Operand::Register(_), Operand::Register(_)) => {
             // Check if this form maps to the 1-byte LD rd, rs (opcodes 0x80-0xBF)
@@ -68,7 +73,7 @@ fn calculate_instruction_size(
         Instruction::Jrcc(_, Operand::Label(_)) | Instruction::Jrcc(_, Operand::Immediate(_)) => {
             Ok(2)
         }
-        Instruction::djnz(Operand::Label(_)) | Instruction::djnz(Operand::Immediate(_)) => Ok(2),
+        Instruction::Djnz(Operand::Label(_)) | Instruction::Djnz(Operand::Immediate(_)) => Ok(2),
         Instruction::Add(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Add(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
         Instruction::Sub(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
@@ -174,6 +179,12 @@ fn encode_instruction(
         Instruction::Scf => Ok(vec![0x4C]),
         // Rcf
         Instruction::Rcf => Ok(vec![0x4D]),
+        Instruction::Enter => Ok(vec![0x4F]),
+        Instruction::Leave => Ok(vec![0x50]),
+        Instruction::Ret => Ok(vec![0xF9]),
+        Instruction::Reti => Ok(vec![0xFA]),
+        Instruction::Ei => Ok(vec![0xFB]),
+        Instruction::Di => Ok(vec![0xFC]),
         // Example: LDI R1, 0xABCD (Opcode: 0x01 + register index)
         Instruction::Ld(Operand::Register(reg), Operand::Immediate(value)) => {
             let opcode = encode_reg_opcode(0x01, reg);
@@ -278,12 +289,12 @@ fn encode_instruction(
             Ok(vec![opcode, rel as u8]) // Opcode for JMP n16
         }
         // DJNZ immediate
-        Instruction::djnz(Operand::Immediate(imm)) => {
+        Instruction::Djnz(Operand::Immediate(imm)) => {
             let rel = *imm as i8;
             Ok(vec![0x6B, rel as u8]) // Opcode for JMP n16
         }
         // DJNZ label
-        Instruction::djnz(Operand::Label(label_name)) => {
+        Instruction::Djnz(Operand::Label(label_name)) => {
             let target_address =
                 symbol_table
                     .get(label_name)
@@ -769,6 +780,102 @@ mod tests {
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x4D]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_enter() {
+        let instruction = Instruction::Enter;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_enter() {
+        let instruction = Instruction::Enter;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x4F]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_leave() {
+        let instruction = Instruction::Leave;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_leave() {
+        let instruction = Instruction::Leave;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x50]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_ret() {
+        let instruction = Instruction::Ret;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_ret() {
+        let instruction = Instruction::Ret;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xF9]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_reti() {
+        let instruction = Instruction::Reti;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_reti() {
+        let instruction = Instruction::Reti;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFA]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_ei() {
+        let instruction = Instruction::Ei;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_ei() {
+        let instruction = Instruction::Ei;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFB]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_di() {
+        let instruction = Instruction::Di;
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_di() {
+        let instruction = Instruction::Di;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFC]
         );
     }
 }

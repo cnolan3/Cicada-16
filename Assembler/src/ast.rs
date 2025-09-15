@@ -1,4 +1,4 @@
-use std::fmt;
+
 
 // --- Operands ---
 
@@ -35,9 +35,12 @@ pub enum Instruction {
     Ei,
     Di,
     Ret,
+    Reti,
     Ccf,
     Scf,
     Rcf,
+    Enter,
+    Leave,
 
     // Load instructions
     Ld(Operand, Operand), // Covers LD rd, rs; LDI r, n16; LD r, (n16); etc.
@@ -63,7 +66,7 @@ pub enum Instruction {
     Call(Operand),
     Jcc(ConditionCode, Operand), // Jcc cc, target
     Jrcc(ConditionCode, Operand),
-    djnz(Operand),
+    Djnz(Operand),
     Callcc(ConditionCode, Operand),
     Syscall(u8),
 

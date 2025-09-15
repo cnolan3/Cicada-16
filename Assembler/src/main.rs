@@ -12,7 +12,6 @@ mod parser;
 
 // pest needs this to be accessible
 extern crate pest;
-#[macro_use]
 extern crate pest_derive;
 
 #[derive(clap_parser)]
@@ -36,12 +35,12 @@ enum Commands {
 fn main() -> Result<()> {
     let opts: Opts = Opts::parse();
     let mut start_addr: u16 = 0x0100;
-    let mut max_rom_size: usize = 4_210_688; // max allowable size of the rom in bytes
+    // let mut max_rom_size: usize = 4_210_688; // max allowable size of the rom in bytes
 
     match &opts.command {
         Some(Commands::Boot) => {
             start_addr = 0x0000;
-            max_rom_size = 16_384;
+            // max_rom_size = 16_384;
         }
         None => {}
     }

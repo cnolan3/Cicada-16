@@ -3,7 +3,7 @@ use std::u16;
 use crate::ast::*;
 use crate::errors::AssemblyError;
 use pest::Parser;
-use pest::iterators::{Pair, Pairs};
+use pest::iterators::Pair;
 use pest_derive::Parser;
 
 // Derive the parser from our grammar file.
@@ -1056,7 +1056,7 @@ fn build_djnz(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         }
     }
 
-    Ok(Instruction::djnz(op))
+    Ok(Instruction::Djnz(op))
 }
 
 // ------------- build instruction –------------
@@ -1099,6 +1099,12 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::ccf => Ok(Instruction::Ccf),
         Rule::scf => Ok(Instruction::Scf),
         Rule::rcf => Ok(Instruction::Rcf),
+        Rule::enter => Ok(Instruction::Enter),
+        Rule::leave => Ok(Instruction::Leave),
+        Rule::ret => Ok(Instruction::Ret),
+        Rule::reti => Ok(Instruction::Reti),
+        Rule::ei => Ok(Instruction::Ei),
+        Rule::di => Ok(Instruction::Di),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
@@ -1356,6 +1362,61 @@ mod tests {
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].instruction, Some(Instruction::Rcf));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_enter() {
+        let source = "enter\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Enter));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_leave() {
+        let source = "leave\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Leave));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_reti() {
+        let source = "reti\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Reti));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_ei() {
+        let source = "ei\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Ei));
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_di() {
+        let source = "di\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::Di));
         assert_eq!(lines[0].label, None);
     }
 }
