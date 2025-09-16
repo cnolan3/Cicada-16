@@ -63,6 +63,7 @@ nop
 | djnz
 | ldi_2_op
 | ld_2_op
+| add_sp
 | addi_2_op
 | addi_1_op
 | add_2_op
@@ -93,6 +94,10 @@ nop
 | sbci_2_op
 | sbci_1_op
 | sbc_2_op
+| push_f
+| pop_f
+| push_op
+| pop_op
 | neg
 | not
 | swap
@@ -150,6 +155,10 @@ adci_1_op = { ^"adci" ~ operand }
 sbc_2_op = { ^"sbc" ~ operand ~ "," ~ operand }
 sbci_2_op = { ^"sbci" ~ operand ~ "," ~ operand }
 sbci_1_op = { ^"sbci" ~ operand }
+push_f = { ^"push" ~ ^"f" }
+pop_f = { ^"pop" ~ ^"f" }
+push_op = { ^"push" ~ operand }
+pop_op = { ^"pop" ~ operand }
 neg = @{ ^"neg" }
 not = @{ ^"not" }
 swap = @{ ^"swap" }
@@ -169,6 +178,7 @@ ei = @{ ^"ei" }
 di = @{ ^"di" }
 inc = { ^"inc" ~ operand }
 dec = { ^"dec" ~ operand }
+add_sp = { ^"add" ~ ^"sp" ~ "," ~ operand}
 
 // --- Core Rules ---
 

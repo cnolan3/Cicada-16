@@ -333,6 +333,36 @@ fn build_add_1_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Add(src, None))
 }
 
+fn build_add_sp(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = add_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = add_pair.into_inner();
+    let operand = build_operand(inner.next().unwrap());
+
+    match operand {
+        Operand::Immediate(value) => {
+            if value > i8::MAX as i32 || value < i8::MIN as i32 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "ADD SP immediate value must fit in a signed 8 bit value (max: {}, min: {}).",
+                        i8::MAX,
+                        i8::MIN
+                    ),
+                });
+            }
+        }
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "ADD SP operand must be an immediate value.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::AddSp(operand))
+}
+
 // build and check operands for an add accumulator immediate instruction
 fn build_addi_1_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = add_pair.as_span().start_pos().line_col().0;
@@ -358,9 +388,8 @@ fn build_addi_1_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason:
-                    "The operand of an ADDI instruction must be an immediate value or a label."
-                        .to_string(),
+                reason: "The operand of an ADDI instruction must be an immediate value or a label."
+                    .to_string(),
             });
         }
     }
@@ -491,9 +520,8 @@ fn build_subi_1_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason:
-                    "The operand of an SUBI instruction must be an immediate value or a label."
-                        .to_string(),
+                reason: "The operand of an SUBI instruction must be an immediate value or a label."
+                    .to_string(),
             });
         }
     }
@@ -624,9 +652,8 @@ fn build_andi_1_op(and_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason:
-                    "The operand of an ANDI instruction must be an immediate value or a label."
-                        .to_string(),
+                reason: "The operand of an ANDI instruction must be an immediate value or a label."
+                    .to_string(),
             });
         }
     }
@@ -757,9 +784,8 @@ fn build_ori_1_op(or_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason:
-                    "The operand of an ORI instruction must be an immediate value or a label."
-                        .to_string(),
+                reason: "The operand of an ORI instruction must be an immediate value or a label."
+                    .to_string(),
             });
         }
     }
@@ -890,9 +916,8 @@ fn build_xori_1_op(xor_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason:
-                    "The operand of an XORI instruction must be an immediate value or a label."
-                        .to_string(),
+                reason: "The operand of an XORI instruction must be an immediate value or a label."
+                    .to_string(),
             });
         }
     }
@@ -1023,9 +1048,8 @@ fn build_cmpi_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason:
-                    "The operand of a CMPI instruction must be an immediate value or a label."
-                        .to_string(),
+                reason: "The operand of a CMPI instruction must be an immediate value or a label."
+                    .to_string(),
             });
         }
     }
@@ -1092,9 +1116,8 @@ fn build_adci_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason:
-                    "The operand of an ADCI instruction must be an immediate value or a label."
-                        .to_string(),
+                reason: "The operand of an ADCI instruction must be an immediate value or a label."
+                    .to_string(),
             });
         }
     }
@@ -1161,14 +1184,65 @@ fn build_sbci_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason:
-                    "The operand of an SBCI instruction must be an immediate value or a label."
-                        .to_string(),
+                reason: "The operand of an SBCI instruction must be an immediate value or a label."
+                    .to_string(),
             });
         }
     }
 
     Ok(Instruction::Sbc(src, None))
+}
+
+fn build_push(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let operand = build_operand(inner.next().unwrap());
+
+    match operand {
+        Operand::Register(_) => {}
+        Operand::Immediate(value) => {
+            if value < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "PUSH immediate value must be unsigned.".to_string(),
+                });
+            } else if value > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("PUSH immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Invalid operand to PUSH instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Push(operand))
+}
+
+fn build_pop(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let operand = build_operand(inner.next().unwrap());
+
+    match operand {
+        Operand::Register(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Operand to a POP instruction must be a register (R0-R7).".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Pop(operand))
 }
 
 // build and check operands for a jump instruction
@@ -1384,6 +1458,7 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::halt => Ok(Instruction::Halt),
         Rule::ld_2_op => build_ld_2_op(pair),
         Rule::ldi_2_op => build_ldi_2_op(pair),
+        Rule::add_sp => build_add_sp(pair),
         Rule::add_2_op => build_add_2_op(pair),
         Rule::addi_2_op => build_addi_2_op(pair),
         Rule::add_1_op => build_add_1_op(pair),
@@ -1412,6 +1487,10 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::adci_1_op => build_adci_1_op(pair),
         Rule::sbc_2_op => build_sbc_2_op(pair),
         Rule::sbci_1_op => build_sbci_1_op(pair),
+        Rule::push_f => Ok(Instruction::PushF),
+        Rule::pop_f => Ok(Instruction::PopF),
+        Rule::push_op => build_push(pair),
+        Rule::pop_op => build_pop(pair),
         Rule::neg => Ok(Instruction::Neg),
         Rule::not => Ok(Instruction::Not),
         Rule::swap => Ok(Instruction::Swap),
@@ -1884,5 +1963,77 @@ mod tests {
             Some(Instruction::Sbc(Operand::Immediate(0x0002), None))
         );
         assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_add_sp_negative() {
+        let source = "add sp, -5\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::AddSp(Operand::Immediate(-5)))
+        );
+    }
+
+    #[test]
+    fn test_parse_push_reg() {
+        let source = "push r3\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Push(Operand::Register(Register::R3)))
+        );
+    }
+
+    #[test]
+    fn test_parse_push_immediate() {
+        let source = "push 0x1234\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Push(Operand::Immediate(0x1234)))
+        );
+    }
+
+    #[test]
+    fn test_parse_push_f() {
+        let source = "push f\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::PushF));
+    }
+
+    #[test]
+    fn test_parse_pop_reg() {
+        let source = "pop r2\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Pop(Operand::Register(Register::R2)))
+        );
+    }
+
+    #[test]
+    fn test_parse_pop_f() {
+        let source = "pop f\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].instruction, Some(Instruction::PopF));
     }
 }

@@ -1,5 +1,3 @@
-
-
 // --- Operands ---
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,6 +52,7 @@ pub enum Instruction {
     Cmp(Operand, Option<Operand>),
     Adc(Operand, Option<Operand>),
     Sbc(Operand, Option<Operand>),
+    AddSp(Operand),
     Neg,
     Not,
     Swap,
@@ -73,6 +72,8 @@ pub enum Instruction {
     // Stack operations
     Push(Operand),
     Pop(Operand),
+    PushF,
+    PopF,
     // ... add all other instructions from your ISA ...
 }
 

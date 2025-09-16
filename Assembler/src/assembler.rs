@@ -86,6 +86,7 @@ fn calculate_instruction_size(
         Instruction::Add(Operand::Register(_), None) => Ok(1),
         Instruction::Add(Operand::Immediate(_), None) => Ok(3),
         Instruction::Add(Operand::Label(_), None) => Ok(3),
+        Instruction::AddSp(_) => Ok(2),
         Instruction::Sub(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Sub(Operand::Register(_), None) => Ok(1),
         Instruction::Sub(Operand::Immediate(_), None) => Ok(3),
@@ -112,6 +113,12 @@ fn calculate_instruction_size(
         Instruction::Adc(Operand::Label(_), None) => Ok(3),
         Instruction::Sbc(Operand::Immediate(_), None) => Ok(3),
         Instruction::Sbc(Operand::Label(_), None) => Ok(3),
+        Instruction::Push(Operand::Register(_)) => Ok(1),
+        Instruction::Push(Operand::Immediate(_)) => Ok(3),
+        Instruction::Push(Operand::Label(_)) => Ok(3),
+        Instruction::PushF => Ok(1),
+        Instruction::Pop(Operand::Register(_)) => Ok(1),
+        Instruction::PopF => Ok(1),
         Instruction::Neg => Ok(1),
         Instruction::Not => Ok(1),
         Instruction::Swap => Ok(1),
@@ -358,6 +365,7 @@ fn encode_instruction(
             let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x09, rd_index, low, high])
         }
+        Instruction::AddSp(Operand::Immediate(offset)) => Ok(vec![0x6C, *offset as u8]),
         // add accumulator immediate
         Instruction::Add(Operand::Immediate(value), None) => {
             let [low, high] = (*value as u16).to_le_bytes();
@@ -501,6 +509,31 @@ fn encode_instruction(
             let [low, high] = (*target_address as u16).to_le_bytes();
             Ok(vec![0xC7, low, high])
         }
+        Instruction::Push(Operand::Register(reg)) => {
+            let index = encode_register_operand(reg);
+            Ok(vec![0x6D + index])
+        }
+        Instruction::Push(Operand::Immediate(value)) => {
+            let [low, high] = (*value as u16).to_le_bytes();
+            Ok(vec![0x7D, low, high])
+        }
+        Instruction::Push(Operand::Label(label_name)) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            Ok(vec![0x7D, low, high])
+        }
+        Instruction::PushF => Ok(vec![0x7E]),
+        Instruction::Pop(Operand::Register(reg)) => {
+            let index = encode_register_operand(reg);
+            Ok(vec![0x75 + index])
+        }
+        Instruction::PopF => Ok(vec![0x7F]),
         // and accumulator immediate
         Instruction::And(Operand::Immediate(value), None) => {
             let [low, high] = (*value as u16).to_le_bytes();
@@ -938,6 +971,83 @@ mod tests {
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0xC7, 0x34, 0x12]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_add_sp() {
+        let instruction = Instruction::AddSp(Operand::Immediate(-8));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_add_sp() {
+        let instruction = Instruction::AddSp(Operand::Immediate(-5));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x6C, 0xFB]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_push_reg() {
+        let instruction = Instruction::Push(Operand::Register(Register::R2));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x6F]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_push_immediate() {
+        let instruction = Instruction::Push(Operand::Immediate(0x1234));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x7D, 0x34, 0x12]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_push_label() {
+        let instruction = Instruction::Push(Operand::Label("TARGET".into()));
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert("TARGET".to_string(), 0x1357);
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x7D, 0x57, 0x13]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_push_f() {
+        let instruction = Instruction::PushF;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x7E]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_pop_reg() {
+        let instruction = Instruction::Pop(Operand::Register(Register::R3));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x78]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_pop_f() {
+        let instruction = Instruction::PopF;
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x7F]
         );
     }
 
