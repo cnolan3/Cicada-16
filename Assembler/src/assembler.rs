@@ -76,6 +76,10 @@ fn calculate_instruction_size(
             Ok(2)
         }
         Instruction::Djnz(Operand::Label(_)) | Instruction::Djnz(Operand::Immediate(_)) => Ok(2),
+        Instruction::Call(Operand::Label(_)) | Instruction::Call(Operand::Immediate(_)) => Ok(3), // CALL n16
+        Instruction::Call(Operand::Indirect(_)) => Ok(1), // CALL (r)
+        Instruction::Callcc(_, _) => Ok(3),               // CALLcc n16
+        Instruction::Syscall(_) => Ok(2),                 // SYSCALL n8
         Instruction::Add(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Add(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
         Instruction::Sub(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
@@ -349,6 +353,49 @@ fn encode_instruction(
             };
             Ok(vec![0x6B, rel as u8]) // Opcode for JMP n16
         }
+        // CALL immediate
+        Instruction::Call(Operand::Immediate(addr)) => {
+            let [low, high] = (*addr as u16).to_le_bytes();
+            Ok(vec![0xC8, low, high])
+        }
+        // CALL label
+        Instruction::Call(Operand::Label(label_name)) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            Ok(vec![0xC8, low, high]) // Opcode for JMP n16
+        }
+        // CALL indirect
+        Instruction::Call(Operand::Indirect(reg)) => {
+            let opcode = encode_reg_opcode(0xC9, reg);
+            Ok(vec![opcode]) // Opcode for JMP n16
+        }
+        // conditional call immediate
+        Instruction::Callcc(cc, Operand::Immediate(addr)) => {
+            let [low, high] = (*addr as u16).to_le_bytes();
+            let opcode = encode_condition_code_opcode(0xD1, cc);
+            Ok(vec![opcode, low, high]) // Opcode for JMP n16
+        }
+        // conditional call label
+        Instruction::Callcc(cc, Operand::Label(label_name)) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            let opcode = encode_condition_code_opcode(0xD1, cc);
+            Ok(vec![opcode, low, high]) // Opcode for JMP n16
+        }
+        // syscall
+        Instruction::Syscall(Operand::Immediate(imm)) => Ok(vec![0x4E, *imm as u8]),
         // register-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Register(rs)) => {
             let opcode = encode_rd_rs_byte(0x80, rd, rs);
@@ -1272,6 +1319,100 @@ mod tests {
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0xDB]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_call_immediate() {
+        let instruction = Instruction::Call(Operand::Immediate(0x1234));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_call_immediate() {
+        let instruction = Instruction::Call(Operand::Immediate(0x1234));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xC8, 0x34, 0x12]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_call_label() {
+        let instruction = Instruction::Call(Operand::Label("test".to_string()));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_call_label() {
+        let instruction = Instruction::Call(Operand::Label("test_label".to_string()));
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert("test_label".to_string(), 0x4321);
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xC8, 0x21, 0x43]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_call_indirect() {
+        let instruction = Instruction::Call(Operand::Indirect(Register::R4));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_encode_instruction_call_indirect() {
+        let instruction = Instruction::Call(Operand::Indirect(Register::R4));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xCD] // 0xC9 + 4
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_callcc() {
+        let instruction =
+            Instruction::Callcc(ConditionCode::Nz, Operand::Label("test".to_string()));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_callcc_immediate() {
+        let instruction = Instruction::Callcc(ConditionCode::C, Operand::Immediate(0x1122));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xD5, 0x22, 0x11] // 0xD1 + 4
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_callcc_label() {
+        let instruction =
+            Instruction::Callcc(ConditionCode::Nz, Operand::Label("test_label".to_string()));
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert("test_label".to_string(), 0x4321);
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xD8, 0x21, 0x43] // 0xD1 + 7
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_syscall() {
+        let instruction = Instruction::Syscall(Operand::Immediate(0x1A));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_syscall() {
+        let instruction = Instruction::Syscall(Operand::Immediate(0x1A));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0x4E, 0x1A]
         );
     }
 }

@@ -106,6 +106,8 @@ nop
 | jmp_con
 | jmp
 | call_con
+| call
+| syscall
 | ccf
 | scf
 | rcf
@@ -167,6 +169,8 @@ jr_con = { jrcc ~ operand }
 jr = { ^"jr" ~ operand }
 jmp_con = { jcc ~ operand }
 call_con = { callcc ~ operand}
+call = { ^"call" ~ operand }
+syscall = { ^"syscall" ~ operand }
 ccf = @{ ^"ccf" }
 scf = @{ ^"scf" }
 rcf = @{ ^"rcf" }

@@ -217,7 +217,7 @@ fn build_ldi_2_op(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("LDI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("LDI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -296,7 +296,7 @@ fn build_addi_2_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("ADDI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("ADDI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -305,8 +305,8 @@ fn build_addi_2_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an ADDI instruction must be an immediate value or a label."
-                        .to_string(),
+                    "The source operand of an ADDI instruction must be an immediate value or a label." .
+to_string(),
             });
         }
     }
@@ -345,7 +345,7 @@ fn build_add_sp(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
                 return Err(AssemblyError::StructuralError {
                     line,
                     reason: format!(
-                        "ADD SP immediate value must fit in a signed 8 bit value (max: {}, min: {}).",
+                        "ADD SP immediate value must fit in a signed 8 bit value (max: {}, min: {})",
                         i8::MAX,
                         i8::MIN
                     ),
@@ -380,7 +380,7 @@ fn build_addi_1_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if *imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("ADDI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("ADDI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -388,8 +388,9 @@ fn build_addi_1_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason: "The operand of an ADDI instruction must be an immediate value or a label."
-                    .to_string(),
+                reason:
+                    "The source operand of an ADDI instruction must be an immediate value or a label." .
+to_string(),
             });
         }
     }
@@ -458,7 +459,7 @@ fn build_subi_2_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("SUBI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("SUBI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -467,8 +468,8 @@ fn build_subi_2_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an SUBI instruction must be an immediate value or a label."
-                        .to_string(),
+                    "The source operand of an SUBI instruction must be an immediate value or a label." .
+to_string(),
             });
         }
     }
@@ -512,7 +513,7 @@ fn build_subi_1_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if *imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("SUBI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("SUBI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -520,8 +521,9 @@ fn build_subi_1_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason: "The operand of an SUBI instruction must be an immediate value or a label."
-                    .to_string(),
+                reason:
+                    "The source operand of an SUBI instruction must be an immediate value or a label." .
+to_string(),
             });
         }
     }
@@ -590,7 +592,7 @@ fn build_andi_2_op(and_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("ANDI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("ANDI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -599,8 +601,8 @@ fn build_andi_2_op(and_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an ANDI instruction must be an immediate value or a label."
-                        .to_string(),
+                    "The source operand of an ANDI instruction must be an immediate value or a label." .
+to_string(),
             });
         }
     }
@@ -644,7 +646,7 @@ fn build_andi_1_op(and_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if *imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("ANDI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("ANDI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -652,8 +654,9 @@ fn build_andi_1_op(and_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason: "The operand of an ANDI instruction must be an immediate value or a label."
-                    .to_string(),
+                reason:
+                    "The source operand of an ANDI instruction must be an immediate value or a label." .
+to_string(),
             });
         }
     }
@@ -722,7 +725,7 @@ fn build_ori_2_op(or_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("ORI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("ORI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -731,8 +734,8 @@ fn build_ori_2_op(or_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an ORI instruction must be an immediate value or a label."
-                        .to_string(),
+                    "The source operand of an ORI instruction must be an immediate value or a label." .
+to_string(),
             });
         }
     }
@@ -776,7 +779,7 @@ fn build_ori_1_op(or_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if *imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("ORI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("ORI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -784,8 +787,9 @@ fn build_ori_1_op(or_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason: "The operand of an ORI instruction must be an immediate value or a label."
-                    .to_string(),
+                reason:
+                    "The source operand of an ORI instruction must be an immediate value or a label." .
+to_string(),
             });
         }
     }
@@ -854,7 +858,7 @@ fn build_xori_2_op(xor_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("XORI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("XORI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -863,8 +867,8 @@ fn build_xori_2_op(xor_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an XORI instruction must be an immediate value or a label."
-                        .to_string(),
+                    "The source operand of an XORI instruction must be an immediate value or a label." .
+to_string(),
             });
         }
     }
@@ -908,7 +912,7 @@ fn build_xori_1_op(xor_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if *imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("XORI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("XORI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -916,8 +920,9 @@ fn build_xori_1_op(xor_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason: "The operand of an XORI instruction must be an immediate value or a label."
-                    .to_string(),
+                reason:
+                    "The source operand of an XORI instruction must be an immediate value or a label." .
+to_string(),
             });
         }
     }
@@ -986,7 +991,7 @@ fn build_cmpi_2_op(cmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("CMPI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("CMPI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -995,8 +1000,8 @@ fn build_cmpi_2_op(cmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an CMPI instruction must be an immediate value or a label."
-                        .to_string(),
+                    "The source operand of an CMPI instruction must be an immediate value or a label." .
+to_string(),
             });
         }
     }
@@ -1040,7 +1045,7 @@ fn build_cmpi_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if *imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("CMPI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("CMPI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -1108,7 +1113,7 @@ fn build_adci_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if *imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("ADCI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("ADCI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -1176,7 +1181,7 @@ fn build_sbci_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if *imm > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("SBCI immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("SBCI immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -1210,7 +1215,7 @@ fn build_push(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             } else if value > (u16::MAX as i32) {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: format!("PUSH immediate value must be 16 bits (max: {}).", u16::MAX),
+                    reason: format!("PUSH immediate value must be 16 bits (max: {})", u16::MAX),
                 });
             }
         }
@@ -1268,8 +1273,9 @@ fn build_jmp(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason: "Operand to a JMP instruction must be an indirect address ((R0-R7)), label or immediate address."
-                    .to_string(),
+                reason:
+                    "Operand to a JMP instruction must be an indirect address ((R0-R7)), label or immediate address." .
+to_string(),
             });
         }
     }
@@ -1290,14 +1296,14 @@ fn build_jr(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
                 return Err(AssemblyError::StructuralError {
                     line,
                     reason: format!(
-                        "JR immediate relative value must be 8 bits (max: {}, min: {}).",
+                        "JR immediate relative value must be 8 bits (max: {}, min: {})",
                         i8::MAX,
                         i8::MIN
                     ),
                 });
             }
         }
-        Operand::Label(_) => {}
+        Operand::Label(_) => {} // Corrected: Removed unnecessary escape for underscore
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -1358,14 +1364,14 @@ fn build_jrcc(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
                 return Err(AssemblyError::StructuralError {
                     line,
                     reason: format!(
-                        "JRcc immediate relative value must be 8 bits (max: {}, min: {}).",
+                        "JRcc immediate relative value must be 8 bits (max: {}, min: {})",
                         i8::MAX,
                         i8::MIN
                     ),
                 });
             }
         }
-        Operand::Label(_) => {}
+        Operand::Label(_) => {} // Corrected: Removed unnecessary escape for underscore
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -1392,14 +1398,14 @@ fn build_djnz(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
                 return Err(AssemblyError::StructuralError {
                     line,
                     reason: format!(
-                        "DJNZ immediate relative value must be 8 bits (max: {}, min: {}).",
+                        "DJNZ immediate relative value must be 8 bits (max: {}, min: {})",
                         i8::MAX,
                         i8::MIN
                     ),
                 });
             }
         }
-        Operand::Label(_) => {}
+        Operand::Label(_) => {} // Corrected: Removed unnecessary escape for underscore
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
@@ -1447,6 +1453,103 @@ fn build_dec(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     Ok(Instruction::Dec(src))
+}
+
+// build and check operands for a call instruction
+fn build_call(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    match op {
+        Operand::Indirect(_) | Operand::Label(_) => {} // Corrected: Removed unnecessary escape for underscore
+        Operand::Immediate(imm) => {
+            if imm > (u16::MAX as i32) || imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "CALL immediate address must be an unsigned 16 bit value (max: {}, min: 0).",
+                        u16::MAX,
+                    ),
+                });
+            }
+        }
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "Operand to a CALL instruction must be an indirect address ((R0-R7)), label or immediate address." .
+to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Call(op))
+}
+
+// build and check operands for a conditional call instruction
+fn build_callcc(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let cc = build_condition_code(inner.next().unwrap());
+    let op = build_operand(inner.next().unwrap());
+
+    match op {
+        Operand::Label(_) => {} // Corrected: Removed unnecessary escape for underscore
+        Operand::Immediate(imm) => {
+            if imm > (u16::MAX as i32) || imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "CALLcc immediate address must be an unsigned 16 bit value (max: {}, min: 0).",
+                        u16::MAX,
+                    ),
+                });
+            }
+        }
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Operand to a CALLcc instruction must be a label or immediate address."
+                    .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Callcc(cc, op))
+}
+
+// build and check operands for a SYSCALL instruction
+fn build_syscall(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    match op {
+        Operand::Immediate(imm) => {
+            if imm > (u8::MAX as i32) || imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "SYSCALL immediate value must be 8 bits (max: {}, min: 0).",
+                        u8::MAX,
+                    ),
+                });
+            }
+        }
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Operand to a SYSCALL instruction must be an immediate 8-bit value."
+                    .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Syscall(op))
 }
 
 // ------------- build instruction –------------
@@ -1499,6 +1602,9 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::jmp_con => build_jcc(pair),
         Rule::jr_con => build_jrcc(pair),
         Rule::djnz => build_djnz(pair),
+        Rule::call => build_call(pair),
+        Rule::call_con => build_callcc(pair),
+        Rule::syscall => build_syscall(pair),
         Rule::ccf => Ok(Instruction::Ccf),
         Rule::scf => Ok(Instruction::Scf),
         Rule::rcf => Ok(Instruction::Rcf),
@@ -2035,5 +2141,89 @@ mod tests {
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].instruction, Some(Instruction::PopF));
+    }
+
+    #[test]
+    fn test_parse_call_immediate() {
+        let source = "call 0x1234\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Call(Operand::Immediate(0x1234)))
+        );
+    }
+
+    #[test]
+    fn test_parse_call_label() {
+        let source = "call my_label\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Call(Operand::Label("my_label".to_string())))
+        );
+    }
+
+    #[test]
+    fn test_parse_call_indirect() {
+        let source = "call (r3)\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Call(Operand::Indirect(Register::R3)))
+        );
+    }
+
+    #[test]
+    fn test_parse_callcc_immediate() {
+        let source = "callz 0x1234\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Callcc(
+                ConditionCode::Z,
+                Operand::Immediate(0x1234)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_callcc_label() {
+        let source = "callnc my_label\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Callcc(
+                ConditionCode::Nc,
+                Operand::Label("my_label".to_string())
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_syscall() {
+        let source = "syscall 0x1A\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Syscall(Operand::Immediate(0x1A)))
+        );
     }
 }
