@@ -333,6 +333,41 @@ fn build_add_1_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Add(src, None))
 }
 
+// build and check operands for an add accumulator immediate instruction
+fn build_addi_1_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = add_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = add_pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    match &src {
+        Operand::Immediate(imm) => {
+            if *imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "ADDI immediate value must be unsigned.".to_string(),
+                });
+            } else if *imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("ADDI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The operand of an ADDI instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Add(src, None))
+}
+
 // build and check operands for a 2 operand sub instruction
 fn build_sub_2_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = sub_pair.as_span().start_pos().line_col().0;
@@ -426,6 +461,41 @@ fn build_sub_1_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             reason: "Operand to a SUB Accumulator instruction must be a register (R0-R7)."
                 .to_string(),
         });
+    }
+
+    Ok(Instruction::Sub(src, None))
+}
+
+// build and check operands for a sub accumulator immediate instruction
+fn build_subi_1_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = sub_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = sub_pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    match &src {
+        Operand::Immediate(imm) => {
+            if *imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "SUBI immediate value must be unsigned.".to_string(),
+                });
+            } else if *imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("SUBI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The operand of an SUBI instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
     }
 
     Ok(Instruction::Sub(src, None))
@@ -529,6 +599,41 @@ fn build_and_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::And(src, None))
 }
 
+// build and check operands for a and accumulator immediate instruction
+fn build_andi_1_op(and_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = and_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = and_pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    match &src {
+        Operand::Immediate(imm) => {
+            if *imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "ANDI immediate value must be unsigned.".to_string(),
+                });
+            } else if *imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("ANDI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The operand of an ANDI instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::And(src, None))
+}
+
 // build and check operands for a 2 operand or instruction
 fn build_or_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = pair.as_span().start_pos().line_col().0;
@@ -622,6 +727,41 @@ fn build_or_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             reason: "Operand to an OR Accumulator instruction must be a register (R0-R7)."
                 .to_string(),
         });
+    }
+
+    Ok(Instruction::Or(src, None))
+}
+
+// build and check operands for an or accumulator immediate instruction
+fn build_ori_1_op(or_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = or_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = or_pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    match &src {
+        Operand::Immediate(imm) => {
+            if *imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "ORI immediate value must be unsigned.".to_string(),
+                });
+            } else if *imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("ORI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The operand of an ORI instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
     }
 
     Ok(Instruction::Or(src, None))
@@ -725,6 +865,41 @@ fn build_xor_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Xor(src, None))
 }
 
+// build and check operands for a xor accumulator immediate instruction
+fn build_xori_1_op(xor_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = xor_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = xor_pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    match &src {
+        Operand::Immediate(imm) => {
+            if *imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "XORI immediate value must be unsigned.".to_string(),
+                });
+            } else if *imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("XORI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The operand of an XORI instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Xor(src, None))
+}
+
 // build and check operands for a 2 operand cmp instruction
 fn build_cmp_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = pair.as_span().start_pos().line_col().0;
@@ -823,6 +998,41 @@ fn build_cmp_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Cmp(src, None))
 }
 
+// build and check operands for a cmp accumulator immediate instruction
+fn build_cmpi_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    match &src {
+        Operand::Immediate(imm) => {
+            if *imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "CMPI immediate value must be unsigned.".to_string(),
+                });
+            } else if *imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("CMPI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The operand of a CMPI instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Cmp(src, None))
+}
+
 // build and check operands for a 2 operand adc instruction
 fn build_adc_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = pair.as_span().start_pos().line_col().0;
@@ -857,6 +1067,41 @@ fn build_adc_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Adc(dest, Some(src)))
 }
 
+// build and check operands for an ADC accumulator immediate instruction
+fn build_adci_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    match &src {
+        Operand::Immediate(imm) => {
+            if *imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "ADCI immediate value must be unsigned.".to_string(),
+                });
+            } else if *imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("ADCI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The operand of an ADCI instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Adc(src, None))
+}
+
 // build and check operands for a 2 operand sbc instruction
 fn build_sbc_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = pair.as_span().start_pos().line_col().0;
@@ -889,6 +1134,41 @@ fn build_sbc_2_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     Ok(Instruction::Sbc(dest, Some(src)))
+}
+
+// build and check operands for an SBC accumulator immediate instruction
+fn build_sbci_1_op(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let src = build_operand(inner.next().unwrap());
+
+    match &src {
+        Operand::Immediate(imm) => {
+            if *imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "SBCI immediate value must be unsigned.".to_string(),
+                });
+            } else if *imm > (u16::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!("SBCI immediate value must be 16 bits (max: {}).", u16::MAX),
+                });
+            }
+        }
+        Operand::Label(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The operand of an SBCI instruction must be an immediate value or a label."
+                        .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Sbc(src, None))
 }
 
 // build and check operands for a jump instruction
@@ -1107,23 +1387,31 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::add_2_op => build_add_2_op(pair),
         Rule::addi_2_op => build_addi_2_op(pair),
         Rule::add_1_op => build_add_1_op(pair),
+        Rule::addi_1_op => build_addi_1_op(pair),
         Rule::sub_2_op => build_sub_2_op(pair),
         Rule::subi_2_op => build_subi_2_op(pair),
         Rule::sub_1_op => build_sub_1_op(pair),
+        Rule::subi_1_op => build_subi_1_op(pair),
         Rule::and_2_op => build_and_2_op(pair),
         Rule::andi_2_op => build_andi_2_op(pair),
         Rule::and_1_op => build_and_1_op(pair),
+        Rule::andi_1_op => build_andi_1_op(pair),
         Rule::or_2_op => build_or_2_op(pair),
         Rule::ori_2_op => build_ori_2_op(pair),
         Rule::or_1_op => build_or_1_op(pair),
+        Rule::ori_1_op => build_ori_1_op(pair),
         Rule::xor_2_op => build_xor_2_op(pair),
         Rule::xori_2_op => build_xori_2_op(pair),
         Rule::xor_1_op => build_xor_1_op(pair),
+        Rule::xori_1_op => build_xori_1_op(pair),
         Rule::cmp_2_op => build_cmp_2_op(pair),
         Rule::cmpi_2_op => build_cmpi_2_op(pair),
         Rule::cmp_1_op => build_cmp_1_op(pair),
+        Rule::cmpi_1_op => build_cmpi_1_op(pair),
         Rule::adc_2_op => build_adc_2_op(pair),
+        Rule::adci_1_op => build_adci_1_op(pair),
         Rule::sbc_2_op => build_sbc_2_op(pair),
+        Rule::sbci_1_op => build_sbci_1_op(pair),
         Rule::neg => Ok(Instruction::Neg),
         Rule::not => Ok(Instruction::Not),
         Rule::swap => Ok(Instruction::Swap),
@@ -1482,6 +1770,118 @@ mod tests {
         assert_eq!(
             lines[0].instruction,
             Some(Instruction::Dec(Operand::Register(Register::R2)))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_addi_acc_immediate() {
+        let source = "addi 0x1234\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Add(Operand::Immediate(0x1234), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_subi_acc_immediate() {
+        let source = "subi $00FF\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Sub(Operand::Immediate(0x00FF), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_andi_acc_immediate() {
+        let source = "andi 0x0F0F\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::And(Operand::Immediate(0x0F0F), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_ori_acc_immediate() {
+        let source = "ori 0x8000\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Or(Operand::Immediate(0x8000), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_xori_acc_immediate() {
+        let source = "xori 0xAAAA\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Xor(Operand::Immediate(0xAAAA), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_cmpi_acc_immediate() {
+        let source = "cmpi 10\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Cmp(Operand::Immediate(10), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_adci_acc_immediate() {
+        let source = "adci $0001\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Adc(Operand::Immediate(0x0001), None))
+        );
+        assert_eq!(lines[0].label, None);
+    }
+
+    #[test]
+    fn test_parse_sbci_acc_immediate() {
+        let source = "sbci $0002\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Sbc(Operand::Immediate(0x0002), None))
         );
         assert_eq!(lines[0].label, None);
     }

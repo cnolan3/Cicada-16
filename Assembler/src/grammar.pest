@@ -88,8 +88,10 @@ nop
 | cmp_2_op
 | cmp_1_op
 | adci_2_op
+| adci_1_op
 | adc_2_op
 | sbci_2_op
+| sbci_1_op
 | sbc_2_op
 | neg
 | not
@@ -144,8 +146,10 @@ cmpi_2_op = { ^"cmpi" ~ operand ~ "," ~ operand }
 cmpi_1_op = { ^"cmpi" ~ operand }
 adc_2_op = { ^"adc" ~ operand ~ "," ~ operand }
 adci_2_op = { ^"adci" ~ operand ~ "," ~ operand }
+adci_1_op = { ^"adci" ~ operand }
 sbc_2_op = { ^"sbc" ~ operand ~ "," ~ operand }
 sbci_2_op = { ^"sbci" ~ operand ~ "," ~ operand }
+sbci_1_op = { ^"sbci" ~ operand }
 neg = @{ ^"neg" }
 not = @{ ^"not" }
 swap = @{ ^"swap" }

@@ -85,8 +85,11 @@ fn calculate_instruction_size(
         Instruction::Cmp(Operand::Register(_), Some(Operand::Immediate(_))) => Ok(4),
         Instruction::Add(Operand::Register(_), None) => Ok(1),
         Instruction::Add(Operand::Immediate(_), None) => Ok(3),
+        Instruction::Add(Operand::Label(_), None) => Ok(3),
         Instruction::Sub(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Sub(Operand::Register(_), None) => Ok(1),
+        Instruction::Sub(Operand::Immediate(_), None) => Ok(3),
+        Instruction::Sub(Operand::Label(_), None) => Ok(3),
         Instruction::And(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Or(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Xor(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
@@ -94,9 +97,21 @@ fn calculate_instruction_size(
         Instruction::Adc(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::Sbc(Operand::Register(_), Some(Operand::Register(_))) => Ok(2),
         Instruction::And(Operand::Register(_), None) => Ok(1),
+        Instruction::And(Operand::Immediate(_), None) => Ok(3),
+        Instruction::And(Operand::Label(_), None) => Ok(3),
         Instruction::Or(Operand::Register(_), None) => Ok(1),
+        Instruction::Or(Operand::Immediate(_), None) => Ok(3),
+        Instruction::Or(Operand::Label(_), None) => Ok(3),
         Instruction::Xor(Operand::Register(_), None) => Ok(1),
+        Instruction::Xor(Operand::Immediate(_), None) => Ok(3),
+        Instruction::Xor(Operand::Label(_), None) => Ok(3),
         Instruction::Cmp(Operand::Register(_), None) => Ok(1),
+        Instruction::Cmp(Operand::Immediate(_), None) => Ok(3),
+        Instruction::Cmp(Operand::Label(_), None) => Ok(3),
+        Instruction::Adc(Operand::Immediate(_), None) => Ok(3),
+        Instruction::Adc(Operand::Label(_), None) => Ok(3),
+        Instruction::Sbc(Operand::Immediate(_), None) => Ok(3),
+        Instruction::Sbc(Operand::Label(_), None) => Ok(3),
         Instruction::Neg => Ok(1),
         Instruction::Not => Ok(1),
         Instruction::Swap => Ok(1),
@@ -343,6 +358,23 @@ fn encode_instruction(
             let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x09, rd_index, low, high])
         }
+        // add accumulator immediate
+        Instruction::Add(Operand::Immediate(value), None) => {
+            let [low, high] = (*value as u16).to_le_bytes();
+            Ok(vec![0xC0, low, high])
+        }
+        // add accumulator label
+        Instruction::Add(Operand::Label(label_name), None) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            Ok(vec![0xC0, low, high])
+        }
         // add accumulator
         Instruction::Add(Operand::Register(rs), None) => {
             let opcode = encode_reg_opcode(0x18, rs);
@@ -352,6 +384,23 @@ fn encode_instruction(
         Instruction::Sub(Operand::Register(rd), Some(Operand::Register(rs))) => {
             let byte0 = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0x11, byte0])
+        }
+        // sub accumulator immediate
+        Instruction::Sub(Operand::Immediate(value), None) => {
+            let [low, high] = (*value as u16).to_le_bytes();
+            Ok(vec![0xC1, low, high])
+        }
+        // sub accumulator label
+        Instruction::Sub(Operand::Label(label_name), None) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            Ok(vec![0xC1, low, high])
         }
         // sub accumulator
         Instruction::Sub(Operand::Register(rs), None) => {
@@ -413,10 +462,61 @@ fn encode_instruction(
             let byte0 = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0x16, byte0])
         }
+        // adc accumulator immediate
+        Instruction::Adc(Operand::Immediate(value), None) => {
+            let [low, high] = (*value as u16).to_le_bytes();
+            Ok(vec![0xC6, low, high])
+        }
+        // adc accumulator label
+        Instruction::Adc(Operand::Label(label_name), None) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            Ok(vec![0xC6, low, high])
+        }
         // sbc reg to reg
         Instruction::Sbc(Operand::Register(rd), Some(Operand::Register(rs))) => {
             let byte0 = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0x17, byte0])
+        }
+        // sbc accumulator immediate
+        Instruction::Sbc(Operand::Immediate(value), None) => {
+            let [low, high] = (*value as u16).to_le_bytes();
+            Ok(vec![0xC7, low, high])
+        }
+        // sbc accumulator label
+        Instruction::Sbc(Operand::Label(label_name), None) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            Ok(vec![0xC7, low, high])
+        }
+        // and accumulator immediate
+        Instruction::And(Operand::Immediate(value), None) => {
+            let [low, high] = (*value as u16).to_le_bytes();
+            Ok(vec![0xC2, low, high])
+        }
+        // and accumulator label
+        Instruction::And(Operand::Label(label_name), None) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            Ok(vec![0xC2, low, high])
         }
         // and accumulator
         Instruction::And(Operand::Register(rs), None) => {
@@ -428,15 +528,66 @@ fn encode_instruction(
             let opcode = encode_reg_opcode(0x30, rs);
             Ok(vec![opcode])
         }
+        // or accumulator immediate
+        Instruction::Or(Operand::Immediate(value), None) => {
+            let [low, high] = (*value as u16).to_le_bytes();
+            Ok(vec![0xC3, low, high])
+        }
+        // or accumulator label
+        Instruction::Or(Operand::Label(label_name), None) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            Ok(vec![0xC3, low, high])
+        }
         // xor accumulator
         Instruction::Xor(Operand::Register(rs), None) => {
             let opcode = encode_reg_opcode(0x38, rs);
             Ok(vec![opcode])
         }
+        // xor accumulator immediate
+        Instruction::Xor(Operand::Immediate(value), None) => {
+            let [low, high] = (*value as u16).to_le_bytes();
+            Ok(vec![0xC4, low, high])
+        }
+        // xor accumulator label
+        Instruction::Xor(Operand::Label(label_name), None) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            Ok(vec![0xC4, low, high])
+        }
         // cmp accumulator
         Instruction::Cmp(Operand::Register(rs), None) => {
             let opcode = encode_reg_opcode(0x40, rs);
             Ok(vec![opcode])
+        }
+        // cmp accumulator immediate
+        Instruction::Cmp(Operand::Immediate(value), None) => {
+            let [low, high] = (*value as u16).to_le_bytes();
+            Ok(vec![0xC5, low, high])
+        }
+        // cmp accumulator label
+        Instruction::Cmp(Operand::Label(label_name), None) => {
+            let target_address =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+            let [low, high] = (*target_address as u16).to_le_bytes();
+            Ok(vec![0xC5, low, high])
         }
         // neg
         Instruction::Neg => Ok(vec![0x48]),
@@ -696,6 +847,97 @@ mod tests {
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x44]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_add_acc_immediate() {
+        let instruction = Instruction::Add(Operand::Immediate(0x1234), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xC0, 0x34, 0x12]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_add_acc_label() {
+        let instruction = Instruction::Add(Operand::Label("TARGET".into()), None);
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert("TARGET".to_string(), 0x2468);
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xC0, 0x68, 0x24]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_sub_acc_immediate() {
+        let instruction = Instruction::Sub(Operand::Immediate(0x00FF), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xC1, 0xFF, 0x00]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_and_acc_immediate() {
+        let instruction = Instruction::And(Operand::Immediate(0x0F0F), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xC2, 0x0F, 0x0F]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_or_acc_immediate() {
+        let instruction = Instruction::Or(Operand::Immediate(0x8000), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xC3, 0x00, 0x80]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_xor_acc_immediate() {
+        let instruction = Instruction::Xor(Operand::Immediate(0xAAAA), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xC4, 0xAA, 0xAA]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_cmp_acc_immediate() {
+        let instruction = Instruction::Cmp(Operand::Immediate(0x0A0B), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xC5, 0x0B, 0x0A]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_adci_acc_immediate() {
+        let instruction = Instruction::Adc(Operand::Immediate(0xFFFF), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xC6, 0xFF, 0xFF]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_sbci_acc_immediate() {
+        let instruction = Instruction::Sbc(Operand::Immediate(0x1234), None);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xC7, 0x34, 0x12]
         );
     }
 
