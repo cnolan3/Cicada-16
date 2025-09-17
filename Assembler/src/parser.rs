@@ -143,7 +143,6 @@ fn build_absolute(pair: Pair<Rule>) -> Operand {
         .next()
         .unwrap();
     let value = u16::from_str_radix(hex.as_str(), 16).unwrap();
-    println!("{}", value);
     Operand::Absolute(value)
 }
 
@@ -200,6 +199,37 @@ fn build_ld_2_op(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     Ok(Instruction::Ld(dest, src))
+}
+
+// build and check operands for a store instruction
+fn build_st_2_op(st_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = st_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = st_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = src {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The source of an ST instruction must be a register value (R0-7).".to_string(),
+        });
+    }
+
+    match dest {
+        Operand::Absolute(_) | Operand::Indirect(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason:
+                    "The destination of an ST instruction must be an absolute or indirect address."
+                        .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::St(dest, src))
 }
 
 // build and check operands for a load immediate instruction
@@ -1571,6 +1601,7 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     match pair.as_rule() {
         Rule::nop => Ok(Instruction::Nop),
         Rule::halt => Ok(Instruction::Halt),
+        Rule::st_2_op => build_st_2_op(pair),
         Rule::ld_2_op => build_ld_2_op(pair),
         Rule::ldi_2_op => build_ldi_2_op(pair),
         Rule::add_sp => build_add_sp(pair),
@@ -2236,6 +2267,54 @@ mod tests {
         assert_eq!(
             lines[0].instruction,
             Some(Instruction::Syscall(Operand::Immediate(0x1A)))
+        );
+    }
+
+    #[test]
+    fn test_parse_ld_absolute() {
+        let source = "ld r1, (0x1234)\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Ld(
+                Operand::Register(Register::R1),
+                Operand::Absolute(0x1234)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_st_absolute() {
+        let source = "st (0x4321), r2\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::St(
+                Operand::Absolute(0x4321),
+                Operand::Register(Register::R2)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_st_indirect() {
+        let source = "st (r1), r2\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::St(
+                Operand::Indirect(Register::R1),
+                Operand::Register(Register::R2)
+            ))
         );
     }
 }

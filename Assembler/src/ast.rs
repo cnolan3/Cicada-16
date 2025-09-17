@@ -43,6 +43,7 @@ pub enum Instruction {
 
     // Load instructions
     Ld(Operand, Operand), // Covers LD rd, rs; LDI r, n16; LD r, (n16); etc.
+    St(Operand, Operand),
 
     // Arithmetic instructions
     Add(Operand, Option<Operand>), // Option for one-operand (ADD rs) vs two-operand (ADD rd, rs)

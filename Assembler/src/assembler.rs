@@ -52,7 +52,8 @@ fn calculate_instruction_size(
         | Instruction::Di
         | Instruction::Inc(_)
         | Instruction::Dec(_) => Ok(1),
-
+        Instruction::St(Operand::Absolute(_), Operand::Register(_)) => Ok(3),
+        Instruction::St(Operand::Indirect(_), Operand::Register(_)) => Ok(2),
         Instruction::Ld(Operand::Register(_), Operand::Register(_)) => {
             // Check if this form maps to the 1-byte LD rd, rs (opcodes 0x80-0xBF)
             Ok(1)
@@ -66,6 +67,7 @@ fn calculate_instruction_size(
             // LD r, (n16) where n16 comes from a label. Size is 3 bytes.
             Ok(3)
         }
+        Instruction::Ld(Operand::Register(_), Operand::Absolute(_)) => Ok(3),
         Instruction::Jmp(Operand::Label(_)) | Instruction::Jmp(Operand::Immediate(_)) => Ok(3), // JMP n16
         Instruction::Jmp(Operand::Indirect(_)) => Ok(1),
         Instruction::Jr(Operand::Label(_)) | Instruction::Jr(Operand::Immediate(_)) => Ok(2), // JR n8s
@@ -675,10 +677,27 @@ fn encode_instruction(
         Instruction::Not => Ok(vec![0x49]),
         // swap
         Instruction::Swap => Ok(vec![0x4A]),
-        // absolute-to-register load
+        // indirect-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Indirect(rs)) => {
             let sub_opcode = encode_rd_rs_byte(0x00, rd, rs);
             Ok(vec![0xFE, sub_opcode])
+        }
+        // register-to-indirect store
+        Instruction::St(Operand::Indirect(rd), Operand::Register(rs)) => {
+            let sub_opcode = encode_rd_rs_byte(0x40, rd, rs);
+            Ok(vec![0xFE, sub_opcode])
+        }
+        // absolute-to-register load
+        Instruction::Ld(Operand::Register(rd), Operand::Absolute(addr)) => {
+            let opcode = encode_reg_opcode(0xE9, rd);
+            let [low, high] = (*addr as u16).to_le_bytes();
+            Ok(vec![opcode, low, high])
+        }
+        // register-to-absolute store
+        Instruction::St(Operand::Absolute(addr), Operand::Register(rs)) => {
+            let opcode = encode_reg_opcode(0xF1, rs);
+            let [low, high] = (*addr as u16).to_le_bytes();
+            Ok(vec![opcode, low, high])
         }
 
         // ... add encoding logic for every instruction variant based on your opcode map ...
@@ -1413,6 +1432,60 @@ mod tests {
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0x4E, 0x1A]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_ld_absolute() {
+        let instruction =
+            Instruction::Ld(Operand::Register(Register::R1), Operand::Absolute(0x1234));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_ld_absolute() {
+        let instruction =
+            Instruction::Ld(Operand::Register(Register::R1), Operand::Absolute(0x1234));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xEA, 0x34, 0x12] // 0xE9 + 1
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_st_absolute() {
+        let instruction =
+            Instruction::St(Operand::Absolute(0x4321), Operand::Register(Register::R2));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_st_absolute() {
+        let instruction =
+            Instruction::St(Operand::Absolute(0x4321), Operand::Register(Register::R2));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xF3, 0x21, 0x43] // 0xF1 + 2
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_st_indirect() {
+        let instruction =
+            Instruction::St(Operand::Indirect(Register::R1), Operand::Register(Register::R2));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_st_indirect() {
+        let instruction =
+            Instruction::St(Operand::Indirect(Register::R1), Operand::Register(Register::R2));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFE, 0x4A] // 0x40 | (1 << 3) | 2
         );
     }
 }
