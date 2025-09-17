@@ -16,15 +16,29 @@ label = { identifier ~ ":" }
 
 identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 
+reg_prefix = _{ ^"r" }
+
+reg_num = @{ ASCII_DIGIT }
+
+hex_prefix = _{ "0x" | "$" }
+
+hex_body = @{ ASCII_HEX_DIGIT+ }
+
+open_paren = _{ "(" }
+
+close_paren = _{ ")" }
+
 // --- Operands ---
 
-operand = { indirect | immediate_hex | immediate_dec | register | identifier }
+operand = { indirect | absolute | immediate_hex | immediate_dec | register | identifier }
 
-indirect = @{ "(" ~ register ~ ")" }
+indirect = ${ open_paren ~ register ~ close_paren }
 
-register = @{ ("r" | "R") ~ ASCII_DIGIT }
+absolute = ${ open_paren ~ immediate_hex ~ close_paren }
 
-immediate_hex = @{ ("0x" | "$") ~ ASCII_HEX_DIGIT+ }
+register = ${ reg_prefix ~ reg_num }
+
+immediate_hex = ${ hex_prefix ~ hex_body }
 
 immediate_dec = @{ ("-")? ~ ASCII_DIGIT+ }
 

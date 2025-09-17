@@ -18,6 +18,7 @@ pub enum Operand {
     Register(Register),
     Immediate(i32),
     Indirect(Register),    // e.g., (R1)
+    Absolute(u16),         // e.g., (0x2020)
     Indexed(Register, i8), // e.g., (R1, 0x10) or (R1, -2)
     Label(String),         // e.g., my_label
 }

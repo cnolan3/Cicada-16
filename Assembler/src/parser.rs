@@ -68,13 +68,15 @@ fn build_operand(pair: Pair<Rule>) -> Operand {
         Rule::immediate_dec => build_immediate_dec(inner_pair),
         Rule::identifier => build_identifier(inner_pair),
         Rule::indirect => build_indirect(inner_pair),
+        Rule::absolute => build_absolute(inner_pair),
         _ => unreachable!("Unknown operand rule: {:?}", inner_pair.as_rule()),
     }
 }
 
 // build a register object from a pair
 fn build_register(pair: Pair<Rule>) -> Operand {
-    let reg_char = pair.as_str().chars().nth(1).unwrap();
+    let inner = pair.into_inner().next().unwrap();
+    let reg_char = inner.as_str().chars().nth(0).unwrap();
     let reg = match reg_char {
         '0' => Register::R0,
         '1' => Register::R1,
@@ -91,24 +93,14 @@ fn build_register(pair: Pair<Rule>) -> Operand {
 
 // build an immediate object
 fn build_immediate_hex(pair: Pair<Rule>) -> Operand {
-    let mut hex_str: &str = "";
-    match &pair.as_str().chars().nth(0) {
-        Some('$') => {
-            hex_str = &pair.as_str()[1..];
-        }
-        Some('0') => {
-            hex_str = &pair.as_str()[2..];
-        }
-        _ => {}
-    }
-
-    let value = i32::from_str_radix(hex_str, 16).unwrap();
+    let inner = pair.into_inner().next().unwrap();
+    let value = i32::from_str_radix(inner.as_str(), 16).unwrap();
     Operand::Immediate(value)
 }
 
 // build an immediate object
 fn build_immediate_dec(pair: Pair<Rule>) -> Operand {
-    let dec_str = &pair.as_str();
+    let dec_str = pair.as_str();
     let value = dec_str.parse::<i32>().unwrap();
     Operand::Immediate(value)
 }
@@ -120,7 +112,14 @@ fn build_identifier(pair: Pair<Rule>) -> Operand {
 
 // build an indirect object
 fn build_indirect(pair: Pair<Rule>) -> Operand {
-    let reg_char = pair.as_str().chars().nth(2).unwrap();
+    let reg = pair
+        .into_inner()
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap();
+    let reg_char = reg.as_str().chars().nth(0).unwrap();
     let reg = match reg_char {
         '0' => Register::R0,
         '1' => Register::R1,
@@ -133,6 +132,19 @@ fn build_indirect(pair: Pair<Rule>) -> Operand {
         _ => unreachable!("Invalid register"),
     };
     Operand::Indirect(reg)
+}
+
+fn build_absolute(pair: Pair<Rule>) -> Operand {
+    let hex = pair
+        .into_inner()
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap();
+    let value = u16::from_str_radix(hex.as_str(), 16).unwrap();
+    println!("{}", value);
+    Operand::Absolute(value)
 }
 
 fn build_condition_code(pair: Pair<Rule>) -> ConditionCode {
