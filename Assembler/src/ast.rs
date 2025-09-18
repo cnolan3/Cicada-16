@@ -61,6 +61,13 @@ pub enum Instruction {
     Inc(Operand),
     Dec(Operand),
 
+    // Bitwise shift and rotate instructions
+    Sra(Operand),
+    Shl(Operand),
+    Shr(Operand),
+    Rol(Operand),
+    Ror(Operand),
+
     // Jumps and Calls
     Jmp(Operand),
     Jr(Operand),

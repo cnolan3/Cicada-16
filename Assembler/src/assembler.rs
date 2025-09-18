@@ -128,6 +128,11 @@ fn calculate_instruction_size(
         Instruction::Neg => Ok(1),
         Instruction::Not => Ok(1),
         Instruction::Swap => Ok(1),
+        Instruction::Sra(_)
+        | Instruction::Shl(_)
+        | Instruction::Shr(_)
+        | Instruction::Rol(_)
+        | Instruction::Ror(_) => Ok(2),
 
         // ... add logic for every instruction variant based on your opcode map ...
         _ => Err(AssemblyError::SemanticError {
@@ -698,6 +703,27 @@ fn encode_instruction(
             let opcode = encode_reg_opcode(0xF1, rs);
             let [low, high] = (*addr as u16).to_le_bytes();
             Ok(vec![opcode, low, high])
+        }
+
+        Instruction::Sra(Operand::Register(reg)) => {
+            let opcode = encode_reg_opcode(0x00, reg);
+            Ok(vec![0xFD, opcode])
+        }
+        Instruction::Shl(Operand::Register(reg)) => {
+            let opcode = encode_reg_opcode(0x08, reg);
+            Ok(vec![0xFD, opcode])
+        }
+        Instruction::Shr(Operand::Register(reg)) => {
+            let opcode = encode_reg_opcode(0x10, reg);
+            Ok(vec![0xFD, opcode])
+        }
+        Instruction::Rol(Operand::Register(reg)) => {
+            let opcode = encode_reg_opcode(0x18, reg);
+            Ok(vec![0xFD, opcode])
+        }
+        Instruction::Ror(Operand::Register(reg)) => {
+            let opcode = encode_reg_opcode(0x20, reg);
+            Ok(vec![0xFD, opcode])
         }
 
         // ... add encoding logic for every instruction variant based on your opcode map ...
@@ -1473,19 +1499,73 @@ mod tests {
 
     #[test]
     fn test_calculate_instruction_size_st_indirect() {
-        let instruction =
-            Instruction::St(Operand::Indirect(Register::R1), Operand::Register(Register::R2));
+        let instruction = Instruction::St(
+            Operand::Indirect(Register::R1),
+            Operand::Register(Register::R2),
+        );
         assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
     }
 
     #[test]
     fn test_encode_instruction_st_indirect() {
-        let instruction =
-            Instruction::St(Operand::Indirect(Register::R1), Operand::Register(Register::R2));
+        let instruction = Instruction::St(
+            Operand::Indirect(Register::R1),
+            Operand::Register(Register::R2),
+        );
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0xFE, 0x4A] // 0x40 | (1 << 3) | 2
+        );
+    }
+
+    #[test]
+    fn test_encode_sra() {
+        let instruction = Instruction::Sra(Operand::Register(Register::R0));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x00]
+        );
+    }
+
+    #[test]
+    fn test_encode_shl() {
+        let instruction = Instruction::Shl(Operand::Register(Register::R1));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x09]
+        );
+    }
+
+    #[test]
+    fn test_encode_shr() {
+        let instruction = Instruction::Shr(Operand::Register(Register::R2));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x12]
+        );
+    }
+
+    #[test]
+    fn test_encode_rol() {
+        let instruction = Instruction::Rol(Operand::Register(Register::R3));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x1B]
+        );
+    }
+
+    #[test]
+    fn test_encode_ror() {
+        let instruction = Instruction::Ror(Operand::Register(Register::R4));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x24]
         );
     }
 }

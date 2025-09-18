@@ -347,8 +347,7 @@ fn build_addi_2_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an ADDI instruction must be an immediate value or a label." .
-to_string(),
+                    "The source operand of an ADDI instruction must be an immediate value or a label." .to_string(),
             });
         }
     }
@@ -431,8 +430,7 @@ fn build_addi_1_op(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an ADDI instruction must be an immediate value or a label." .
-to_string(),
+                    "The source operand of an ADDI instruction must be an immediate value or a label." .to_string(),
             });
         }
     }
@@ -510,8 +508,7 @@ fn build_subi_2_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an SUBI instruction must be an immediate value or a label." .
-to_string(),
+                    "The source operand of an SUBI instruction must be an immediate value or a label." .to_string(),
             });
         }
     }
@@ -564,8 +561,7 @@ fn build_subi_1_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an SUBI instruction must be an immediate value or a label." .
-to_string(),
+                    "The source operand of an SUBI instruction must be an immediate value or a label." .to_string(),
             });
         }
     }
@@ -643,8 +639,7 @@ fn build_andi_2_op(and_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an ANDI instruction must be an immediate value or a label." .
-to_string(),
+                    "The source operand of an ANDI instruction must be an immediate value or a label." .to_string(),
             });
         }
     }
@@ -697,8 +692,7 @@ fn build_andi_1_op(and_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an ANDI instruction must be an immediate value or a label." .
-to_string(),
+                    "The source operand of an ANDI instruction must be an immediate value or a label." .to_string(),
             });
         }
     }
@@ -776,8 +770,7 @@ fn build_ori_2_op(or_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an ORI instruction must be an immediate value or a label." .
-to_string(),
+                    "The source operand of an ORI instruction must be an immediate value or a label." .to_string(),
             });
         }
     }
@@ -830,8 +823,7 @@ fn build_ori_1_op(or_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an ORI instruction must be an immediate value or a label." .
-to_string(),
+                    "The source operand of an ORI instruction must be an immediate value or a label." .to_string(),
             });
         }
     }
@@ -909,8 +901,7 @@ fn build_xori_2_op(xor_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an XORI instruction must be an immediate value or a label." .
-to_string(),
+                    "The source operand of an XORI instruction must be an immediate value or a label." .to_string(),
             });
         }
     }
@@ -963,8 +954,7 @@ fn build_xori_1_op(xor_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an XORI instruction must be an immediate value or a label." .
-to_string(),
+                    "The source operand of an XORI instruction must be an immediate value or a label." .to_string(),
             });
         }
     }
@@ -1042,8 +1032,7 @@ fn build_cmpi_2_op(cmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "The source operand of an CMPI instruction must be an immediate value or a label." .
-to_string(),
+                    "The source operand of an CMPI instruction must be an immediate value or a label." .to_string(),
             });
         }
     }
@@ -1316,8 +1305,7 @@ fn build_jmp(jmp_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "Operand to a JMP instruction must be an indirect address ((R0-R7)), label or immediate address." .
-to_string(),
+                    "Operand to a JMP instruction must be an indirect address ((R0-R7)), label or immediate address." .to_string(),
             });
         }
     }
@@ -1497,6 +1485,91 @@ fn build_dec(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Dec(src))
 }
 
+// build and check operands for a sra instruction
+fn build_sra(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+    let mut inner = pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = op {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand for SRA instruction must be a register.".to_string(),
+        });
+    }
+
+    Ok(Instruction::Sra(op))
+}
+
+// build and check operands for a shl instruction
+fn build_shl(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+    let mut inner = pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = op {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand for Shl instruction must be a register.".to_string(),
+        });
+    }
+
+    Ok(Instruction::Shl(op))
+}
+
+// build and check operands for a shr instruction
+fn build_shr(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+    let mut inner = pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = op {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand for shr instruction must be a register.".to_string(),
+        });
+    }
+
+    Ok(Instruction::Shr(op))
+}
+
+// build and check operands for a rol instruction
+fn build_rol(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+    let mut inner = pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = op {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand for rol instruction must be a register.".to_string(),
+        });
+    }
+
+    Ok(Instruction::Rol(op))
+}
+
+// build and check operands for a ror instruction
+fn build_ror(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+    let mut inner = pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = op {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand for ror instruction must be a register.".to_string(),
+        });
+    }
+
+    Ok(Instruction::Ror(op))
+}
+
 // build and check operands for a call instruction
 fn build_call(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     let line = pair.as_span().start_pos().line_col().0;
@@ -1521,8 +1594,7 @@ fn build_call(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
             return Err(AssemblyError::StructuralError {
                 line,
                 reason:
-                    "Operand to a CALL instruction must be an indirect address ((R0-R7)), label or immediate address." .
-to_string(),
+                    "Operand to a CALL instruction must be an indirect address ((R0-R7)), label or immediate address." .to_string(),
             });
         }
     }
@@ -1659,6 +1731,11 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::di => Ok(Instruction::Di),
         Rule::inc => build_inc(pair),
         Rule::dec => build_dec(pair),
+        Rule::sra => build_sra(pair),
+        Rule::shl => build_shl(pair),
+        Rule::shr => build_shr(pair),
+        Rule::rol => build_rol(pair),
+        Rule::ror => build_ror(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
@@ -2315,6 +2392,66 @@ mod tests {
                 Operand::Indirect(Register::R1),
                 Operand::Register(Register::R2)
             ))
+        );
+    }
+
+    #[test]
+    fn test_parse_sra() {
+        let source = "sra r1\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Sra(Operand::Register(Register::R1)))
+        );
+    }
+
+    #[test]
+    fn test_parse_shl() {
+        let source = "shl r2\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Shl(Operand::Register(Register::R2)))
+        );
+    }
+
+    #[test]
+    fn test_parse_shr() {
+        let source = "shr r3\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Shr(Operand::Register(Register::R3)))
+        );
+    }
+
+    #[test]
+    fn test_parse_rol() {
+        let source = "rol r4\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Rol(Operand::Register(Register::R4)))
+        );
+    }
+
+    #[test]
+    fn test_parse_ror() {
+        let source = "ror r5\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Ror(Operand::Register(Register::R5)))
         );
     }
 }

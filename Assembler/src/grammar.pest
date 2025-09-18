@@ -134,6 +134,11 @@ nop
 | di
 | inc
 | dec
+| sra
+| shl
+| shr
+| rol
+| ror
 // ... add all other instruction mnemonics here
 }
 
@@ -198,6 +203,11 @@ ei = @{ ^"ei" }
 di = @{ ^"di" }
 inc = { ^"inc" ~ operand }
 dec = { ^"dec" ~ operand }
+sra = { ^"sra" ~ operand }
+shl = { ^"shl" ~ operand }
+shr = { ^"shr" ~ operand }
+rol = { ^"rol" ~ operand }
+ror = { ^"ror" ~ operand }
 add_sp = { ^"add" ~ ^"sp" ~ "," ~ operand}
 
 // --- Core Rules ---
