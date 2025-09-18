@@ -1826,6 +1826,120 @@ fn build_syscall(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Syscall(op))
 }
 
+// build and check operands for a bit check instruction
+fn build_bit(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = add_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = add_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let b = build_operand(inner.next().unwrap());
+
+    match &dest {
+        Operand::Register(_) | Operand::Indirect(_) | Operand::Absolute(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "BIT destination operand must be a register, indirect address or absolute address".to_string(),
+            });
+        }
+    }
+
+    match &b {
+        Operand::Immediate(imm) => {
+            if *imm > 7 || *imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "BIT bit ID operand must be between 0 and 7.".to_string(),
+                });
+            }
+        }
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "BIT bit ID operand must be an unsigned immediate value".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Bit(dest, b))
+}
+
+// build and check operands for a set instruction
+fn build_set(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = add_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = add_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let b = build_operand(inner.next().unwrap());
+
+    match &dest {
+        Operand::Register(_) | Operand::Indirect(_) | Operand::Absolute(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "SET destination operand must be a register, indirect address or absolute address.".to_string(),
+            });
+        }
+    }
+
+    match &b {
+        Operand::Immediate(imm) => {
+            if *imm > 7 || *imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "SET bit ID operand must be between 0 and 7.".to_string(),
+                });
+            }
+        }
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "SET bit ID operand must be an unsigned immediate value.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Set(dest, b))
+}
+
+// build and check operands for a res instruction
+fn build_res(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = add_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = add_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let b = build_operand(inner.next().unwrap());
+
+    match &dest {
+        Operand::Register(_) | Operand::Indirect(_) | Operand::Absolute(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "RES destination operand must be a register, indirect address or absolute address.".to_string(),
+            });
+        }
+    }
+
+    match &b {
+        Operand::Immediate(imm) => {
+            if *imm > 7 || *imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "RES bit ID operand must be between 0 and 7.".to_string(),
+                });
+            }
+        }
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "RES bit ID operand must be an unsigned immediate value.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Res(dest, b))
+}
+
 // ------------- build instruction –------------
 
 // Helper to build an Instruction from a pest Pair
@@ -1903,6 +2017,9 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::shr => build_shr(pair),
         Rule::rol => build_rol(pair),
         Rule::ror => build_ror(pair),
+        Rule::bit => build_bit(pair),
+        Rule::set => build_set(pair),
+        Rule::res => build_res(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }

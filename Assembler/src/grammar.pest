@@ -75,6 +75,9 @@ instruction = {
 nop
 | halt
 | djnz
+| bit
+| set
+| res
 | st_2_op
 | ldi_b
 | ldi_2_op
@@ -223,6 +226,9 @@ shr = { ^"shr" ~ operand }
 rol = { ^"rol" ~ operand }
 ror = { ^"ror" ~ operand }
 add_sp = { ^"add" ~ ^"sp" ~ "," ~ operand}
+bit = { ^"bit" ~ operand ~ "," ~ operand }
+set = { ^"set" ~ operand ~ "," ~ operand }
+res = { ^"res" ~ operand ~ "," ~ operand }
 
 // --- Core Rules ---
 

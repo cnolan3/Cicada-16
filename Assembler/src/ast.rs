@@ -90,6 +90,11 @@ pub enum Instruction {
     Pop(Operand),
     PushF,
     PopF,
+
+    // bit manipulation
+    Bit(Operand, Operand),
+    Set(Operand, Operand),
+    Res(Operand, Operand),
     // ... add all other instructions from your ISA ...
 }
 

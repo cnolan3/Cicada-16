@@ -140,7 +140,15 @@ fn calculate_instruction_size(
         | Instruction::Orb(_)
         | Instruction::Xorb(_)
         | Instruction::Cmpb(_) => Ok(2),
-
+        Instruction::Bit(Operand::Register(_), _)
+        | Instruction::Set(Operand::Register(_), _)
+        | Instruction::Res(Operand::Register(_), _) => Ok(3),
+        Instruction::Bit(Operand::Absolute(_), _)
+        | Instruction::Set(Operand::Absolute(_), _)
+        | Instruction::Res(Operand::Absolute(_), _) => Ok(4),
+        Instruction::Bit(Operand::Indirect(_), _)
+        | Instruction::Set(Operand::Indirect(_), _)
+        | Instruction::Res(Operand::Indirect(_), _) => Ok(3),
         // ... add logic for every instruction variant based on your opcode map ...
         _ => Err(AssemblyError::SemanticError {
             line: line_num,
@@ -414,11 +422,6 @@ fn encode_instruction(
         Instruction::Ld(Operand::Register(rd), Operand::Register(rs)) => {
             let opcode = encode_rd_rs_byte(0x80, rd, rs);
             Ok(vec![opcode])
-        }
-        // accumulator immediate byte load
-        Instruction::Ldb(Operand::Register(rd), Operand::Immediate(imm8)) => {
-            let sub_opcode = encode_reg_opcode(0xA0, rd);
-            Ok(vec![0xFD, sub_opcode, *imm8 as u8])
         }
         // add reg to reg
         Instruction::Add(Operand::Register(rd), Some(Operand::Register(rs))) => {
@@ -766,6 +769,56 @@ fn encode_instruction(
         Instruction::Ror(Operand::Register(reg)) => {
             let opcode = encode_reg_opcode(0x20, reg);
             Ok(vec![0xFD, opcode])
+        }
+        Instruction::Bit(Operand::Register(r), Operand::Immediate(b)) => {
+            let reg = encode_register_operand(r);
+            let sub_opcode: u8 = 0x58 + *b as u8;
+            Ok(vec![0xFD, sub_opcode, reg])
+        }
+        Instruction::Set(Operand::Register(r), Operand::Immediate(b)) => {
+            let reg = encode_register_operand(r);
+            let sub_opcode: u8 = 0x60 + *b as u8;
+            Ok(vec![0xFD, sub_opcode, reg])
+        }
+        Instruction::Res(Operand::Register(r), Operand::Immediate(b)) => {
+            let reg = encode_register_operand(r);
+            let sub_opcode: u8 = 0x68 + *b as u8;
+            Ok(vec![0xFD, sub_opcode, reg])
+        }
+        Instruction::Bit(Operand::Absolute(addr), Operand::Immediate(b)) => {
+            let [low, high] = (*addr as u16).to_le_bytes();
+            let sub_opcode: u8 = 0x70 + *b as u8;
+            Ok(vec![0xFD, sub_opcode, low, high])
+        }
+        Instruction::Set(Operand::Absolute(addr), Operand::Immediate(b)) => {
+            let [low, high] = (*addr as u16).to_le_bytes();
+            let sub_opcode: u8 = 0x78 + *b as u8;
+            Ok(vec![0xFD, sub_opcode, low, high])
+        }
+        Instruction::Res(Operand::Absolute(addr), Operand::Immediate(b)) => {
+            let [low, high] = (*addr as u16).to_le_bytes();
+            let sub_opcode: u8 = 0x80 + *b as u8;
+            Ok(vec![0xFD, sub_opcode, low, high])
+        }
+        Instruction::Bit(Operand::Indirect(r), Operand::Immediate(b)) => {
+            let reg = encode_register_operand(r);
+            let sub_opcode: u8 = 0x88 + *b as u8;
+            Ok(vec![0xFD, sub_opcode, reg])
+        }
+        Instruction::Set(Operand::Indirect(r), Operand::Immediate(b)) => {
+            let reg = encode_register_operand(r);
+            let sub_opcode: u8 = 0x90 + *b as u8;
+            Ok(vec![0xFD, sub_opcode, reg])
+        }
+        Instruction::Res(Operand::Indirect(r), Operand::Immediate(b)) => {
+            let reg = encode_register_operand(r);
+            let sub_opcode: u8 = 0x98 + *b as u8;
+            Ok(vec![0xFD, sub_opcode, reg])
+        }
+        // accumulator immediate byte load
+        Instruction::Ldb(Operand::Register(rd), Operand::Immediate(imm8)) => {
+            let sub_opcode = encode_reg_opcode(0xA0, rd);
+            Ok(vec![0xFD, sub_opcode, *imm8 as u8])
         }
 
         // ... add encoding logic for every instruction variant based on your opcode map ...
