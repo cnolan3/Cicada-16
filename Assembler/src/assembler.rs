@@ -1777,4 +1777,52 @@ mod tests {
             vec![0xFD, 0xA1, 0xAB]
         );
     }
+
+    #[test]
+    fn test_calculate_instruction_size_bit_register() {
+        let instruction = Instruction::Bit(Operand::Register(Register::R1), Operand::Immediate(7));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_bit_register() {
+        let instruction = Instruction::Bit(Operand::Register(Register::R1), Operand::Immediate(7));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x5F, 0x01]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_set_absolute() {
+        let instruction = Instruction::Set(Operand::Absolute(0x1234), Operand::Immediate(0));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 4);
+    }
+
+    #[test]
+    fn test_encode_instruction_set_absolute() {
+        let instruction = Instruction::Set(Operand::Absolute(0x1234), Operand::Immediate(0));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x78, 0x34, 0x12]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_res_indirect() {
+        let instruction = Instruction::Res(Operand::Indirect(Register::R2), Operand::Immediate(3));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_res_indirect() {
+        let instruction = Instruction::Res(Operand::Indirect(Register::R2), Operand::Immediate(3));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x9B, 0x02]
+        );
+    }
 }

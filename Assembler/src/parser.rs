@@ -2265,4 +2265,52 @@ mod tests {
             ))
         );
     }
+
+    #[test]
+    fn test_parse_bit_register() {
+        let source = "bit r1, 7\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Bit(
+                Operand::Register(Register::R1),
+                Operand::Immediate(7)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_set_absolute() {
+        let source = "set (0x1234), 0\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Set(
+                Operand::Absolute(0x1234),
+                Operand::Immediate(0)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_res_indirect() {
+        let source = "res (r2), 3\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Res(
+                Operand::Indirect(Register::R2),
+                Operand::Immediate(3)
+            ))
+        );
+    }
 }
