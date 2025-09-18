@@ -244,7 +244,7 @@ fn build_ldi_2_op(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     } else {
         return Err(AssemblyError::StructuralError {
             line,
-            reason: "The destination of an LD instruction must be a register value (R0-7)."
+            reason: "The destination of an LDI instruction must be a register value (R0-7)."
                 .to_string(),
         });
     }
@@ -275,6 +275,52 @@ fn build_ldi_2_op(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     Ok(Instruction::Ld(dest, src))
+}
+
+// build and check operands for a load byte immediate instruction
+fn build_ldi_b(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = ld_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = ld_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = dest {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The destination of an LDI.b instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    match src {
+        Operand::Immediate(imm) => {
+            if imm < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: "LDI.b immediate value must be unsigned.".to_string(),
+                });
+            } else if imm > (u8::MAX as i32) {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "LDI.b immediate value must be an unsigned 8 bit value (max: {})",
+                        u8::MAX
+                    ),
+                });
+            }
+        }
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The source operand of an LD.b instruction must be an immediate value."
+                    .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Ldb(dest, src))
 }
 
 // build and check operands for a 2 operand add instruction
@@ -1819,6 +1865,7 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::adci_1_op => build_adci_1_op(pair),
         Rule::sbc_2_op => build_sbc_2_op(pair),
         Rule::sbci_1_op => build_sbci_1_op(pair),
+        Rule::ldi_b => build_ldi_b(pair),
         Rule::add_b => build_add_b(pair),
         Rule::sub_b => build_sub_b(pair),
         Rule::and_b => build_and_b(pair),
@@ -2083,6 +2130,22 @@ mod tests {
         assert_eq!(
             lines[0].instruction,
             Some(Instruction::Cmpb(Operand::Register(Register::R6)))
+        );
+    }
+
+    #[test]
+    fn test_parse_ldi_b() {
+        let source = "ldi.b r1, 0xAB\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Ldb(
+                Operand::Register(Register::R1),
+                Operand::Immediate(0xAB)
+            ))
         );
     }
 }

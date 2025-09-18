@@ -67,6 +67,7 @@ fn calculate_instruction_size(
             // LD r, (n16) where n16 comes from a label. Size is 3 bytes.
             Ok(3)
         }
+        Instruction::Ldb(Operand::Register(_), Operand::Immediate(_)) => Ok(3),
         Instruction::Ld(Operand::Register(_), Operand::Absolute(_)) => Ok(3),
         Instruction::Jmp(Operand::Label(_)) | Instruction::Jmp(Operand::Immediate(_)) => Ok(3), // JMP n16
         Instruction::Jmp(Operand::Indirect(_)) => Ok(1),
@@ -413,6 +414,11 @@ fn encode_instruction(
         Instruction::Ld(Operand::Register(rd), Operand::Register(rs)) => {
             let opcode = encode_rd_rs_byte(0x80, rd, rs);
             Ok(vec![opcode])
+        }
+        // accumulator immediate byte load
+        Instruction::Ldb(Operand::Register(rd), Operand::Immediate(imm8)) => {
+            let sub_opcode = encode_reg_opcode(0xA0, rd);
+            Ok(vec![0xFD, sub_opcode, *imm8 as u8])
         }
         // add reg to reg
         Instruction::Add(Operand::Register(rd), Some(Operand::Register(rs))) => {
@@ -1698,6 +1704,24 @@ mod tests {
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0xFD, 0x56] // 0x50 + 6
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_ldi_b() {
+        let instruction =
+            Instruction::Ldb(Operand::Register(Register::R1), Operand::Immediate(0xAB));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_ldi_b() {
+        let instruction =
+            Instruction::Ldb(Operand::Register(Register::R1), Operand::Immediate(0xAB));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0xA1, 0xAB]
         );
     }
 }

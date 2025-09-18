@@ -76,6 +76,7 @@ nop
 | halt
 | djnz
 | st_2_op
+| ldi_b
 | ldi_2_op
 | ld_2_op
 | add_b
@@ -153,6 +154,7 @@ halt = @{ ^"halt" }
 djnz = { ^"djnz" ~ operand }
 ld_2_op =  { ^"ld" ~ operand ~ "," ~ operand }
 st_2_op =  { ^"st" ~ operand ~ "," ~ operand }
+ldi_b = { ^"ldi.b" ~ operand ~ "," ~ operand }
 ldi_2_op =  { ^"ldi" ~ operand ~ "," ~ operand }
 add_2_op = { ^"add" ~ operand ~ "," ~ operand }
 add_1_op = { ^"add" ~ operand }
