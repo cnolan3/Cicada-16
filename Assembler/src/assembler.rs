@@ -132,7 +132,13 @@ fn calculate_instruction_size(
         | Instruction::Shl(_)
         | Instruction::Shr(_)
         | Instruction::Rol(_)
-        | Instruction::Ror(_) => Ok(2),
+        | Instruction::Ror(_)
+        | Instruction::Addb(_)
+        | Instruction::Subb(_)
+        | Instruction::Andb(_)
+        | Instruction::Orb(_)
+        | Instruction::Xorb(_)
+        | Instruction::Cmpb(_) => Ok(2),
 
         // ... add logic for every instruction variant based on your opcode map ...
         _ => Err(AssemblyError::SemanticError {
@@ -442,6 +448,11 @@ fn encode_instruction(
             let opcode = encode_reg_opcode(0x18, rs);
             Ok(vec![opcode])
         }
+        // add.b accumulator
+        Instruction::Addb(Operand::Register(rs)) => {
+            let opcode = encode_reg_opcode(0x28, rs);
+            Ok(vec![0xFD, opcode])
+        }
         // sub reg to reg
         Instruction::Sub(Operand::Register(rd), Some(Operand::Register(rs))) => {
             let byte0 = encode_rd_rs_byte(0x00, rd, rs);
@@ -475,6 +486,11 @@ fn encode_instruction(
             let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x0A, rd_index, low, high])
         }
+        // sub.b accumulator
+        Instruction::Subb(Operand::Register(rs)) => {
+            let opcode = encode_reg_opcode(0x30, rs);
+            Ok(vec![0xFD, opcode])
+        }
         // and reg to reg
         Instruction::And(Operand::Register(rd), Some(Operand::Register(rs))) => {
             let byte0 = encode_rd_rs_byte(0x00, rd, rs);
@@ -485,6 +501,11 @@ fn encode_instruction(
             let rd_index = encode_register_operand(rd);
             let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x0B, rd_index, low, high])
+        }
+        // and.b accumulator
+        Instruction::Andb(Operand::Register(rs)) => {
+            let opcode = encode_reg_opcode(0x38, rs);
+            Ok(vec![0xFD, opcode])
         }
         // or reg to reg
         Instruction::Or(Operand::Register(rd), Some(Operand::Register(rs))) => {
@@ -497,6 +518,11 @@ fn encode_instruction(
             let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x0C, rd_index, low, high])
         }
+        // or.b accumulator
+        Instruction::Orb(Operand::Register(rs)) => {
+            let opcode = encode_reg_opcode(0x40, rs);
+            Ok(vec![0xFD, opcode])
+        }
         // xor reg to reg
         Instruction::Xor(Operand::Register(rd), Some(Operand::Register(rs))) => {
             let byte0 = encode_rd_rs_byte(0x00, rd, rs);
@@ -508,6 +534,11 @@ fn encode_instruction(
             let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x0D, rd_index, low, high])
         }
+        // xor.b accumulator
+        Instruction::Xorb(Operand::Register(rs)) => {
+            let opcode = encode_reg_opcode(0x48, rs);
+            Ok(vec![0xFD, opcode])
+        }
         // cmp reg to reg
         Instruction::Cmp(Operand::Register(rd), Some(Operand::Register(rs))) => {
             let byte0 = encode_rd_rs_byte(0x00, rd, rs);
@@ -518,6 +549,11 @@ fn encode_instruction(
             let rd_index = encode_register_operand(rd);
             let [low, high] = (*imm as u16).to_le_bytes();
             Ok(vec![0x0E, rd_index, low, high])
+        }
+        // cmp.b accumulator
+        Instruction::Cmpb(Operand::Register(rs)) => {
+            let opcode = encode_reg_opcode(0x50, rs);
+            Ok(vec![0xFD, opcode])
         }
         // adc reg to reg
         Instruction::Adc(Operand::Register(rd), Some(Operand::Register(rs))) => {
@@ -1566,6 +1602,102 @@ mod tests {
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0xFD, 0x24]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_add_b() {
+        let instruction = Instruction::Addb(Operand::Register(Register::R1));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_add_b() {
+        let instruction = Instruction::Addb(Operand::Register(Register::R1));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x29] // 0x28 + 1
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_sub_b() {
+        let instruction = Instruction::Subb(Operand::Register(Register::R2));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_sub_b() {
+        let instruction = Instruction::Subb(Operand::Register(Register::R2));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x32] // 0x30 + 2
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_and_b() {
+        let instruction = Instruction::Andb(Operand::Register(Register::R3));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_and_b() {
+        let instruction = Instruction::Andb(Operand::Register(Register::R3));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x3B] // 0x38 + 3
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_or_b() {
+        let instruction = Instruction::Orb(Operand::Register(Register::R4));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_or_b() {
+        let instruction = Instruction::Orb(Operand::Register(Register::R4));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x44] // 0x40 + 4
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_xor_b() {
+        let instruction = Instruction::Xorb(Operand::Register(Register::R5));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_xor_b() {
+        let instruction = Instruction::Xorb(Operand::Register(Register::R5));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x4D] // 0x48 + 5
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_cmp_b() {
+        let instruction = Instruction::Cmpb(Operand::Register(Register::R6));
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_encode_instruction_cmp_b() {
+        let instruction = Instruction::Cmpb(Operand::Register(Register::R6));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFD, 0x56] // 0x50 + 6
         );
     }
 }

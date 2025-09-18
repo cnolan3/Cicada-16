@@ -47,11 +47,17 @@ pub enum Instruction {
 
     // Arithmetic instructions
     Add(Operand, Option<Operand>), // Option for one-operand (ADD rs) vs two-operand (ADD rd, rs)
+    Addb(Operand),
     Sub(Operand, Option<Operand>),
+    Subb(Operand),
     And(Operand, Option<Operand>),
+    Andb(Operand),
     Or(Operand, Option<Operand>),
+    Orb(Operand),
     Xor(Operand, Option<Operand>),
+    Xorb(Operand),
     Cmp(Operand, Option<Operand>),
+    Cmpb(Operand),
     Adc(Operand, Option<Operand>),
     Sbc(Operand, Option<Operand>),
     AddSp(Operand),

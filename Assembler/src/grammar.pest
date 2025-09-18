@@ -78,27 +78,33 @@ nop
 | st_2_op
 | ldi_2_op
 | ld_2_op
+| add_b
 | add_sp
 | addi_2_op
 | addi_1_op
 | add_2_op
 | add_1_op
+| sub_b
 | subi_2_op
 | subi_1_op
 | sub_2_op
 | sub_1_op
+| and_b
 | andi_2_op
 | andi_1_op
 | and_2_op
 | and_1_op
+| or_b
 | ori_2_op
 | ori_1_op
 | or_2_op
 | or_1_op
+| xor_b
 | xori_2_op
 | xori_1_op
 | xor_2_op
 | xor_1_op
+| cmp_b
 | cmpi_2_op
 | cmpi_1_op
 | cmp_2_op
@@ -150,26 +156,32 @@ st_2_op =  { ^"st" ~ operand ~ "," ~ operand }
 ldi_2_op =  { ^"ldi" ~ operand ~ "," ~ operand }
 add_2_op = { ^"add" ~ operand ~ "," ~ operand }
 add_1_op = { ^"add" ~ operand }
+add_b = { ^"add.b" ~ operand }
 addi_2_op = { ^"addi" ~ operand ~ "," ~ operand }
 addi_1_op = { ^"addi" ~ operand }
 sub_2_op = { ^"sub" ~ operand ~ "," ~ operand }
 sub_1_op = { ^"sub" ~ operand }
+sub_b = { ^"sub.b" ~ operand }
 subi_2_op = { ^"subi" ~ operand ~ "," ~ operand }
 subi_1_op = { ^"subi" ~ operand }
 and_2_op = { ^"and" ~ operand ~ "," ~ operand }
 and_1_op = { ^"and" ~ operand }
+and_b = { ^"and.b" ~ operand }
 andi_2_op = { ^"andi" ~ operand ~ "," ~ operand }
 andi_1_op = { ^"andi" ~ operand }
 or_2_op = { ^"or" ~ operand ~ "," ~ operand }
 or_1_op = { ^"or" ~ operand }
+or_b = { ^"or.b" ~ operand }
 ori_2_op = { ^"ori" ~ operand ~ "," ~ operand }
 ori_1_op = { ^"ori" ~ operand }
 xor_2_op = { ^"xor" ~ operand ~ "," ~ operand }
 xor_1_op = { ^"xor" ~ operand }
+xor_b = { ^"xor.b" ~ operand }
 xori_2_op = { ^"xori" ~ operand ~ "," ~ operand }
 xori_1_op = { ^"xori" ~ operand }
 cmp_2_op = { ^"cmp" ~ operand ~ "," ~ operand }
 cmp_1_op = { ^"cmp" ~ operand }
+cmp_b = { ^"cmp.b" ~ operand }
 cmpi_2_op = { ^"cmpi" ~ operand ~ "," ~ operand }
 cmpi_1_op = { ^"cmpi" ~ operand }
 adc_2_op = { ^"adc" ~ operand ~ "," ~ operand }
