@@ -30,7 +30,17 @@ close_paren = _{ ")" }
 
 // --- Operands ---
 
-operand = { indirect | absolute | immediate_hex | immediate_dec | register | identifier }
+operand = {
+predec
+| postinc
+| indirect
+| absolute
+| immediate_hex
+| immediate_dec
+| register
+| identifier
+| indexed
+}
 
 indirect = ${ open_paren ~ register ~ close_paren }
 
@@ -41,6 +51,12 @@ register = ${ reg_prefix ~ reg_num }
 immediate_hex = ${ hex_prefix ~ hex_body }
 
 immediate_dec = @{ ("-")? ~ ASCII_DIGIT+ }
+
+indexed = { open_paren ~ register ~ "," ~ immediate_dec ~ close_paren }
+
+predec = ${ "-(" ~ register ~ ")" }
+
+postinc = ${ "(" ~ register ~ ")+" }
 
 // --- Condition Codes ---
 
@@ -78,9 +94,11 @@ nop
 | bit
 | set
 | res
+| st_b
 | st_2_op
 | ldi_b
 | ldi_2_op
+| ld_b
 | ld_2_op
 | add_b
 | add_sp
@@ -149,6 +167,7 @@ nop
 | shr
 | rol
 | ror
+| lea
 // ... add all other instruction mnemonics here
 }
 
@@ -225,10 +244,13 @@ shl = { ^"shl" ~ operand }
 shr = { ^"shr" ~ operand }
 rol = { ^"rol" ~ operand }
 ror = { ^"ror" ~ operand }
-add_sp = { ^"add" ~ ^"sp" ~ "," ~ operand}
+add_sp = { ^"add" ~ ^"sp" ~ "," ~ operand }
 bit = { ^"bit" ~ operand ~ "," ~ operand }
 set = { ^"set" ~ operand ~ "," ~ operand }
 res = { ^"res" ~ operand ~ "," ~ operand }
+ld_b = { ^"ld.b" ~ operand ~ "," ~ operand }
+st_b = { ^"st.b" ~ operand ~ "," ~ operand }
+lea = { ^"lea" ~ operand ~ "," ~ operand }
 
 // --- Core Rules ---
 

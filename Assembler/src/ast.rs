@@ -21,6 +21,8 @@ pub enum Operand {
     Absolute(u16),         // e.g., (0x2020)
     Indexed(Register, i8), // e.g., (R1, 0x10) or (R1, -2)
     Label(String),         // e.g., my_label
+    PreDecrement(Register),
+    PostIncrement(Register),
 }
 
 // --- Instructions ---
@@ -45,6 +47,7 @@ pub enum Instruction {
     Ld(Operand, Operand), // Covers LD rd, rs; LDI r, n16; LD r, (n16); etc.
     Ldb(Operand, Operand),
     St(Operand, Operand),
+    Stb(Operand, Operand),
 
     // Arithmetic instructions
     Add(Operand, Option<Operand>), // Option for one-operand (ADD rs) vs two-operand (ADD rd, rs)
@@ -95,6 +98,8 @@ pub enum Instruction {
     Bit(Operand, Operand),
     Set(Operand, Operand),
     Res(Operand, Operand),
+
+    Lea(Operand, Operand),
     // ... add all other instructions from your ISA ...
 }
 

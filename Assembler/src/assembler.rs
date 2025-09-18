@@ -67,8 +67,21 @@ fn calculate_instruction_size(
             // LD r, (n16) where n16 comes from a label. Size is 3 bytes.
             Ok(3)
         }
+        Instruction::Ld(Operand::Register(_), Operand::Indexed(_, _)) => Ok(3),
+        Instruction::Ld(Operand::Register(_), Operand::PostIncrement(_)) => Ok(3),
+        Instruction::Ld(Operand::Register(_), Operand::PreDecrement(_)) => Ok(3),
         Instruction::Ldb(Operand::Register(_), Operand::Immediate(_)) => Ok(3),
+        Instruction::Ldb(Operand::Register(_), Operand::Indirect(_)) => Ok(2),
+        Instruction::Ldb(Operand::Register(_), Operand::PostIncrement(_)) => Ok(3),
+        Instruction::Ldb(Operand::Register(_), Operand::PreDecrement(_)) => Ok(3),
+        Instruction::St(Operand::Indexed(_, _), Operand::Register(_)) => Ok(3),
+        Instruction::St(Operand::PostIncrement(_), Operand::Register(_)) => Ok(3),
+        Instruction::St(Operand::PreDecrement(_), Operand::Register(_)) => Ok(3),
+        Instruction::Stb(Operand::Indirect(_), Operand::Register(_)) => Ok(2),
+        Instruction::Stb(Operand::PostIncrement(_), Operand::Register(_)) => Ok(3),
+        Instruction::Stb(Operand::PreDecrement(_), Operand::Register(_)) => Ok(3),
         Instruction::Ld(Operand::Register(_), Operand::Absolute(_)) => Ok(3),
+        Instruction::Lea(Operand::Register(_), Operand::Indexed(_, _)) => Ok(3),
         Instruction::Jmp(Operand::Label(_)) | Instruction::Jmp(Operand::Immediate(_)) => Ok(3), // JMP n16
         Instruction::Jmp(Operand::Indirect(_)) => Ok(1),
         Instruction::Jr(Operand::Label(_)) | Instruction::Jr(Operand::Immediate(_)) => Ok(2), // JR n8s
@@ -819,6 +832,66 @@ fn encode_instruction(
         Instruction::Ldb(Operand::Register(rd), Operand::Immediate(imm8)) => {
             let sub_opcode = encode_reg_opcode(0xA0, rd);
             Ok(vec![0xFD, sub_opcode, *imm8 as u8])
+        }
+        Instruction::Ldb(Operand::Register(rd), Operand::Indirect(rs)) => {
+            let sub_opcode = encode_rd_rs_byte(0x80, rd, rs);
+            Ok(vec![0xFE, sub_opcode])
+        }
+        Instruction::Stb(Operand::Indirect(rd), Operand::Register(rs)) => {
+            let sub_opcode = encode_rd_rs_byte(0x80, rd, rs);
+            Ok(vec![0xFE, sub_opcode])
+        }
+        Instruction::Ld(Operand::Register(rd), Operand::Indexed(rs, offset)) => {
+            let sub_opcode = encode_rd_rs_byte(0x00, rd, rs);
+            Ok(vec![0xFF, sub_opcode, *offset as u8])
+        }
+        Instruction::St(Operand::Indexed(rd, offset), Operand::Register(rs)) => {
+            let sub_opcode = encode_rd_rs_byte(0x40, rd, rs);
+            Ok(vec![0xFF, sub_opcode, *offset as u8])
+        }
+        Instruction::Lea(Operand::Register(rd), Operand::Indexed(rs, offset)) => {
+            let sub_opcode = encode_rd_rs_byte(0x80, rd, rs);
+            Ok(vec![0xFF, sub_opcode, *offset as u8])
+        }
+        Instruction::Ld(Operand::Register(rd), Operand::PostIncrement(rs)) => {
+            let sub_opcode = encode_reg_opcode(0xC0, rs);
+            let dest = encode_register_operand(rd);
+            Ok(vec![0xFF, sub_opcode, dest])
+        }
+        Instruction::St(Operand::PostIncrement(rd), Operand::Register(rs)) => {
+            let sub_opcode = encode_reg_opcode(0xC8, rs);
+            let dest = encode_register_operand(rd);
+            Ok(vec![0xFF, sub_opcode, dest])
+        }
+        Instruction::Ld(Operand::Register(rd), Operand::PreDecrement(rs)) => {
+            let sub_opcode = encode_reg_opcode(0xD0, rs);
+            let dest = encode_register_operand(rd);
+            Ok(vec![0xFF, sub_opcode, dest])
+        }
+        Instruction::St(Operand::PreDecrement(rd), Operand::Register(rs)) => {
+            let sub_opcode = encode_reg_opcode(0xD8, rs);
+            let dest = encode_register_operand(rd);
+            Ok(vec![0xFF, sub_opcode, dest])
+        }
+        Instruction::Ldb(Operand::Register(rd), Operand::PostIncrement(rs)) => {
+            let sub_opcode = encode_reg_opcode(0xE0, rs);
+            let dest = encode_register_operand(rd);
+            Ok(vec![0xFF, sub_opcode, dest])
+        }
+        Instruction::Stb(Operand::PostIncrement(rd), Operand::Register(rs)) => {
+            let sub_opcode = encode_reg_opcode(0xE8, rs);
+            let dest = encode_register_operand(rd);
+            Ok(vec![0xFF, sub_opcode, dest])
+        }
+        Instruction::Ldb(Operand::Register(rd), Operand::PreDecrement(rs)) => {
+            let sub_opcode = encode_reg_opcode(0xF0, rs);
+            let dest = encode_register_operand(rd);
+            Ok(vec![0xFF, sub_opcode, dest])
+        }
+        Instruction::Stb(Operand::PreDecrement(rd), Operand::Register(rs)) => {
+            let sub_opcode = encode_reg_opcode(0xF8, rs);
+            let dest = encode_register_operand(rd);
+            Ok(vec![0xFF, sub_opcode, dest])
         }
 
         // ... add encoding logic for every instruction variant based on your opcode map ...
@@ -1823,6 +1896,248 @@ mod tests {
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
             vec![0xFD, 0x9B, 0x02]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_ld_indexed() {
+        let instruction = Instruction::Ld(
+            Operand::Register(Register::R0),
+            Operand::Indexed(Register::R1, 16),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_ld_indexed() {
+        let instruction = Instruction::Ld(
+            Operand::Register(Register::R0),
+            Operand::Indexed(Register::R1, 16),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFF, 0x01, 0x10]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_st_indexed() {
+        let instruction = Instruction::St(
+            Operand::Indexed(Register::R2, -1),
+            Operand::Register(Register::R3),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_st_indexed() {
+        let instruction = Instruction::St(
+            Operand::Indexed(Register::R2, -1),
+            Operand::Register(Register::R3),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFF, 0x53, 0xFF]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_lea_indexed() {
+        let instruction = Instruction::Lea(
+            Operand::Register(Register::R4),
+            Operand::Indexed(Register::R5, 32),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_lea_indexed() {
+        let instruction = Instruction::Lea(
+            Operand::Register(Register::R4),
+            Operand::Indexed(Register::R5, 32),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFF, 0xA5, 0x20]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_ld_post_increment() {
+        let instruction = Instruction::Ld(
+            Operand::Register(Register::R6),
+            Operand::PostIncrement(Register::R7),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_ld_post_increment() {
+        let instruction = Instruction::Ld(
+            Operand::Register(Register::R6),
+            Operand::PostIncrement(Register::R7),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFF, 0xC7, 0x06]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_st_post_increment() {
+        let instruction = Instruction::St(
+            Operand::PostIncrement(Register::R0),
+            Operand::Register(Register::R1),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_st_post_increment() {
+        let instruction = Instruction::St(
+            Operand::PostIncrement(Register::R0),
+            Operand::Register(Register::R1),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFF, 0xC9, 0x00]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_ld_pre_decrement() {
+        let instruction = Instruction::Ld(
+            Operand::Register(Register::R2),
+            Operand::PreDecrement(Register::R3),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_ld_pre_decrement() {
+        let instruction = Instruction::Ld(
+            Operand::Register(Register::R2),
+            Operand::PreDecrement(Register::R3),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFF, 0xD3, 0x02]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_st_pre_decrement() {
+        let instruction = Instruction::St(
+            Operand::PreDecrement(Register::R4),
+            Operand::Register(Register::R5),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_st_pre_decrement() {
+        let instruction = Instruction::St(
+            Operand::PreDecrement(Register::R4),
+            Operand::Register(Register::R5),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFF, 0xDD, 0x04]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_ld_b_post_increment() {
+        let instruction = Instruction::Ldb(
+            Operand::Register(Register::R6),
+            Operand::PostIncrement(Register::R7),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_ld_b_post_increment() {
+        let instruction = Instruction::Ldb(
+            Operand::Register(Register::R6),
+            Operand::PostIncrement(Register::R7),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFF, 0xE7, 0x06]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_st_b_post_increment() {
+        let instruction = Instruction::Stb(
+            Operand::PostIncrement(Register::R0),
+            Operand::Register(Register::R1),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_st_b_post_increment() {
+        let instruction = Instruction::Stb(
+            Operand::PostIncrement(Register::R0),
+            Operand::Register(Register::R1),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFF, 0xE9, 0x00]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_ld_b_pre_decrement() {
+        let instruction = Instruction::Ldb(
+            Operand::Register(Register::R2),
+            Operand::PreDecrement(Register::R3),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_ld_b_pre_decrement() {
+        let instruction = Instruction::Ldb(
+            Operand::Register(Register::R2),
+            Operand::PreDecrement(Register::R3),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFF, 0xF3, 0x02]
+        );
+    }
+
+    #[test]
+    fn test_calculate_instruction_size_st_b_pre_decrement() {
+        let instruction = Instruction::Stb(
+            Operand::PreDecrement(Register::R4),
+            Operand::Register(Register::R5),
+        );
+        assert_eq!(calculate_instruction_size(&instruction, 0).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_encode_instruction_st_b_pre_decrement() {
+        let instruction = Instruction::Stb(
+            Operand::PreDecrement(Register::R4),
+            Operand::Register(Register::R5),
+        );
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, 0).unwrap(),
+            vec![0xFF, 0xFD, 0x04]
         );
     }
 }

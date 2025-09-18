@@ -69,6 +69,9 @@ fn build_operand(pair: Pair<Rule>) -> Operand {
         Rule::identifier => build_identifier(inner_pair),
         Rule::indirect => build_indirect(inner_pair),
         Rule::absolute => build_absolute(inner_pair),
+        Rule::predec => build_pre_decrement(inner_pair),
+        Rule::postinc => build_post_increment(inner_pair),
+        Rule::indexed => build_Indexed(inner_pair),
         _ => unreachable!("Unknown operand rule: {:?}", inner_pair.as_rule()),
     }
 }
@@ -76,18 +79,7 @@ fn build_operand(pair: Pair<Rule>) -> Operand {
 // build a register object from a pair
 fn build_register(pair: Pair<Rule>) -> Operand {
     let inner = pair.into_inner().next().unwrap();
-    let reg_char = inner.as_str().chars().nth(0).unwrap();
-    let reg = match reg_char {
-        '0' => Register::R0,
-        '1' => Register::R1,
-        '2' => Register::R2,
-        '3' => Register::R3,
-        '4' => Register::R4,
-        '5' => Register::R5,
-        '6' => Register::R6,
-        '7' => Register::R7,
-        _ => unreachable!("Invalid register"),
-    };
+    let reg = pair_to_reg(inner);
     Operand::Register(reg)
 }
 
@@ -112,25 +104,14 @@ fn build_identifier(pair: Pair<Rule>) -> Operand {
 
 // build an indirect object
 fn build_indirect(pair: Pair<Rule>) -> Operand {
-    let reg = pair
+    let reg_pair = pair
         .into_inner()
         .next()
         .unwrap()
         .into_inner()
         .next()
         .unwrap();
-    let reg_char = reg.as_str().chars().nth(0).unwrap();
-    let reg = match reg_char {
-        '0' => Register::R0,
-        '1' => Register::R1,
-        '2' => Register::R2,
-        '3' => Register::R3,
-        '4' => Register::R4,
-        '5' => Register::R5,
-        '6' => Register::R6,
-        '7' => Register::R7,
-        _ => unreachable!("Invalid register"),
-    };
+    let reg = pair_to_reg(reg_pair);
     Operand::Indirect(reg)
 }
 
@@ -144,6 +125,42 @@ fn build_absolute(pair: Pair<Rule>) -> Operand {
         .unwrap();
     let value = u16::from_str_radix(hex.as_str(), 16).unwrap();
     Operand::Absolute(value)
+}
+
+fn build_pre_decrement(pair: Pair<Rule>) -> Operand {
+    let reg_pair = pair
+        .into_inner()
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap();
+    let reg = pair_to_reg(reg_pair);
+    Operand::PreDecrement(reg)
+}
+
+fn build_post_increment(pair: Pair<Rule>) -> Operand {
+    let reg_pair = pair
+        .into_inner()
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap();
+    let reg = pair_to_reg(reg_pair);
+    Operand::PostIncrement(reg)
+}
+
+fn build_Indexed(pair: Pair<Rule>) -> Operand {
+    let mut inner = pair.into_inner();
+    let reg_pair = inner.next().unwrap().into_inner().next().unwrap();
+    let imm_str = inner.next().unwrap().as_str();
+
+    let reg = pair_to_reg(reg_pair);
+
+    let imm = imm_str.parse::<i32>().unwrap();
+
+    Operand::Indexed(reg, imm as i8)
 }
 
 fn build_condition_code(pair: Pair<Rule>) -> ConditionCode {
@@ -165,6 +182,21 @@ fn build_condition_code(pair: Pair<Rule>) -> ConditionCode {
         Rule::overflow => ConditionCode::V,
         Rule::not_overflow => ConditionCode::Nv,
         _ => unreachable!("Invalid condition code"),
+    }
+}
+
+fn pair_to_reg(reg_pair: Pair<Rule>) -> Register {
+    let reg_char = reg_pair.as_str().chars().nth(0).unwrap();
+    match reg_char {
+        '0' => Register::R0,
+        '1' => Register::R1,
+        '2' => Register::R2,
+        '3' => Register::R3,
+        '4' => Register::R4,
+        '5' => Register::R5,
+        '6' => Register::R6,
+        '7' => Register::R7,
+        _ => unreachable!("Invalid register"),
     }
 }
 
@@ -195,6 +227,18 @@ fn build_ld_2_op(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
                     .to_string(),
             });
         }
+        Operand::Indexed(_, offset) => {
+            if offset > i8::MAX || offset < i8::MIN {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "The offset value given to a LD offset instruction must be a signed 8 bit value (max: {}, min: {})",
+                        i8::MAX,
+                        i8::MIN
+                    ),
+                });
+            }
+        }
         _ => {}
     }
 
@@ -218,13 +262,26 @@ fn build_st_2_op(st_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     match dest {
-        Operand::Absolute(_) | Operand::Indirect(_) => {}
+        Operand::Absolute(_)
+        | Operand::Indirect(_)
+        | Operand::PostIncrement(_)
+        | Operand::PreDecrement(_) => {}
+        Operand::Indexed(_, offset) => {
+            if offset > i8::MAX || offset < i8::MIN {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "The offset value given to a ST offset instruction must be a signed 8 bit value (max: {}, min: {})",
+                        i8::MAX,
+                        i8::MIN
+                    ),
+                });
+            }
+        }
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason:
-                    "The destination of an ST instruction must be an absolute or indirect address."
-                        .to_string(),
+                reason: "Invalid desitination operand to ST instruction.".to_string(),
             });
         }
     }
@@ -263,18 +320,81 @@ fn build_ldi_2_op(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
                 });
             }
         }
-        Operand::Label(_) => {}
+        Operand::Label(_)
+        | Operand::Indirect(_)
+        | Operand::PostIncrement(_)
+        | Operand::PreDecrement(_) => {}
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason:
-                    "The source operand of an LD instruction must be an immediate value or a label."
-                        .to_string(),
+                reason: "Invalid source operand to LD instruction.".to_string(),
             });
         }
     }
 
     Ok(Instruction::Ld(dest, src))
+}
+
+// build and check operands for a load byte instruction
+fn build_ld_b(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = ld_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = ld_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = dest {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The destination of an LD.b instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    match src {
+        Operand::Indirect(_) | Operand::PreDecrement(_) | Operand::PostIncrement(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The source operand of an LD.b instruction must be an indirect address or post-increment/pre-decrement value."
+                    .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Ldb(dest, src))
+}
+
+// build and check operands for a store byte instruction
+fn build_st_b(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = ld_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = ld_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = src {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The source of an ST.b instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    match dest {
+        Operand::Indirect(_) | Operand::PreDecrement(_) | Operand::PostIncrement(_) => {}
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "The destination operand of an ST.b instruction must be an indirect address or post-increment/pre-decrement value."
+                    .to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Stb(dest, src))
 }
 
 // build and check operands for a load byte immediate instruction
@@ -314,7 +434,7 @@ fn build_ldi_b(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         _ => {
             return Err(AssemblyError::StructuralError {
                 line,
-                reason: "The source operand of an LD.b instruction must be an immediate value."
+                reason: "The source operand of an LDI.b instruction must be an immediate value."
                     .to_string(),
             });
         }
@@ -651,6 +771,47 @@ fn build_subi_1_op(sub_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     }
 
     Ok(Instruction::Sub(src, None))
+}
+
+// build and check operands for a lea instruction
+fn build_lea(ld_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = ld_pair.as_span().start_pos().line_col().0;
+
+    let mut inner = ld_pair.into_inner();
+    let dest = build_operand(inner.next().unwrap());
+    let src = build_operand(inner.next().unwrap());
+
+    if let Operand::Register(_) = dest {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "The destination of an LEA instruction must be a register value (R0-7)."
+                .to_string(),
+        });
+    }
+
+    match src {
+        Operand::Indexed(_, offset) => {
+            if offset > i8::MAX || offset < i8::MIN {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: format!(
+                        "The offset value given to a LEA instruction must be a signed 8 bit value (max: {}, min: {})",
+                        i8::MAX,
+                        i8::MIN
+                    ),
+                });
+            }
+        }
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: "Invalid operands to LEA instruction.".to_string(),
+            });
+        }
+    }
+
+    Ok(Instruction::Lea(dest, src))
 }
 
 // build and check operands for a 2 operand and instruction
@@ -1986,6 +2147,8 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::or_b => build_or_b(pair),
         Rule::xor_b => build_xor_b(pair),
         Rule::cmp_b => build_cmp_b(pair),
+        Rule::ld_b => build_ld_b(pair),
+        Rule::st_b => build_st_b(pair),
         Rule::push_f => Ok(Instruction::PushF),
         Rule::pop_f => Ok(Instruction::PopF),
         Rule::push_op => build_push(pair),
@@ -2020,6 +2183,7 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::bit => build_bit(pair),
         Rule::set => build_set(pair),
         Rule::res => build_res(pair),
+        Rule::lea => build_lea(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
@@ -2262,6 +2426,182 @@ mod tests {
             Some(Instruction::Ldb(
                 Operand::Register(Register::R1),
                 Operand::Immediate(0xAB)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_ld_indexed() {
+        let source = "ld r0, (r1, 16)\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Ld(
+                Operand::Register(Register::R0),
+                Operand::Indexed(Register::R1, 16)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_st_indexed() {
+        let source = "st (r2, -1), r3\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::St(
+                Operand::Indexed(Register::R2, -1),
+                Operand::Register(Register::R3)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_lea_indexed() {
+        let source = "lea r4, (r5, 32)\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Lea(
+                Operand::Register(Register::R4),
+                Operand::Indexed(Register::R5, 32)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_ld_post_increment() {
+        let source = "ld r6, (r7)+\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Ld(
+                Operand::Register(Register::R6),
+                Operand::PostIncrement(Register::R7)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_st_post_increment() {
+        let source = "st (r0)+, r1\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::St(
+                Operand::PostIncrement(Register::R0),
+                Operand::Register(Register::R1)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_ld_pre_decrement() {
+        let source = "ld r2, -(r3)\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Ld(
+                Operand::Register(Register::R2),
+                Operand::PreDecrement(Register::R3)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_st_pre_decrement() {
+        let source = "st -(r4), r5\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::St(
+                Operand::PreDecrement(Register::R4),
+                Operand::Register(Register::R5)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_ld_b_post_increment() {
+        let source = "ld.b r6, (r7)+\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Ldb(
+                Operand::Register(Register::R6),
+                Operand::PostIncrement(Register::R7)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_st_b_post_increment() {
+        let source = "st.b (r0)+, r1\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Stb(
+                Operand::PostIncrement(Register::R0),
+                Operand::Register(Register::R1)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_ld_b_pre_decrement() {
+        let source = "ld.b r2, -(r3)\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Ldb(
+                Operand::Register(Register::R2),
+                Operand::PreDecrement(Register::R3)
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_st_b_pre_decrement() {
+        let source = "st.b -(r4), r5\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::Stb(
+                Operand::PreDecrement(Register::R4),
+                Operand::Register(Register::R5)
             ))
         );
     }
