@@ -115,6 +115,11 @@ pub enum ConditionCode {
     Nv, // Not Overflow
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Directive {
+    Org(Operand),
+}
+
 // --- Assembly Line Structure ---
 
 // Represents a single line of code, which can have a label, an instruction, or both.
@@ -123,5 +128,5 @@ pub struct AssemblyLine {
     pub line_number: usize,
     pub label: Option<String>,
     pub instruction: Option<Instruction>,
-    // Add directives later: pub directive: Option<Directive>,
+    pub directive: Option<Directive>, // Add directives later: pub directive: Option<Directive>,
 }

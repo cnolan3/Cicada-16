@@ -42,6 +42,12 @@ predec
 | indexed
 }
 
+data_operand = {
+immediate_hex
+| immediate_dec
+| identifier
+}
+
 indirect = ${ open_paren ~ register ~ close_paren }
 
 absolute = ${ open_paren ~ immediate_hex ~ close_paren }
@@ -252,10 +258,18 @@ ld_b = { ^"ld.b" ~ operand ~ "," ~ operand }
 st_b = { ^"st.b" ~ operand ~ "," ~ operand }
 lea = { ^"lea" ~ operand ~ "," ~ operand }
 
+// --- Directive Rules ---
+
+data_operand_list = { data_operand ~ ("," ~ data_operand)* }
+
+org_directive = { ^".org" ~ operand }
+
+directive = { org_directive }
+
 // --- Core Rules ---
 
 // This represents the actual content on a line, if any.
-line_content = { (label | instruction) }
+line_content = { (label | instruction | directive) }
 
 // A program is zero or more lines ending with a newline, followed by an
 // optional final line that may not have a newline. This is a robust pattern

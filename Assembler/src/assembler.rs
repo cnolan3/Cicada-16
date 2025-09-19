@@ -1,4 +1,4 @@
-use crate::ast::{AssemblyLine, ConditionCode, Instruction, Operand, Register};
+use crate::ast::{AssemblyLine, ConditionCode, Directive, Instruction, Operand, Register};
 use crate::errors::AssemblyError;
 use std::collections::HashMap;
 
@@ -28,6 +28,25 @@ pub fn build_symbol_table(
         // Increment current_address by the size of the instruction.
         if let Some(instruction) = &line.instruction {
             current_address += calculate_instruction_size(instruction, line.line_number)?;
+        }
+
+        // handle directives
+        if let Some(directive) = &line.directive {
+            match directive {
+                Directive::Org(Operand::Immediate(addr)) => {
+                    // It's good practice to ensure .org doesn't move backwards,
+                    // as it can overwrite previous label definitions.
+                    let new_addr = *addr as u16;
+                    if new_addr < current_address {
+                        return Err(AssemblyError::SemanticError {
+                            line: line.line_number,
+                            reason: format!(".org directive cannot move the address backwards."),
+                        });
+                    }
+                    current_address = new_addr;
+                } // ... other directives later
+                _ => {}
+            }
         }
     }
     Ok(symbol_table)
@@ -180,6 +199,20 @@ pub fn generate_bytecode(
     let mut current_address: u16 = start_addr.clone(); // Start address after cartridge header
 
     for line in lines {
+        if let Some(directive) = &line.directive {
+            match directive {
+                Directive::Org(Operand::Immediate(addr)) => {
+                    let new_addr = *addr as u16;
+                    if new_addr > current_address {
+                        let padding_size = (new_addr - current_address) as usize;
+                        bytecode.resize(bytecode.len() + padding_size, 0x00);
+                    }
+                    current_address = new_addr;
+                } // ... other directives later
+                _ => {}
+            }
+        }
+
         if let Some(instruction) = &line.instruction {
             let instruction_bytes = encode_instruction(
                 instruction,
@@ -187,7 +220,7 @@ pub fn generate_bytecode(
                 &current_address,
                 line.line_number,
             )?;
-            current_address += calculate_instruction_size(instruction, line.line_number)?;
+            current_address += instruction_bytes.len() as u16;
             bytecode.extend(instruction_bytes);
         }
     }

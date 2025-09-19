@@ -48,8 +48,20 @@ pub fn parse_source(source: &str) -> Result<Vec<AssemblyLine>, AssemblyError> {
             }
         }
 
+        // Check for a directive
+        if let Some(pair) = inner.peek() {
+            if pair.as_rule() == Rule::directive {
+                assembly_line.directive = Some(build_directive(
+                    inner.next().unwrap().into_inner().next().unwrap(),
+                )?);
+            }
+        }
+
         // Only add non-empty lines to our AST
-        if assembly_line.label.is_some() || assembly_line.instruction.is_some() {
+        if assembly_line.label.is_some()
+            || assembly_line.instruction.is_some()
+            || assembly_line.directive.is_some()
+        {
             ast.push(assembly_line);
         }
     }
@@ -71,7 +83,7 @@ fn build_operand(pair: Pair<Rule>) -> Operand {
         Rule::absolute => build_absolute(inner_pair),
         Rule::predec => build_pre_decrement(inner_pair),
         Rule::postinc => build_post_increment(inner_pair),
-        Rule::indexed => build_Indexed(inner_pair),
+        Rule::indexed => build_indexed(inner_pair),
         _ => unreachable!("Unknown operand rule: {:?}", inner_pair.as_rule()),
     }
 }
@@ -151,7 +163,7 @@ fn build_post_increment(pair: Pair<Rule>) -> Operand {
     Operand::PostIncrement(reg)
 }
 
-fn build_Indexed(pair: Pair<Rule>) -> Operand {
+fn build_indexed(pair: Pair<Rule>) -> Operand {
     let mut inner = pair.into_inner();
     let reg_pair = inner.next().unwrap().into_inner().next().unwrap();
     let imm_str = inner.next().unwrap().as_str();
@@ -2187,6 +2199,41 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
+}
+
+// ------------- directives –------------
+
+fn build_directive(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
+    match pair.as_rule() {
+        Rule::org_directive => build_org_dir(pair),
+        _ => unreachable!("Unknown directive rule: {:?}", pair.as_rule()),
+    }
+}
+
+fn build_org_dir(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+    let op = build_operand(pair.into_inner().next().unwrap());
+
+    match op {
+        Operand::Immediate(addr) => {
+            if addr > u16::MAX as i32 || addr < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason:
+                        ".org address must be an unsigned 16 bit value (max: 0xFFFF, min: 0x0000)"
+                            .to_string(),
+                });
+            }
+        }
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: ".org argument must be an immediate value.".to_string(),
+            });
+        }
+    }
+
+    Ok(Directive::Org(op))
 }
 
 // ------------- unit tests –------------
