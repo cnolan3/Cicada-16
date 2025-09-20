@@ -264,7 +264,9 @@ data_operand_list = { data_operand ~ ("," ~ data_operand)* }
 
 org_directive = { ^".org" ~ operand }
 
-directive = { org_directive }
+bank_directive = { ^".bank" ~ operand }
+
+directive = { org_directive | bank_directive }
 
 // --- Core Rules ---
 

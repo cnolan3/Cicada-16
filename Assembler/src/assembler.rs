@@ -2,8 +2,10 @@ use crate::ast::{AssemblyLine, ConditionCode, Directive, Instruction, Operand, R
 use crate::errors::AssemblyError;
 use std::collections::HashMap;
 
+const BANK_SIZE: u32 = 16384;
+
 // The symbol table stores label names and their calculated addresses.
-type SymbolTable = HashMap<String, u16>;
+type SymbolTable = HashMap<String, u32>;
 
 /// Pass 1: Build the symbol table.
 pub fn build_symbol_table(
@@ -11,7 +13,8 @@ pub fn build_symbol_table(
     start_addr: &u16,
 ) -> Result<SymbolTable, AssemblyError> {
     let mut symbol_table = SymbolTable::new();
-    let mut current_address: u16 = start_addr.clone(); // Start address after cartridge header
+    let mut current_address: u32 = start_addr.clone() as u32; // Start address after cartridge header
+    let mut current_bank: u32 = 0;
 
     for line in lines {
         // If a label exists on this line, record its current address.
@@ -28,6 +31,13 @@ pub fn build_symbol_table(
         // Increment current_address by the size of the instruction.
         if let Some(instruction) = &line.instruction {
             current_address += calculate_instruction_size(instruction, line.line_number)?;
+            let cur_bank_end = (current_bank as u32 + 1) * BANK_SIZE;
+            if current_address > cur_bank_end {
+                return Err(AssemblyError::StructuralError {
+                    line: line.line_number,
+                    reason: format!("ROM bank {} overflow.", current_bank),
+                });
+            }
         }
 
         // handle directives
@@ -36,15 +46,26 @@ pub fn build_symbol_table(
                 Directive::Org(Operand::Immediate(addr)) => {
                     // It's good practice to ensure .org doesn't move backwards,
                     // as it can overwrite previous label definitions.
-                    let new_addr = *addr as u16;
+                    let new_addr = *addr as u32;
                     if new_addr < current_address {
                         return Err(AssemblyError::SemanticError {
                             line: line.line_number,
-                            reason: format!(".org directive cannot move the address backwards."),
+                            reason: ".org directive cannot move the address backwards.".to_string(),
                         });
                     }
                     current_address = new_addr;
-                } // ... other directives later
+                    current_bank = current_address / BANK_SIZE;
+                }
+                Directive::Bank(Operand::Immediate(num)) => {
+                    if *num as u32 <= current_bank {
+                        return Err(AssemblyError::SemanticError {
+                            line: line.line_number,
+                            reason: ".bank directive cannot move to a previous bank.".to_string(),
+                        });
+                    }
+                    current_bank = *num as u32;
+                    current_address = current_bank * BANK_SIZE;
+                }
                 _ => {}
             }
         }
@@ -56,7 +77,7 @@ pub fn build_symbol_table(
 fn calculate_instruction_size(
     instruction: &Instruction,
     line_num: usize,
-) -> Result<u16, AssemblyError> {
+) -> Result<u32, AssemblyError> {
     match instruction {
         Instruction::Nop
         | Instruction::Halt
@@ -196,19 +217,30 @@ pub fn generate_bytecode(
     start_addr: &u16,
 ) -> Result<Vec<u8>, AssemblyError> {
     let mut bytecode = Vec::new();
-    let mut current_address: u16 = start_addr.clone(); // Start address after cartridge header
+    let mut current_address: u32 = start_addr.clone() as u32; // Start address after cartridge header
+    // let mut current_bank: i32 = 0;
 
     for line in lines {
         if let Some(directive) = &line.directive {
             match directive {
                 Directive::Org(Operand::Immediate(addr)) => {
-                    let new_addr = *addr as u16;
+                    let new_addr = *addr as u32;
                     if new_addr > current_address {
                         let padding_size = (new_addr - current_address) as usize;
                         bytecode.resize(bytecode.len() + padding_size, 0x00);
                     }
                     current_address = new_addr;
-                } // ... other directives later
+                }
+                Directive::Bank(Operand::Immediate(num)) => {
+                    let new_addr = *num as u32 * BANK_SIZE;
+                    if new_addr > current_address {
+                        let padding_size = (new_addr - current_address) as usize;
+                        bytecode.resize(bytecode.len() + padding_size, 0x00);
+                    }
+
+                    // current_bank = *num;
+                    current_address = new_addr;
+                }
                 _ => {}
             }
         }
@@ -220,7 +252,7 @@ pub fn generate_bytecode(
                 &current_address,
                 line.line_number,
             )?;
-            current_address += instruction_bytes.len() as u16;
+            current_address += instruction_bytes.len() as u32;
             bytecode.extend(instruction_bytes);
         }
     }
@@ -261,7 +293,7 @@ fn encode_condition_code_opcode(base_opcode: u8, cc: &ConditionCode) -> u8 {
 fn encode_instruction(
     instruction: &Instruction,
     symbol_table: &SymbolTable,
-    current_address: &u16,
+    current_address: &u32,
     line_num: usize,
 ) -> Result<Vec<u8>, AssemblyError> {
     match instruction {

@@ -2205,12 +2205,14 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
 
 fn build_directive(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
     match pair.as_rule() {
-        Rule::org_directive => build_org_dir(pair),
+        Rule::org_directive => build_org_directive(pair),
+        Rule::bank_directive => build_bank_directive(pair),
         _ => unreachable!("Unknown directive rule: {:?}", pair.as_rule()),
     }
 }
 
-fn build_org_dir(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
+// build an origin directive
+fn build_org_directive(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
     let line = pair.as_span().start_pos().line_col().0;
     let op = build_operand(pair.into_inner().next().unwrap());
 
@@ -2234,6 +2236,31 @@ fn build_org_dir(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
     }
 
     Ok(Directive::Org(op))
+}
+
+// build a bank directive
+fn build_bank_directive(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+    let op = build_operand(pair.into_inner().next().unwrap());
+
+    match op {
+        Operand::Immediate(addr) => {
+            if addr > 256 || addr < 0 {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: ".bank number must be an unsigned value between 0 and 256".to_string(),
+                });
+            }
+        }
+        _ => {
+            return Err(AssemblyError::StructuralError {
+                line,
+                reason: ".bank argument must be an immediate value.".to_string(),
+            });
+        }
+    }
+
+    Ok(Directive::Bank(op))
 }
 
 // ------------- unit tests –------------
@@ -2728,9 +2755,77 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_org_directive_fail() {
+    fn test_parse_org_directive_incorrect_operand() {
         let source = ".org R0\n";
         let result = parse_source(source);
-        assert!(result.is_err());
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::StructuralError {
+                line: 1,
+                reason: ".org argument must be an immediate value.".to_string(),
+            }
+        }));
+    }
+
+    #[test]
+    fn test_parse_org_directive_out_of_bound() {
+        let source = ".org 0x12345\n";
+        let result = parse_source(source);
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::StructuralError {
+                line: 1,
+                reason: ".org address must be an unsigned 16 bit value (max: 0xFFFF, min: 0x0000)"
+                    .to_string(),
+            }
+        }));
+    }
+
+    #[test]
+    fn test_parse_bank_directive_hex() {
+        let source = ".bank 0x3\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::Bank(Operand::Immediate(0x3)))
+        );
+    }
+
+    #[test]
+    fn test_parse_bank_directive_dec() {
+        let source = ".bank 5\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::Bank(Operand::Immediate(5)))
+        );
+    }
+
+    #[test]
+    fn test_parse_bank_directive_incorrect_operand() {
+        let source = ".bank R0\n";
+        let result = parse_source(source);
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::StructuralError {
+                line: 1,
+                reason: ".bank argument must be an immediate value.".to_string(),
+            }
+        }));
+    }
+
+    #[test]
+    fn test_parse_bank_directive_out_of_bound() {
+        let source = ".bank 300\n";
+        let result = parse_source(source);
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::StructuralError {
+                line: 1,
+                reason: ".bank number must be an unsigned value between 0 and 256".to_string(),
+            }
+        }));
     }
 }

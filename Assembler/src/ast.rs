@@ -118,6 +118,7 @@ pub enum ConditionCode {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Directive {
     Org(Operand),
+    Bank(Operand),
 }
 
 // --- Assembly Line Structure ---
