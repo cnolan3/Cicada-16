@@ -2700,4 +2700,37 @@ mod tests {
             ))
         );
     }
+
+    #[test]
+    fn test_parse_org_directive_hex() {
+        let source = ".org 0x3000\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::Org(Operand::Immediate(0x3000)))
+        );
+    }
+
+    #[test]
+    fn test_parse_org_directive_dec() {
+        let source = ".org 500\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::Org(Operand::Immediate(500)))
+        );
+    }
+
+    #[test]
+    fn test_parse_org_directive_fail() {
+        let source = ".org R0\n";
+        let result = parse_source(source);
+        assert!(result.is_err());
+    }
 }
