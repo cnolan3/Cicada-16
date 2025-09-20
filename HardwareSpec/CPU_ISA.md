@@ -200,7 +200,7 @@ The post-increment and pre-decrement addressing modes are powerful features for 
 | CALL n16   | 0x2000    | 3     | 20     | Call subroutine at address n16. Pushes PC+3 onto stack.                                                                            |
 | CALL (r)   | (R0)      | 1     | 12     | Call subroutine at address in register r. Pushes PC+1 onto stack.                                                                  |
 | CALLcc n16 | C, 0x2000 | 3     | 12/20  | Conditional call if condition cc is met.                                                                                           |
-| SYSCALL n8 | 0x1A      | 2     | 24     | Calls a system library routine. Pushes F, then pushes PC, then jumps to the address from the system vector table at index n8.      |
+| SYSCALL n8 | 0x1A      | 2     | 24     | Calls a system library routine. Pushes PC, then pushes F, then jumps to the address from the system vector table at index n8.      |
 | RET        |           | 1     | 12     | Return from subroutine. Pops PC from stack.                                                                                        |
 | RETI       |           | 1     | 12     | Return from interrupt. Pops flags from the stack, then pops PC from stack and enables interrupts. See `Interrupts.md` for details. |
 | ENTER      |           | 1     | 12     | Creates a new stack frame. See explanation below.                                                                                  |
@@ -227,8 +227,8 @@ The `SYSCALL` instruction provides a standardized way for user programs to reque
 
 When `SYSCALL n8` is executed, the CPU performs the following sequence:
 
-1.  It pushes the 16-bit Flags register (F) onto the stack.
-2.  It pushes the address of the _next_ instruction (PC) onto the stack. This allows the system routine to return control to the user program.
+1.  It pushes the address of the _next_ instruction (PC) onto the stack. This allows the system routine to return control to the user program.
+2.  It pushes the 16-bit Flags register (F) onto the stack.
 3.  It looks up the address of the system routine in a vector table located in low memory. The `n8` immediate value is an index into this table.
 4.  It sets the PC to the address fetched from the vector table, effectively transferring control to the system routine.
 
