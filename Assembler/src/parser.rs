@@ -25,35 +25,31 @@ pub fn parse_source(source: &str) -> Result<Vec<AssemblyLine>, AssemblyError> {
 
         // Check for a label first
         if let Some(pair) = inner.peek() {
-            if pair.as_rule() == Rule::label {
-                assembly_line.label = Some(
-                    inner
-                        .next()
-                        .unwrap()
-                        .into_inner()
-                        .next()
-                        .unwrap()
-                        .as_str()
-                        .to_string(),
-                );
-            }
-        }
-
-        // Check for an instruction
-        if let Some(pair) = inner.peek() {
-            if pair.as_rule() == Rule::instruction {
-                assembly_line.instruction = Some(build_instruction(
-                    inner.next().unwrap().into_inner().next().unwrap(),
-                )?);
-            }
-        }
-
-        // Check for a directive
-        if let Some(pair) = inner.peek() {
-            if pair.as_rule() == Rule::directive {
-                assembly_line.directive = Some(build_directive(
-                    inner.next().unwrap().into_inner().next().unwrap(),
-                )?);
+            assembly_line.line_number = pair.as_span().start_pos().line_col().0;
+            match pair.as_rule() {
+                Rule::label => {
+                    assembly_line.label = Some(
+                        inner
+                            .next()
+                            .unwrap()
+                            .into_inner()
+                            .next()
+                            .unwrap()
+                            .as_str()
+                            .to_string(),
+                    );
+                }
+                Rule::instruction => {
+                    assembly_line.instruction = Some(build_instruction(
+                        inner.next().unwrap().into_inner().next().unwrap(),
+                    )?);
+                }
+                Rule::directive => {
+                    assembly_line.directive = Some(build_directive(
+                        inner.next().unwrap().into_inner().next().unwrap(),
+                    )?);
+                }
+                _ => {}
             }
         }
 
@@ -2113,6 +2109,25 @@ fn build_res(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::Res(dest, b))
 }
 
+// build a call.far instruction
+fn build_call_far(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    println!("{}, {}", pair, pair.as_str());
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    if let Operand::Label(_) = op {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to a CALL.far instruction must be a label.".to_string(),
+        });
+    }
+
+    Ok(Instruction::CallFar(op))
+}
+
 // ------------- build instruction –------------
 
 // Helper to build an Instruction from a pest Pair
@@ -2196,6 +2211,7 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::set => build_set(pair),
         Rule::res => build_res(pair),
         Rule::lea => build_lea(pair),
+        Rule::call_far => build_call_far(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
@@ -2825,6 +2841,31 @@ mod tests {
             e == AssemblyError::StructuralError {
                 line: 1,
                 reason: ".bank number must be an unsigned value between 0 and 256".to_string(),
+            }
+        }));
+    }
+
+    #[test]
+    fn test_parse_call_far() {
+        let source = "CALL.far LABEL\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::CallFar(Operand::Label("LABEL".to_string())))
+        );
+    }
+
+    #[test]
+    fn test_parse_call_far_invalid_operand() {
+        let source = "CALL.far 300\n";
+        let result = parse_source(source);
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::StructuralError {
+                line: 1,
+                reason: "Operand to a CALL.far instruction must be a label.".to_string(),
             }
         }));
     }

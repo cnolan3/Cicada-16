@@ -220,6 +220,7 @@ fn calculate_instruction_size(
         Instruction::Bit(Operand::Indirect(_), _)
         | Instruction::Set(Operand::Indirect(_), _)
         | Instruction::Res(Operand::Indirect(_), _) => Ok(3),
+        Instruction::CallFar(_) => Ok(8),
         // ... add logic for every instruction variant based on your opcode map ...
         _ => Err(AssemblyError::SemanticError {
             line: line_num,
@@ -372,30 +373,12 @@ fn encode_instruction(
         }
         // Example: LDI R1, 0xABCD (Opcode: 0x01 + register index)
         Instruction::Ld(Operand::Register(reg), Operand::Immediate(value)) => {
-            let opcode = encode_reg_opcode(0x01, reg);
-            let [low, high] = (*value as u16).to_le_bytes();
-            Ok(vec![opcode, low, high])
+            let bytecode = encode_ldi(reg, *value as u16);
+            Ok(bytecode)
         }
         // Example: JMP my_label
         Instruction::Jmp(Operand::Label(label_name)) => {
-            // let target_symbol =
-            //     symbol_table
-            //         .get(label_name)
-            //         .ok_or_else(|| AssemblyError::SemanticError {
-            //             line: line_num,
-            //             reason: format!("Undefined label: {}", label_name),
-            //         })?;
-            // if target_symbol.bank != *current_bank {
-            //     return Err(AssemblyError::SemanticError {
-            //         line: line_num,
-            //         reason: format!(
-            //             "Label \"{}\" exists in a different bank than the current instruction.",
-            //             label_name
-            //         ),
-            //     });
-            // }
             let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
-
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             Ok(vec![0x51, low, high]) // Opcode for JMP n16
         }
@@ -517,7 +500,10 @@ fn encode_instruction(
             Ok(vec![opcode, low, high]) // Opcode for JMP n16
         }
         // syscall
-        Instruction::Syscall(Operand::Immediate(imm)) => Ok(vec![0x4E, *imm as u8]),
+        Instruction::Syscall(Operand::Immediate(imm)) => {
+            let bytecode = encode_syscall(*imm as u8);
+            Ok(bytecode)
+        }
         // register-to-register load
         Instruction::Ld(Operand::Register(rd), Operand::Register(rs)) => {
             let opcode = encode_rd_rs_byte(0x80, rd, rs);
@@ -685,8 +671,8 @@ fn encode_instruction(
             Ok(vec![0xC7, low, high])
         }
         Instruction::Push(Operand::Register(reg)) => {
-            let index = encode_register_operand(reg);
-            Ok(vec![0x6D + index])
+            let bytecode = encode_push_r(reg);
+            Ok(bytecode)
         }
         Instruction::Push(Operand::Immediate(value)) => {
             let [low, high] = (*value as u16).to_le_bytes();
@@ -699,8 +685,8 @@ fn encode_instruction(
         }
         Instruction::PushF => Ok(vec![0x7E]),
         Instruction::Pop(Operand::Register(reg)) => {
-            let index = encode_register_operand(reg);
-            Ok(vec![0x75 + index])
+            let bytecode = encode_pop_r(reg);
+            Ok(bytecode)
         }
         Instruction::PopF => Ok(vec![0x7F]),
         // and accumulator immediate
@@ -926,12 +912,68 @@ fn encode_instruction(
             let dest = encode_register_operand(rd);
             Ok(vec![0xFF, sub_opcode, dest])
         }
+        Instruction::CallFar(Operand::Label(label_name)) => {
+            let target_symbol =
+                symbol_table
+                    .get(label_name)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", label_name),
+                    })?;
+
+            if target_symbol.bank == 0 {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Label \"{}\" exists in bank 0, use a normal CALL instruction instead.",
+                        label_name
+                    ),
+                });
+            } else if target_symbol.bank == *current_bank {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Label \"{}\" exists in the same bank as the CALL.far instruction, use a normal CALL instruction instead.",
+                        label_name
+                    ),
+                });
+            }
+
+            let mut final_bytecode = Vec::new();
+            final_bytecode.extend(encode_ldi(&Register::R4, target_symbol.bank as u16));
+            final_bytecode.extend(encode_ldi(
+                &Register::R5,
+                target_symbol.logical_address as u16,
+            ));
+            final_bytecode.extend(encode_syscall(0x21));
+            Ok(final_bytecode)
+        }
 
         // ... add encoding logic for every instruction variant based on your opcode map ...
         _ => Err(AssemblyError::SemanticErrorNoLine {
             reason: "Invalid Instruction".to_string(),
         }),
     }
+}
+
+fn encode_push_r(rs: &Register) -> Vec<u8> {
+    let index = encode_register_operand(rs);
+    vec![0x6D + index]
+}
+
+fn encode_pop_r(rd: &Register) -> Vec<u8> {
+    let index = encode_register_operand(rd);
+    vec![0x75 + index]
+}
+
+fn encode_ldi(rd: &Register, val: u16) -> Vec<u8> {
+    let opcode = encode_reg_opcode(0x01, rd);
+    let [low, high] = val.to_le_bytes();
+    vec![opcode, low, high]
+}
+
+fn encode_syscall(index: u8) -> Vec<u8> {
+    vec![0x4E, index]
 }
 
 fn encode_rd_rs_byte(base_val: u8, rd: &Register, rs: &Register) -> u8 {
@@ -2196,5 +2238,66 @@ mod tests {
             encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
             vec![0xFF, 0xFD, 0x04]
         );
+    }
+
+    #[test]
+    fn test_encode_instruction_call_far() {
+        let instruction = Instruction::CallFar(Operand::Label("test_label".to_string()));
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert(
+            "test_label".to_string(),
+            Symbol {
+                logical_address: 0x4321,
+                bank: 1,
+            },
+        );
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0x1100, &0, 0).unwrap(),
+            vec![0x05, 0x01, 0x00, 0x06, 0x21, 0x43, 0x4E, 0x21]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_call_far_bank_0_fail() {
+        let instruction = Instruction::CallFar(Operand::Label("test_label".to_string()));
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert(
+            "test_label".to_string(),
+            Symbol {
+                logical_address: 0x2100,
+                bank: 0,
+            },
+        );
+        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, 1);
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::SemanticError {
+                line: 1,
+                reason:
+                    "Label \"test_label\" exists in bank 0, use a normal CALL instruction instead."
+                        .to_string(),
+            }
+        }));
+    }
+
+    #[test]
+    fn test_encode_instruction_call_far_same_bank_fail() {
+        let instruction = Instruction::CallFar(Operand::Label("test_label".to_string()));
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert(
+            "test_label".to_string(),
+            Symbol {
+                logical_address: 0x4321,
+                bank: 1,
+            },
+        );
+        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, 1);
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::SemanticError {
+                line: 1,
+                reason:
+                    "Label \"test_label\" exists in the same bank as the CALL.far instruction, use a normal CALL instruction instead."
+                        .to_string(),
+            }
+        }));
     }
 }

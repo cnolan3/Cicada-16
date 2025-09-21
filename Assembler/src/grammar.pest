@@ -87,8 +87,10 @@ zero = @{ ^"Z" }
 not_zero = @{ ^"NZ" }
 
 jcc = ${ ^"j" ~ cc }
+jcc_far = ${ ^"j" ~ cc ~ ^".far" }
 jrcc = ${ ^"jr" ~ cc }
 callcc = ${ ^"call" ~ cc }
+callcc_far = ${ ^"call" ~ cc ~ ^".far" }
 
 // --- Instructions ---
 
@@ -152,9 +154,12 @@ nop
 | swap
 | jr_con
 | jr
+| jmp_con_far
 | jmp_con
 | jmp
+| call_con_far
 | call_con
+| call_far
 | call
 | syscall
 | ccf
@@ -228,11 +233,15 @@ neg = @{ ^"neg" }
 not = @{ ^"not" }
 swap = @{ ^"swap" }
 jmp = { ^"jmp" ~ operand }
+jmp_far = { ^"jmp.far" ~ operand }
 jr_con = { jrcc ~ operand }
 jr = { ^"jr" ~ operand }
 jmp_con = { jcc ~ operand }
+jmp_con_far = { jcc_far ~ operand }
 call_con = { callcc ~ operand}
+call_con_far = { callcc_far ~ operand }
 call = { ^"call" ~ operand }
+call_far = { ^"call.far" ~ operand }
 syscall = { ^"syscall" ~ operand }
 ccf = @{ ^"ccf" }
 scf = @{ ^"scf" }

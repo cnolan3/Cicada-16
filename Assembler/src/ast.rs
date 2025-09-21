@@ -87,6 +87,10 @@ pub enum Instruction {
     Djnz(Operand),
     Callcc(ConditionCode, Operand),
     Syscall(Operand),
+    CallFar(Operand),
+    JmpFar(Operand),
+    CallccFar(Operand),
+    JmpccFar(Operand),
 
     // Stack operations
     Push(Operand),
