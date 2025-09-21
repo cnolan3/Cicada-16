@@ -10,15 +10,16 @@ This table describes the memory map from the CPU's perspective while the interna
 | :-------------- | :------------------------------ | :--------- | :----------------------------------------------------------------------------------- |
 | 0x0000 - 0x3FDF | Internal Boot ROM               | Read-Only  | Mapped only during boot. Overlays Cartridge ROM Bank 0. Inaccessible after handover. |
 | 0x3FE0 - 0x3FFF | Internal Interrupt Vector Table | Hardwired  | Points to ISRs within the Boot ROM. See `Interrupts.md` for the table layout.        |
-| 0x6000 - 0x7FFF | VRAM Window                     | Read/Write | Locked to VRAM Bank 0 during boot. The `VRAM_BANK` register is ignored.              |
-| 0xA000 - 0xBFFF | Work RAM (WRAM0)                | Read/Write | The WRAM1 window (`D000-DFFF`) is unmapped during boot.                              |
+| 0x4000 - 0x7FFF | Cartridge ROM Bank 0            | Read-Only  | Temporarily mapped here during boot to allow the Boot ROM to access the cartridge header for verification.                   |
+| 0x9000 - 0xAFFF | VRAM Window                     | Read/Write | Locked to VRAM Bank 0 during boot. The `VRAM_BANK` register is ignored.              |
+| 0xB000 - 0xCFFF | Work RAM Bank 0 (WRAM0)         | Read/Write | The WRAM1 window (`D000-DFFF`) is unmapped during boot.                              |
 | 0xE000 - 0xEFFF | System Library RAM              | Read/Write | Copied here during boot. Made Read-Only after handover.                              |
-| 0xF000 - 0xF07F | I/O Registers                   | Read/Write |                                                                                      |
+| 0xF000 - 0xF03F | I/O Registers                   | Read/Write |                                                                                      |
 | 0xF040 - 0xF07F | PPU Registers                   | Read/Write |                                                                                      |
 | 0xF080 - 0xF0BF | APU Registers                   | Read/Write |                                                                                      |
 | 0xF200 - 0xF3FF | CRAM                            | Read/Write | CPU writes should be timed to V-Blank/H-Blank.                                       |
-| 0xF400 - 0xF5FF | OAM (Sprite Attribute Memory)   | Read/Write |
-| 0xF600 - 0xF9FF | DSP Delay Buffer                | Read/Write |
+| 0xF400 - 0xF5FF | OAM (Sprite Attribute Memory)   | Read/Write |                                                                                      |
+| 0xF600 - 0xF9FF | DSP Delay Buffer                | Read/Write |                                                                                      |
 | 0xFA00 - 0xFDFF | Wave RAM                        | Read/Write | Available for boot sound data.                                                       |
 | 0xFE00 - 0xFFFF | HRAM                            | Read/Write |                                                                                      |
 
@@ -57,3 +58,4 @@ The code on the Boot ROM executes the following steps in order:
 
 © 2025 Connor Nolan. This work is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
+org/licenses/by-sa/4.0/).

@@ -38,9 +38,13 @@ To expand the amount of available RAM beyond the limits of the 16-bit address sp
 
 At power-on, the MMU starts in a special state to execute the internal Boot ROM.
 
-- The Boot ROM is mapped to addresses `0x0000-0x3FFF`, temporarily overlaying the game cartridge.
-- After the boot sequence finishes its hardware setup and verification, it commands the MMU to unmap the Boot ROM.
-- The MMU then maps the game cartridge into the `0x0000-7FFF` range, and the CPU jumps to the game's entry point.
+- The Boot ROM is mapped to addresses `0x0000-0x3FFF`, temporarily overlaying where the game cartridge's ROM Bank 0 will eventually be.
+- To allow the Boot ROM to read the cartridge header for verification, the first 16 KiB of the cartridge ROM (Bank 0) is temporarily mapped to `0x4000-0x7FFF`.
+- After the boot sequence finishes, it writes to the `BOOT_CTRL` register, which commands the MMU to perform the final memory map handover:
+  - The Boot ROM at `0x0000-0x3FFF` is unmapped.
+  - The temporary mapping of Cartridge ROM Bank 0 at `0x4000-0x7FFF` is removed.
+  - The game cartridge is mapped into its final configuration: ROM Bank 0 is mapped to `0x0000-0x3FFF` and the switchable ROM bank window is enabled at `0x4000-0x7FFF`.
+- The CPU then jumps to the game's entry point at `0x0100`.
 
 ### **Memory Protection**
 
