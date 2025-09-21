@@ -220,7 +220,8 @@ fn calculate_instruction_size(
         Instruction::Bit(Operand::Indirect(_), _)
         | Instruction::Set(Operand::Indirect(_), _)
         | Instruction::Res(Operand::Indirect(_), _) => Ok(3),
-        Instruction::CallFar(_) => Ok(8),
+        Instruction::CallFar(Operand::Label(_), None) => Ok(8),
+        Instruction::CallFar(Operand::Label(_), Some(Operand::Label(_))) => Ok(9),
         // ... add logic for every instruction variant based on your opcode map ...
         _ => Err(AssemblyError::SemanticError {
             line: line_num,
@@ -472,14 +473,14 @@ fn encode_instruction(
         }
         // CALL immediate
         Instruction::Call(Operand::Immediate(addr)) => {
-            let [low, high] = (*addr as u16).to_le_bytes();
-            Ok(vec![0xC8, low, high])
+            let bytecode = encode_call_immediate(*addr as u16);
+            Ok(bytecode)
         }
         // CALL label
         Instruction::Call(Operand::Label(label_name)) => {
             let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![0xC8, low, high]) // Opcode for JMP n16
+            let bytecode = encode_call_immediate(target_symbol.logical_address as u16);
+            Ok(bytecode)
         }
         // CALL indirect
         Instruction::Call(Operand::Indirect(reg)) => {
@@ -912,7 +913,7 @@ fn encode_instruction(
             let dest = encode_register_operand(rd);
             Ok(vec![0xFF, sub_opcode, dest])
         }
-        Instruction::CallFar(Operand::Label(label_name)) => {
+        Instruction::CallFar(Operand::Label(label_name), None) => {
             let target_symbol =
                 symbol_table
                     .get(label_name)
@@ -948,6 +949,60 @@ fn encode_instruction(
             final_bytecode.extend(encode_syscall(0x21));
             Ok(final_bytecode)
         }
+        Instruction::CallFar(Operand::Label(call_label), Some(Operand::Label(via_label))) => {
+            let call_symbol =
+                symbol_table
+                    .get(call_label)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", call_label),
+                    })?;
+
+            let via_symbol =
+                symbol_table
+                    .get(via_label)
+                    .ok_or_else(|| AssemblyError::SemanticError {
+                        line: line_num,
+                        reason: format!("Undefined label: {}", via_label),
+                    })?;
+
+            if call_symbol.bank == 0 {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Label \"{}\" exists in bank 0, use a normal CALL instruction instead.",
+                        call_label
+                    ),
+                });
+            } else if call_symbol.bank == *current_bank {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Label \"{}\" exists in the same bank as the CALL.far instruction, use a normal CALL instruction instead.",
+                        call_label
+                    ),
+                });
+            }
+
+            if via_symbol.bank != 0 {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Custom CALL.far via trampoline label must exist in bank 0, \"{}\" found in bank {}",
+                        via_label, via_symbol.bank,
+                    ),
+                });
+            }
+
+            let mut final_bytecode = Vec::new();
+            final_bytecode.extend(encode_ldi(&Register::R4, call_symbol.bank as u16));
+            final_bytecode.extend(encode_ldi(
+                &Register::R5,
+                call_symbol.logical_address as u16,
+            ));
+            final_bytecode.extend(encode_call_immediate(via_symbol.logical_address as u16));
+            Ok(final_bytecode)
+        }
 
         // ... add encoding logic for every instruction variant based on your opcode map ...
         _ => Err(AssemblyError::SemanticErrorNoLine {
@@ -974,6 +1029,11 @@ fn encode_ldi(rd: &Register, val: u16) -> Vec<u8> {
 
 fn encode_syscall(index: u8) -> Vec<u8> {
     vec![0x4E, index]
+}
+
+fn encode_call_immediate(logical_addr: u16) -> Vec<u8> {
+    let [low, high] = logical_addr.to_le_bytes();
+    vec![0xC8, low, high]
 }
 
 fn encode_rd_rs_byte(base_val: u8, rd: &Register, rs: &Register) -> u8 {
@@ -2242,7 +2302,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_call_far() {
-        let instruction = Instruction::CallFar(Operand::Label("test_label".to_string()));
+        let instruction = Instruction::CallFar(Operand::Label("test_label".to_string()), None);
         let mut symbol_table = SymbolTable::new();
         symbol_table.insert(
             "test_label".to_string(),
@@ -2259,7 +2319,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_call_far_bank_0_fail() {
-        let instruction = Instruction::CallFar(Operand::Label("test_label".to_string()));
+        let instruction = Instruction::CallFar(Operand::Label("test_label".to_string()), None);
         let mut symbol_table = SymbolTable::new();
         symbol_table.insert(
             "test_label".to_string(),
@@ -2281,7 +2341,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_call_far_same_bank_fail() {
-        let instruction = Instruction::CallFar(Operand::Label("test_label".to_string()));
+        let instruction = Instruction::CallFar(Operand::Label("test_label".to_string()), None);
         let mut symbol_table = SymbolTable::new();
         symbol_table.insert(
             "test_label".to_string(),
@@ -2296,6 +2356,129 @@ mod tests {
                 line: 1,
                 reason:
                     "Label \"test_label\" exists in the same bank as the CALL.far instruction, use a normal CALL instruction instead."
+                        .to_string(),
+            }
+        }));
+    }
+
+    #[test]
+    fn test_encode_instruction_call_far_via() {
+        let instruction = Instruction::CallFar(
+            Operand::Label("test_label".to_string()),
+            Some(Operand::Label("tramp".to_string())),
+        );
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert(
+            "test_label".to_string(),
+            Symbol {
+                logical_address: 0x4321,
+                bank: 1,
+            },
+        );
+        symbol_table.insert(
+            "tramp".to_string(),
+            Symbol {
+                logical_address: 0x0200,
+                bank: 0,
+            },
+        );
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0x1100, &0, 0).unwrap(),
+            vec![0x05, 0x01, 0x00, 0x06, 0x21, 0x43, 0xC8, 0x00, 0x02]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_call_far_via_bank_0_fail() {
+        let instruction = Instruction::CallFar(
+            Operand::Label("test_label".to_string()),
+            Some(Operand::Label("tramp".to_string())),
+        );
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert(
+            "test_label".to_string(),
+            Symbol {
+                logical_address: 0x2100,
+                bank: 0,
+            },
+        );
+        symbol_table.insert(
+            "tramp".to_string(),
+            Symbol {
+                logical_address: 0x0200,
+                bank: 0,
+            },
+        );
+        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, 1);
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::SemanticError {
+                line: 1,
+                reason:
+                    "Label \"test_label\" exists in bank 0, use a normal CALL instruction instead."
+                        .to_string(),
+            }
+        }));
+    }
+
+    #[test]
+    fn test_encode_instruction_call_far_via_same_bank_fail() {
+        let instruction = Instruction::CallFar(
+            Operand::Label("test_label".to_string()),
+            Some(Operand::Label("tramp".to_string())),
+        );
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert(
+            "test_label".to_string(),
+            Symbol {
+                logical_address: 0x4321,
+                bank: 1,
+            },
+        );
+        symbol_table.insert(
+            "tramp".to_string(),
+            Symbol {
+                logical_address: 0x0200,
+                bank: 0,
+            },
+        );
+        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, 1);
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::SemanticError {
+                line: 1,
+                reason:
+                    "Label \"test_label\" exists in the same bank as the CALL.far instruction, use a normal CALL instruction instead."
+                        .to_string(),
+            }
+        }));
+    }
+
+    #[test]
+    fn test_encode_instruction_call_far_via_invalid_bank_fail() {
+        let instruction = Instruction::CallFar(
+            Operand::Label("test_label".to_string()),
+            Some(Operand::Label("tramp".to_string())),
+        );
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert(
+            "test_label".to_string(),
+            Symbol {
+                logical_address: 0x4400,
+                bank: 2,
+            },
+        );
+        symbol_table.insert(
+            "tramp".to_string(),
+            Symbol {
+                logical_address: 0x4848,
+                bank: 1,
+            },
+        );
+        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, 1);
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::SemanticError {
+                line: 1,
+                reason:
+                    "Custom CALL.far via trampoline label must exist in bank 0, \"tramp\" found in bank 1"
                         .to_string(),
             }
         }));

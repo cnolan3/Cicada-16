@@ -5,7 +5,6 @@ use crate::errors::AssemblyError;
 use pest::Parser;
 use pest::iterators::Pair;
 use pest_derive::Parser;
-
 // Derive the parser from our grammar file.
 #[derive(Parser)]
 #[grammar = "./grammar.pest"]
@@ -2111,7 +2110,6 @@ fn build_res(add_pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
 
 // build a call.far instruction
 fn build_call_far(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
-    println!("{}, {}", pair, pair.as_str());
     let line = pair.as_span().start_pos().line_col().0;
 
     let mut inner = pair.into_inner();
@@ -2125,7 +2123,34 @@ fn build_call_far(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         });
     }
 
-    Ok(Instruction::CallFar(op))
+    Ok(Instruction::CallFar(op, None))
+}
+
+// build a call.far via instruction
+fn build_call_far_via(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let call_label = build_operand(inner.next().unwrap());
+    let via_label = build_operand(inner.next().unwrap());
+
+    if let Operand::Label(_) = call_label {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to a CALL.far instruction must be a label.".to_string(),
+        });
+    }
+
+    if let Operand::Label(_) = via_label {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "via operand to a CALL.far instruction must be a label.".to_string(),
+        });
+    }
+
+    Ok(Instruction::CallFar(call_label, Some(via_label)))
 }
 
 // ------------- build instruction –------------
@@ -2212,6 +2237,7 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::res => build_res(pair),
         Rule::lea => build_lea(pair),
         Rule::call_far => build_call_far(pair),
+        Rule::call_far_via => build_call_far_via(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
@@ -2854,7 +2880,10 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert_eq!(
             lines[0].instruction,
-            Some(Instruction::CallFar(Operand::Label("LABEL".to_string())))
+            Some(Instruction::CallFar(
+                Operand::Label("LABEL".to_string()),
+                None
+            ))
         );
     }
 
@@ -2866,6 +2895,46 @@ mod tests {
             e == AssemblyError::StructuralError {
                 line: 1,
                 reason: "Operand to a CALL.far instruction must be a label.".to_string(),
+            }
+        }));
+    }
+
+    #[test]
+    fn test_parse_call_far_via() {
+        let source = "CALL.far LABEL via TRAMP\n";
+        let result = parse_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::CallFar(
+                Operand::Label("LABEL".to_string()),
+                Some(Operand::Label("TRAMP".to_string())),
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_call_far_via_invalid_operand() {
+        let source = "CALL.far 300 via TRAMP\n";
+        let result = parse_source(source);
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::StructuralError {
+                line: 1,
+                reason: "Operand to a CALL.far instruction must be a label.".to_string(),
+            }
+        }));
+    }
+
+    #[test]
+    fn test_parse_call_far_via_invalid_via_operand() {
+        let source = "CALL.far LABEL via 200\n";
+        let result = parse_source(source);
+        assert!(result.is_err_and(|e| {
+            e == AssemblyError::StructuralError {
+                line: 1,
+                reason: "via operand to a CALL.far instruction must be a label.".to_string(),
             }
         }));
     }
