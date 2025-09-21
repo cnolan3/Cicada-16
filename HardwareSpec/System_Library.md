@@ -84,7 +84,8 @@ The 4 KiB (4096 bytes) of System Library RAM is allocated as follows:
 | 0x1E      | Function   | `setInterruptHandler`    |
 | 0x1F      | Function   | `dmaCopy`                |
 | 0x20      | Function   | `dmaCopyVBlank`          |
-| 0x21-0x7F | ---        | **Unused**               |
+| 0x21      | Function   | `callFar`                |
+| 0x22-0x7F | ---        | **Unused**               |
 
 ## **System Library Functions and Data**
 
@@ -484,6 +485,27 @@ The most common use for DMA is updating graphics in VRAM. This is a specialized 
   - Starts a VRAM-safe DMA transfer.
 - **Output:** None.
 - **Clobbered Registers:** None.
+
+### `callFar` : Index 0x21
+
+This function provides a "trampoline" to call a function located in a different ROM bank and have it return seamlessly. It handles switching to the target bank, calling the function, and switching back to the original bank automatically. This is the standard mechanism for cross-bank function calls.
+
+This function is designed to be as transparent as possible, allowing registers `R0-R3` to be used for passing arguments to the far function.
+
+- **Inputs:**
+  - `R4.b`: The number of the ROM bank to switch to.
+  - `R5`: The 16-bit address of the function to call within the target bank.
+- **Action:**
+  1.  Reads and saves the current ROM bank number.
+  2.  Switches to the target ROM bank specified in `R4`.
+  3.  Calls the function at the address specified in `R5`.
+  4.  Waits for the called function to return.
+  5.  Switches back to the original ROM bank.
+  6.  Returns to the caller.
+- **Register Usage:**
+  - **Argument Passing:** Use registers `R0`, `R1`, `R2`, and `R3` to pass arguments to the target (far) function.
+  - **Return Values:** Return values from the far function in `R0-R3` are preserved and passed back to the original caller.
+  - **Clobbered Registers:** `R4` and `R5` are used as inputs by this function and their contents may be clobbered. All other registers (`R0-R3`, `R6`) are preserved.
 
 ---
 
