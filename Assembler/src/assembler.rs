@@ -238,6 +238,8 @@ fn calculate_instruction_size(
         | Instruction::Res(Operand::Indirect(_), _) => Ok(3),
         Instruction::CallFar(Operand::Label(_), None) => Ok(8),
         Instruction::CallFar(Operand::Label(_), Some(Operand::Label(_))) => Ok(9),
+        Instruction::JmpFar(Operand::Label(_), None) => Ok(8),
+        Instruction::JmpFar(Operand::Label(_), Some(Operand::Label(_))) => Ok(9),
         // ... add logic for every instruction variant based on your opcode map ...
         _ => Err(AssemblyError::SemanticError {
             line: line_num,
@@ -330,7 +332,6 @@ fn get_symbol<'a>(
     symbol_table: &'a SymbolTable,
     label_name: &String,
     line_num: usize,
-    current_bank: &u32,
 ) -> Result<&'a Symbol, AssemblyError> {
     let target_symbol =
         symbol_table
@@ -339,6 +340,17 @@ fn get_symbol<'a>(
                 line: line_num,
                 reason: format!("Undefined label: {}", label_name),
             })?;
+
+    Ok(target_symbol)
+}
+
+fn get_and_check_symbol<'a>(
+    symbol_table: &'a SymbolTable,
+    label_name: &String,
+    line_num: usize,
+    current_bank: &u32,
+) -> Result<&'a Symbol, AssemblyError> {
+    let target_symbol = get_symbol(symbol_table, label_name, line_num)?;
 
     if target_symbol.bank != *current_bank {
         return Err(AssemblyError::SemanticError {
@@ -395,7 +407,8 @@ fn encode_instruction(
         }
         // Example: JMP my_label
         Instruction::Jmp(Operand::Label(label_name)) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             Ok(vec![0x51, low, high]) // Opcode for JMP n16
         }
@@ -416,7 +429,8 @@ fn encode_instruction(
         }
         // jump relative label
         Instruction::Jr(Operand::Label(label_name)) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let rel: i32 = target_symbol.logical_address as i32 - *current_address as i32;
             if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
                 return Err(AssemblyError::SemanticError {
@@ -438,7 +452,8 @@ fn encode_instruction(
         }
         // conditional jump label
         Instruction::Jcc(cc, Operand::Label(label_name)) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             let opcode = encode_condition_code_opcode(0x5B, cc);
             Ok(vec![opcode, low, high]) // Opcode for JMP n16
@@ -451,7 +466,8 @@ fn encode_instruction(
         }
         // conditional jump relative label
         Instruction::Jrcc(cc, Operand::Label(label_name)) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let rel: i32 = target_symbol.logical_address as i32 - *current_address as i32;
             if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
                 return Err(AssemblyError::SemanticError {
@@ -473,7 +489,8 @@ fn encode_instruction(
         }
         // DJNZ label
         Instruction::Djnz(Operand::Label(label_name)) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let rel: i32 = target_symbol.logical_address as i32 - *current_address as i32;
             if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
                 return Err(AssemblyError::SemanticError {
@@ -494,7 +511,8 @@ fn encode_instruction(
         }
         // CALL label
         Instruction::Call(Operand::Label(label_name)) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let bytecode = encode_call_immediate(target_symbol.logical_address as u16);
             Ok(bytecode)
         }
@@ -511,7 +529,8 @@ fn encode_instruction(
         }
         // conditional call label
         Instruction::Callcc(cc, Operand::Label(label_name)) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             let opcode = encode_condition_code_opcode(0xD1, cc);
             Ok(vec![opcode, low, high]) // Opcode for JMP n16
@@ -545,7 +564,8 @@ fn encode_instruction(
         }
         // add accumulator label
         Instruction::Add(Operand::Label(label_name), None) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             Ok(vec![0xC0, low, high])
         }
@@ -571,7 +591,8 @@ fn encode_instruction(
         }
         // sub accumulator label
         Instruction::Sub(Operand::Label(label_name), None) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             Ok(vec![0xC1, low, high])
         }
@@ -667,7 +688,8 @@ fn encode_instruction(
         }
         // adc accumulator label
         Instruction::Adc(Operand::Label(label_name), None) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             Ok(vec![0xC6, low, high])
         }
@@ -683,7 +705,8 @@ fn encode_instruction(
         }
         // sbc accumulator label
         Instruction::Sbc(Operand::Label(label_name), None) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             Ok(vec![0xC7, low, high])
         }
@@ -696,7 +719,8 @@ fn encode_instruction(
             Ok(vec![0x7D, low, high])
         }
         Instruction::Push(Operand::Label(label_name)) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             Ok(vec![0x7D, low, high])
         }
@@ -713,7 +737,8 @@ fn encode_instruction(
         }
         // and accumulator label
         Instruction::And(Operand::Label(label_name), None) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             Ok(vec![0xC2, low, high])
         }
@@ -734,7 +759,8 @@ fn encode_instruction(
         }
         // or accumulator label
         Instruction::Or(Operand::Label(label_name), None) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             Ok(vec![0xC3, low, high])
         }
@@ -750,7 +776,8 @@ fn encode_instruction(
         }
         // xor accumulator label
         Instruction::Xor(Operand::Label(label_name), None) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             Ok(vec![0xC4, low, high])
         }
@@ -766,7 +793,8 @@ fn encode_instruction(
         }
         // cmp accumulator label
         Instruction::Cmp(Operand::Label(label_name), None) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num, current_bank)?;
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
             let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
             Ok(vec![0xC5, low, high])
         }
@@ -930,13 +958,7 @@ fn encode_instruction(
             Ok(vec![0xFF, sub_opcode, dest])
         }
         Instruction::CallFar(Operand::Label(label_name), None) => {
-            let target_symbol =
-                symbol_table
-                    .get(label_name)
-                    .ok_or_else(|| AssemblyError::SemanticError {
-                        line: line_num,
-                        reason: format!("Undefined label: {}", label_name),
-                    })?;
+            let target_symbol = get_symbol(symbol_table, label_name, line_num)?;
 
             if target_symbol.bank == 0 {
                 return Err(AssemblyError::SemanticError {
@@ -956,31 +978,12 @@ fn encode_instruction(
                 });
             }
 
-            let mut final_bytecode = Vec::new();
-            final_bytecode.extend(encode_ldi(&Register::R4, target_symbol.bank as u16));
-            final_bytecode.extend(encode_ldi(
-                &Register::R5,
-                target_symbol.logical_address as u16,
-            ));
-            final_bytecode.extend(encode_syscall(0x21));
+            let final_bytecode = encode_far(target_symbol, 0x21);
             Ok(final_bytecode)
         }
         Instruction::CallFar(Operand::Label(call_label), Some(Operand::Label(via_label))) => {
-            let call_symbol =
-                symbol_table
-                    .get(call_label)
-                    .ok_or_else(|| AssemblyError::SemanticError {
-                        line: line_num,
-                        reason: format!("Undefined label: {}", call_label),
-                    })?;
-
-            let via_symbol =
-                symbol_table
-                    .get(via_label)
-                    .ok_or_else(|| AssemblyError::SemanticError {
-                        line: line_num,
-                        reason: format!("Undefined label: {}", via_label),
-                    })?;
+            let call_symbol = get_symbol(symbol_table, call_label, line_num)?;
+            let via_symbol = get_symbol(symbol_table, via_label, line_num)?;
 
             if call_symbol.bank == 0 {
                 return Err(AssemblyError::SemanticError {
@@ -1010,13 +1013,66 @@ fn encode_instruction(
                 });
             }
 
-            let mut final_bytecode = Vec::new();
-            final_bytecode.extend(encode_ldi(&Register::R4, call_symbol.bank as u16));
-            final_bytecode.extend(encode_ldi(
-                &Register::R5,
-                call_symbol.logical_address as u16,
-            ));
-            final_bytecode.extend(encode_call_immediate(via_symbol.logical_address as u16));
+            let final_bytecode = encode_far_via(call_symbol, via_symbol);
+            Ok(final_bytecode)
+        }
+        Instruction::JmpFar(Operand::Label(label_name), None) => {
+            let target_symbol = get_symbol(symbol_table, label_name, line_num)?;
+
+            if target_symbol.bank == 0 {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Label \"{}\" exists in bank 0, use a normal JMP instruction instead.",
+                        label_name
+                    ),
+                });
+            } else if target_symbol.bank == *current_bank {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Label \"{}\" exists in the same bank as the JMP.far instruction, use a normal JMP instruction instead.",
+                        label_name
+                    ),
+                });
+            }
+
+            let final_bytecode = encode_far(target_symbol, 0x22);
+            Ok(final_bytecode)
+        }
+        Instruction::JmpFar(Operand::Label(call_label), Some(Operand::Label(via_label))) => {
+            let call_symbol = get_symbol(symbol_table, call_label, line_num)?;
+            let via_symbol = get_symbol(symbol_table, via_label, line_num)?;
+
+            if call_symbol.bank == 0 {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Label \"{}\" exists in bank 0, use a normal JMP instruction instead.",
+                        call_label
+                    ),
+                });
+            } else if call_symbol.bank == *current_bank {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Label \"{}\" exists in the same bank as the JMP.far instruction, use a normal JMP instruction instead.",
+                        call_label
+                    ),
+                });
+            }
+
+            if via_symbol.bank != 0 {
+                return Err(AssemblyError::SemanticError {
+                    line: line_num,
+                    reason: format!(
+                        "Custom JMP.far via trampoline label must exist in bank 0, \"{}\" found in bank {}",
+                        via_label, via_symbol.bank,
+                    ),
+                });
+            }
+
+            let final_bytecode = encode_far_via(call_symbol, via_symbol);
             Ok(final_bytecode)
         }
 
@@ -1025,6 +1081,28 @@ fn encode_instruction(
             reason: "Invalid Instruction".to_string(),
         }),
     }
+}
+
+fn encode_far(call_symbol: &Symbol, syslib_index: u8) -> Vec<u8> {
+    let mut bytecode = Vec::new();
+    bytecode.extend(encode_ldi(&Register::R4, call_symbol.bank as u16));
+    bytecode.extend(encode_ldi(
+        &Register::R5,
+        call_symbol.logical_address as u16,
+    ));
+    bytecode.extend(encode_syscall(syslib_index));
+    bytecode
+}
+
+fn encode_far_via(call_symbol: &Symbol, via_symbol: &Symbol) -> Vec<u8> {
+    let mut bytecode = Vec::new();
+    bytecode.extend(encode_ldi(&Register::R4, call_symbol.bank as u16));
+    bytecode.extend(encode_ldi(
+        &Register::R5,
+        call_symbol.logical_address as u16,
+    ));
+    bytecode.extend(encode_call_immediate(via_symbol.logical_address as u16));
+    bytecode
 }
 
 fn encode_push_r(rs: &Register) -> Vec<u8> {

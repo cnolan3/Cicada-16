@@ -2169,6 +2169,51 @@ fn build_call_far_via(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
     Ok(Instruction::CallFar(call_label, Some(via_label)))
 }
 
+// build a jump.far instruction
+fn build_jmp_far(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let op = build_operand(inner.next().unwrap());
+
+    if let Operand::Label(_) = op {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to a JMP.far instruction must be a label.".to_string(),
+        });
+    }
+
+    Ok(Instruction::JmpFar(op, None))
+}
+
+// build a jump.far via instruction
+fn build_jmp_far_via(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+
+    let mut inner = pair.into_inner();
+    let call_label = build_operand(inner.next().unwrap());
+    let via_label = build_operand(inner.next().unwrap());
+
+    if let Operand::Label(_) = call_label {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "Operand to a JMP.far instruction must be a label.".to_string(),
+        });
+    }
+
+    if let Operand::Label(_) = via_label {
+    } else {
+        return Err(AssemblyError::StructuralError {
+            line,
+            reason: "via operand to a JMP.far instruction must be a label.".to_string(),
+        });
+    }
+
+    Ok(Instruction::JmpFar(call_label, Some(via_label)))
+}
+
 // ------------- build instruction –------------
 
 // Helper to build an Instruction from a pest Pair
@@ -2254,6 +2299,8 @@ fn build_instruction(pair: Pair<Rule>) -> Result<Instruction, AssemblyError> {
         Rule::lea => build_lea(pair),
         Rule::call_far => build_call_far(pair),
         Rule::call_far_via => build_call_far_via(pair),
+        Rule::jmp_far => build_jmp_far(pair),
+        Rule::jmp_far_via => build_jmp_far_via(pair),
         // ... add cases for all other instructions
         _ => unreachable!("Unknown instruction rule: {:?}", pair.as_rule()),
     }
