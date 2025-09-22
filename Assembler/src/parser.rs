@@ -2428,10 +2428,11 @@ fn build_word_directive(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
                     });
                 }
             }
+            Operand::Label(_) => {}
             _ => {
                 return Err(AssemblyError::StructuralError {
                     line,
-                    reason: ".word data must be a list of immediate values.".to_string(),
+                    reason: ".word data must be a list of immediate values or labels.".to_string(),
                 });
             }
         }
