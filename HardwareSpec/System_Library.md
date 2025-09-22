@@ -85,7 +85,8 @@ The 4 KiB (4096 bytes) of System Library RAM is allocated as follows:
 | 0x1F      | Function   | `dmaCopy`                |
 | 0x20      | Function   | `dmaCopyVBlank`          |
 | 0x21      | Function   | `callFar`                |
-| 0x22-0x7F | ---        | **Unused**               |
+| 0x22      | Function   | `jmpFar`                 |
+| 0x23-0x7F | ---        | **Unused**               |
 
 ## **System Library Functions and Data**
 
@@ -506,6 +507,19 @@ This function is designed to be as transparent as possible, allowing registers `
   - **Argument Passing:** Use registers `R0`, `R1`, `R2`, and `R3` to pass arguments to the target (far) function.
   - **Return Values:** Return values from the far function in `R0-R3` are preserved and passed back to the original caller.
   - **Clobbered Registers:** `R4` and `R5` are used as inputs by this function and their contents may be clobbered. All other registers (`R0-R3`, `R6`) are preserved.
+
+### `jmpFar` : Index 0x22
+
+This function provides a "trampoline" to jump to a label located in a different ROM bank. It handles switching to the target bank and then jumping, effectively transferring execution control without returning. This is the standard mechanism for cross-bank jumps.
+
+- **Inputs:**
+  - `R4.b`: The number of the ROM bank to switch to.
+  - `R5`: The 16-bit address of the label to jump to within the target bank.
+- **Action:**
+  1.  Switches to the target ROM bank specified in `R4`.
+  2.  Jumps to the address specified in `R5`. Execution does not return to the caller.
+- **Register Usage:**
+  - The state of all registers is preserved during the bank switch and jump. They are not used or modified by the `jmpFar` function itself.
 
 ---
 
