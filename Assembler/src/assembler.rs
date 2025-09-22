@@ -65,13 +65,6 @@ pub fn build_symbol_table(
         // Increment current_address by the size of the instruction.
         if let Some(instruction) = &line.instruction {
             current_address += calculate_instruction_size(instruction, line.line_number)?;
-            let cur_bank_end = (current_bank as u32 + 1) * BANK_SIZE;
-            if current_address > cur_bank_end {
-                return Err(AssemblyError::StructuralError {
-                    line: line.line_number,
-                    reason: format!("ROM bank {} overflow.", current_bank),
-                });
-            }
         }
 
         // handle directives
@@ -100,8 +93,23 @@ pub fn build_symbol_table(
                     current_bank = *num as u32;
                     current_address = current_bank * BANK_SIZE;
                 }
+                Directive::Byte(bytes) => {
+                    current_address += bytes.len() as u32;
+                }
+                Directive::Word(words) => {
+                    current_address += (words.len() as u32) * 2;
+                }
                 _ => {}
             }
+        }
+
+        // check for overflow of current bank
+        let cur_bank_end = (current_bank as u32 + 1) * BANK_SIZE;
+        if current_address > cur_bank_end {
+            return Err(AssemblyError::StructuralError {
+                line: line.line_number,
+                reason: format!("ROM bank {} overflow.", current_bank),
+            });
         }
     }
     Ok(symbol_table)
@@ -278,6 +286,28 @@ pub fn generate_bytecode(
 
                     current_bank = *num as u32;
                     current_address = new_addr;
+                }
+                Directive::Byte(bytes) => {
+                    let mut data_block: Vec<u8> = Vec::new();
+                    for byte in bytes {
+                        if let Operand::Immediate(byte_data) = byte {
+                            data_block.push(*byte_data as u8);
+                        }
+                    }
+                    current_address += data_block.len() as u32;
+                    bytecode.extend(data_block);
+                }
+                Directive::Word(words) => {
+                    let mut data_block: Vec<u8> = Vec::new();
+                    for word in words {
+                        if let Operand::Immediate(word_data) = word {
+                            let [low, high] = (*word_data as u16).to_le_bytes();
+                            data_block.push(low);
+                            data_block.push(high);
+                        }
+                    }
+                    current_address += data_block.len() as u32;
+                    bytecode.extend(data_block);
                 }
                 _ => {}
             }

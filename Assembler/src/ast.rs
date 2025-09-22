@@ -139,6 +139,8 @@ pub enum ConditionCode {
 pub enum Directive {
     Org(Operand),
     Bank(Operand),
+    Byte(Vec<Operand>),
+    Word(Vec<Operand>),
 }
 
 // --- Assembly Line Structure ---

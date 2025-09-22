@@ -2312,6 +2312,8 @@ fn build_directive(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
     match pair.as_rule() {
         Rule::org_directive => build_org_directive(pair),
         Rule::bank_directive => build_bank_directive(pair),
+        Rule::byte_directive => build_byte_directive(pair),
+        Rule::word_directive => build_word_directive(pair),
         _ => unreachable!("Unknown directive rule: {:?}", pair.as_rule()),
     }
 }
@@ -2366,6 +2368,78 @@ fn build_bank_directive(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
     }
 
     Ok(Directive::Bank(op))
+}
+
+// build a byte data directive
+fn build_byte_directive(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+    let bytes = pair.into_inner().next().unwrap().into_inner();
+    let mut ops: Vec<Operand> = Vec::new();
+
+    for byte in bytes {
+        let op = build_operand(byte);
+
+        match op {
+            Operand::Immediate(val) => {
+                if val > u8::MAX as i32 || val < 0 {
+                    return Err(AssemblyError::StructuralError {
+                        line,
+                        reason: format!(
+                            ".byte data must be unsigned 8 bit values between 0 and {}, given value: {}",
+                            u8::MAX,
+                            val
+                        ),
+                    });
+                }
+            }
+            _ => {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: ".byte data must be a list of immediate values.".to_string(),
+                });
+            }
+        }
+
+        ops.push(op);
+    }
+
+    Ok(Directive::Byte(ops))
+}
+
+// build a word data directive
+fn build_word_directive(pair: Pair<Rule>) -> Result<Directive, AssemblyError> {
+    let line = pair.as_span().start_pos().line_col().0;
+    let words = pair.into_inner().next().unwrap().into_inner();
+    let mut ops: Vec<Operand> = Vec::new();
+
+    for word in words {
+        let op = build_operand(word);
+
+        match op {
+            Operand::Immediate(val) => {
+                if val > u16::MAX as i32 || val < 0 {
+                    return Err(AssemblyError::StructuralError {
+                        line,
+                        reason: format!(
+                            ".word data must be unsigned 16 bit values between 0 and {}, given value: {}",
+                            u16::MAX,
+                            val
+                        ),
+                    });
+                }
+            }
+            _ => {
+                return Err(AssemblyError::StructuralError {
+                    line,
+                    reason: ".word data must be a list of immediate values.".to_string(),
+                });
+            }
+        }
+
+        ops.push(op);
+    }
+
+    Ok(Directive::Word(ops))
 }
 
 // ------------- unit tests –------------

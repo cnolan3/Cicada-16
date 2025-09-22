@@ -300,7 +300,11 @@ org_directive = { ^".org" ~ operand }
 
 bank_directive = { ^".bank" ~ operand }
 
-directive = { org_directive | bank_directive }
+byte_directive = { ^".byte" ~ data_operand_list }
+
+word_directive = { ^".word" ~ data_operand_list }
+
+directive = { org_directive | bank_directive | byte_directive | word_directive }
 
 // --- Core Rules ---
 
