@@ -325,6 +325,21 @@ pub fn generate_bytecode(
             bytecode.extend(instruction_bytes);
         }
     }
+
+    // pad the resulting bytecode to the next bank size
+    let mut num_banks = bytecode.len() as u32 / BANK_SIZE;
+
+    num_banks = if bytecode.len() as u32 % BANK_SIZE > 0 {
+        num_banks + 1
+    } else {
+        num_banks
+    };
+
+    num_banks = std::cmp::max(num_banks, 2);
+
+    bytecode.resize((num_banks * BANK_SIZE) as usize, 0xFF);
+
+    // final bytecode
     Ok(bytecode)
 }
 
