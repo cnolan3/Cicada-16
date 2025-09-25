@@ -1,3 +1,4 @@
+use crate::errors::AssemblyError;
 use crate::parser::ast_builder::utility_functions::*;
 use crate::parser::{ConditionCode, Operand};
 use crate::parser::{Pair, Rule};
@@ -60,15 +61,21 @@ pub fn build_indirect(pair: Pair<Rule>) -> Result<Operand> {
 }
 
 pub fn build_absolute(pair: Pair<Rule>) -> Result<Operand> {
-    let hex = pair
-        .into_inner()
-        .next()
-        .unwrap()
-        .into_inner()
-        .next()
-        .unwrap();
-    let value = u16::from_str_radix(hex.as_str(), 16).unwrap();
-    Ok(Operand::AbsAddr(value))
+    let line = pair.as_span().start_pos().line_col().0;
+    let inner = pair.into_inner().next().unwrap();
+    match inner.as_rule() {
+        Rule::immediate_hex => {
+            let hex = inner.into_inner().next().unwrap();
+            let value = u16::from_str_radix(hex.as_str(), 16).unwrap();
+            Ok(Operand::AbsAddr(value))
+        }
+        Rule::identifier => Ok(Operand::AbsLabel(inner.as_str().to_string())),
+        _ => Err(AssemblyError::StructuralError {
+            line,
+            reason: "Invalid absolute operand, must be a 16 bit immediate or a label.".to_string(),
+        }
+        .into()),
+    }
 }
 
 pub fn build_pre_decrement(pair: Pair<Rule>) -> Result<Operand> {
