@@ -1,0 +1,204 @@
+/*
+Copyright 2025 Connor Nolan
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+mod encoder;
+mod symbol_table;
+
+use crate::ast::{AssemblyLine, Directive, Operand};
+use crate::errors::AssemblyError;
+use symbol_table::*;
+
+const BANK_SIZE: u32 = 16384;
+
+/// Pass 1: Build the symbol table.
+pub fn build_symbol_table(
+    lines: &[AssemblyLine],
+    start_addr: &u16,
+) -> Result<SymbolTable, AssemblyError> {
+    let mut symbol_table = SymbolTable::new();
+    let mut current_address: u32 = start_addr.clone() as u32; // Start address after cartridge header
+    let mut current_bank: u32 = 0;
+
+    for line in lines {
+        // If a label exists on this line, record its current address.
+        if let Some(label) = &line.label {
+            if symbol_table.contains_key(label) {
+                return Err(AssemblyError::SemanticError {
+                    line: line.line_number,
+                    reason: format!("Duplicate label definition: {}", label),
+                });
+            }
+
+            let logical_address = match current_bank {
+                0 => current_address,
+                _ => BANK_SIZE + (current_address % BANK_SIZE),
+            };
+
+            symbol_table.insert(
+                label.clone(),
+                Symbol {
+                    logical_address,
+                    bank: current_bank,
+                },
+            );
+        }
+
+        // Increment current_address by the size of the instruction.
+        if let Some(instruction) = &line.instruction {
+            current_address += encoder::calculate_instruction_size(instruction);
+        }
+
+        // handle directives
+        if let Some(directive) = &line.directive {
+            match directive {
+                Directive::Org(Operand::Immediate(addr)) => {
+                    // It's good practice to ensure .org doesn't move backwards,
+                    // as it can overwrite previous label definitions.
+                    let new_addr = *addr as u32;
+                    if new_addr < current_address {
+                        return Err(AssemblyError::SemanticError {
+                            line: line.line_number,
+                            reason: ".org directive cannot move the address backwards.".to_string(),
+                        });
+                    }
+                    current_address = new_addr;
+                    current_bank = current_address / BANK_SIZE;
+                }
+                Directive::Bank(num) => {
+                    if *num as u32 <= current_bank {
+                        return Err(AssemblyError::SemanticError {
+                            line: line.line_number,
+                            reason: ".bank directive cannot move to a previous bank.".to_string(),
+                        });
+                    }
+                    current_bank = *num as u32;
+                    current_address = current_bank * BANK_SIZE;
+                }
+                Directive::Byte(bytes) => {
+                    current_address += bytes.len() as u32;
+                }
+                Directive::Word(words) => {
+                    current_address += (words.len() as u32) * 2;
+                }
+                _ => {}
+            }
+        }
+
+        // check for overflow of current bank
+        let cur_bank_end = (current_bank as u32 + 1) * BANK_SIZE;
+        if current_address > cur_bank_end {
+            return Err(AssemblyError::StructuralError {
+                line: line.line_number,
+                reason: format!("ROM bank {} overflow.", current_bank),
+            });
+        }
+    }
+    Ok(symbol_table)
+}
+
+/// Pass 2: Generate machine code.
+pub fn generate_bytecode(
+    lines: &[AssemblyLine],
+    symbol_table: &SymbolTable,
+    start_addr: &u16,
+) -> Result<Vec<u8>, AssemblyError> {
+    let mut bytecode = Vec::new();
+    let mut current_address: u32 = start_addr.clone() as u32; // Start address after cartridge header
+    let mut current_bank: u32 = 0;
+
+    for line in lines {
+        if let Some(directive) = &line.directive {
+            match directive {
+                Directive::Org(Operand::Immediate(addr)) => {
+                    let new_addr = *addr as u32;
+                    if new_addr > current_address {
+                        let padding_size = (new_addr - current_address) as usize;
+                        bytecode.resize(bytecode.len() + padding_size, 0x00);
+                    }
+                    current_address = new_addr;
+                }
+                Directive::Bank(num) => {
+                    let new_addr = *num as u32 * BANK_SIZE;
+                    if new_addr > current_address {
+                        let padding_size = (new_addr - current_address) as usize;
+                        bytecode.resize(bytecode.len() + padding_size, 0x00);
+                    }
+
+                    current_bank = *num as u32;
+                    current_address = new_addr;
+                }
+                Directive::Byte(bytes) => {
+                    let mut data_block: Vec<u8> = Vec::new();
+                    for byte in bytes {
+                        data_block.push(*byte);
+                    }
+                    current_address += data_block.len() as u32;
+                    bytecode.extend(data_block);
+                }
+                Directive::Word(words) => {
+                    let mut data_block: Vec<u8> = Vec::new();
+                    for word in words {
+                        match word {
+                            Operand::Immediate(word_data) => {
+                                let [low, high] = (*word_data as u16).to_le_bytes();
+                                data_block.push(low);
+                                data_block.push(high);
+                            }
+                            Operand::Label(label_name) => {
+                                let sym = get_symbol(symbol_table, label_name, line.line_number)?;
+                                let [low, high] = (sym.logical_address as u16).to_le_bytes();
+                                data_block.push(low);
+                                data_block.push(high);
+                            }
+                            _ => {}
+                        }
+                    }
+                    current_address += data_block.len() as u32;
+                    bytecode.extend(data_block);
+                }
+                _ => {}
+            }
+        }
+
+        if let Some(instruction) = &line.instruction {
+            let instruction_bytes = encoder::encode_instruction(
+                instruction,
+                symbol_table,
+                &current_address,
+                &current_bank,
+                line.line_number,
+            )?;
+            current_address += instruction_bytes.len() as u32;
+            bytecode.extend(instruction_bytes);
+        }
+    }
+
+    // pad the resulting bytecode to the next bank size
+    let mut num_banks = bytecode.len() as u32 / BANK_SIZE;
+
+    num_banks = if bytecode.len() as u32 % BANK_SIZE > 0 {
+        num_banks + 1
+    } else {
+        num_banks
+    };
+
+    num_banks = std::cmp::max(num_banks, 2);
+
+    bytecode.resize((num_banks * BANK_SIZE) as usize, 0xFF);
+
+    // final bytecode
+    Ok(bytecode)
+}

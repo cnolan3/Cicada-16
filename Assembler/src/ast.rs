@@ -33,8 +33,9 @@ pub enum Register {
 pub enum Operand {
     Register(Register),
     Immediate(i32),
-    Indirect(Register),    // e.g., (R1)
-    Absolute(u16),         // e.g., (0x2020)
+    Indirect(Register), // e.g., (R1)
+    AbsAddr(u16),       // e.g., (0x2020)
+    AbsLabel(String),
     Indexed(Register, i8), // e.g., (R1, 0x10) or (R1, -2)
     Label(String),         // e.g., my_label
     PreDecrement(Register),
@@ -59,68 +60,120 @@ pub enum Instruction {
     Enter,
     Leave,
 
-    // Load instructions
-    Ld(Operand, Operand), // Covers LD rd, rs; LDI r, n16; LD r, (n16); etc.
-    Ldb(Operand, Operand),
-    St(Operand, Operand),
-    Stb(Operand, Operand),
+    // 16 bit Load/Store instructions
+    LdReg(Register, Register),         // LD r1, r2
+    Ldi(Register, Operand),            // LDI r1, 0x1234 AND LDI r1, label
+    LdIndirect(Register, Register),    // LD r1, (r2)
+    LdAbs(Register, Operand),          // LD r1, (0x1234) AND LD r1, (label)
+    LdIndexed(Register, Register, i8), // LD r1, (r2, 3)
+    LdPreDec(Register, Register),      // LD r1, -(r2)
+    LdPostInc(Register, Register),     // LD r1, (r2)+
+    StIndirect(Register, Register),    // St (r1), r2
+    StAbs(Operand, Register),          // St (0x1234), r1 AND LD (label), r1
+    StIndexed(Register, i8, Register), // St (r1, 4), r2
+    StPreDec(Register, Register),      // St -(r1), r2
+    StPostInc(Register, Register),     // St (r1)+, r2
 
-    // Arithmetic instructions
-    Add(Operand, Option<Operand>), // Option for one-operand (ADD rs) vs two-operand (ADD rd, rs)
-    Addb(Operand),
-    Sub(Operand, Option<Operand>),
-    Subb(Operand),
-    And(Operand, Option<Operand>),
-    Andb(Operand),
-    Or(Operand, Option<Operand>),
-    Orb(Operand),
-    Xor(Operand, Option<Operand>),
-    Xorb(Operand),
-    Cmp(Operand, Option<Operand>),
-    Cmpb(Operand),
-    Adc(Operand, Option<Operand>),
-    Sbc(Operand, Option<Operand>),
-    AddSp(Operand),
-    Neg,
-    Not,
-    Swap,
-    Inc(Operand),
-    Dec(Operand),
+    // 8 bit Load/Store instructions
+    LdiB(Register, u8),              // LDI.b r1, 0x12
+    LdBIndirect(Register, Register), // LD.b r1, (r2)
+    LdBPreDec(Register, Register),   // LD.b r1, -(r2)
+    LdBPostInc(Register, Register),  // LD.b r1, (r2)+
+    StBIndirect(Register, Register), // St.b (r1), r2
+    StBPreDec(Register, Register),   // St.b -(r1), r2
+    StBPostInc(Register, Register),  // St.b (r1)+, r2
 
-    // Bitwise shift and rotate instructions
-    Sra(Operand),
-    Shl(Operand),
-    Shr(Operand),
-    Rol(Operand),
-    Ror(Operand),
+    // LEA
+    Lea(Register, Register, i8), // LEA r1, (r2, 0x12)
 
-    // Jumps and Calls
-    Jmp(Operand),
-    Jr(Operand),
-    Call(Operand),
-    Jcc(ConditionCode, Operand), // Jcc cc, target
-    Jrcc(ConditionCode, Operand),
-    Djnz(Operand),
-    Callcc(ConditionCode, Operand),
-    Syscall(Operand),
-    CallFar(Operand, Option<Operand>),
-    JmpFar(Operand, Option<Operand>),
-    CallccFar(ConditionCode, Operand, Option<Operand>),
-    JmpccFar(ConditionCode, Operand, Option<Operand>),
+    // Stack Operations
+    Push(Register), // PUSH r1
+    Pop(Register),  // POP r1
+    PushI(Operand), // PUSH 0x1234 AND PUSH label
+    PushF,          // PUSH f
+    PopF,           // POP f
 
-    // Stack operations
-    Push(Operand),
-    Pop(Operand),
-    PushF,
-    PopF,
+    // 16 bit accumulator arithmetic
+    AddAcc(Register), // ADD r1
+    SubAcc(Register), // SUB r1
+    AndAcc(Register), // AND r1
+    OrAcc(Register),  // OR r1
+    XorAcc(Register), // XOR r1
+    CmpAcc(Register), // CMP r1
+    NegAcc,           // NEG
+    NotAcc,           // NOT
+    SwapAcc,          // SWAP
+
+    // 16 bit accumulator immediate arithmetic
+    AddAccI(Operand), // ADDI 0x1234 AND ADDI label
+    SubAccI(Operand), // SUBI 0x1234 AND SUBI label
+    AndAccI(Operand), // ANDI 0x1234 AND ANDI label
+    OrAccI(Operand),  // ORI 0x1234 AND ORI label
+    XorAccI(Operand), // XORI 0x1234 AND XORI label
+    CmpAccI(Operand), // CMPI 0x1234 AND CMPI label
+    AdcAccI(Operand), // ADCI 0x1234 AND ADCI label
+    SbcAccI(Operand), // SBCI 0x1234 AND SBCI label
+
+    // 16 bit register-to-register arithmetic
+    AddReg(Register, Register), // ADD r1, r2
+    SubReg(Register, Register), // SUB r1, r2
+    AndReg(Register, Register), // AND r1, r2
+    OrReg(Register, Register),  // OR r1, r2
+    XorReg(Register, Register), // XOR r1, r2
+    CmpReg(Register, Register), // CMP r1, r1
+    AdcReg(Register, Register), // ADC r1, r2
+    SbcReg(Register, Register), // SBC r1, r2
+
+    // 16 bit Immediate-to-register arithmetic
+    AddIReg(Register, Operand), // ADD r1, 0x1234 AND ADD r1, label
+    SubIReg(Register, Operand), // SUB r1, 0x1234 AND SUB r1, label
+    AndIReg(Register, Operand), // AND r1, 0x1234 AND AND r1, label
+    OrIReg(Register, Operand),  // OR r1, 0x1234 AND OR r1, label
+    XorIReg(Register, Operand), // XOR r1, 0x1234 AND XOR r1, label
+    CmpIReg(Register, Operand), // CMP r1, 0x1234 AND CMP r1, label
+    AddSp(i8),                  // ADD SP, -3
+    Inc(Register),              // INC r1,
+    Dec(Register),              // DEC r1,
+
+    // 8 bit accumulator arithmetic
+    AddBAcc(Register), // ADD.b r1
+    SubBAcc(Register), // SUB.b r1
+    AndBAcc(Register), // And.b r1
+    OrBAcc(Register),  // OR.b r1
+    XorBAcc(Register), // XOR.b r1
+    CmpBAcc(Register), // CMP.b r1
 
     // bit manipulation
-    Bit(Operand, Operand),
-    Set(Operand, Operand),
-    Res(Operand, Operand),
+    Sra(Register),             // SRA r1
+    Shl(Register),             // SHL r1
+    Shr(Register),             // SHR r1
+    Rol(Register),             // ROL r1
+    Ror(Register),             // ROR r1
+    BitReg(Register, u8),      // BIT r1, 3
+    SetReg(Register, u8),      // SET r1, 3
+    ResReg(Register, u8),      // RES r1, 3
+    BitAbs(Operand, u8),       // BIT (0x1234), 3
+    SetAbs(Operand, u8),       // SET (0x1234), 3
+    ResAbs(Operand, u8),       // RES (0x1234), 3
+    BitIndirect(Register, u8), // BIT (r1), 3
+    SetIndirect(Register, u8), // SET (r1), 3
+    ResIndirect(Register, u8), // RES (r1), 3
 
-    Lea(Operand, Operand),
-    // ... add all other instructions from your ISA ...
+    // Control Flow
+    JmpI(Operand),                   // JMP 0x1234 AND JMP label
+    JmpIndirect(Register),           // JMP (r1)
+    JrI(Operand),                    // JR -3 AND JR label
+    JccI(ConditionCode, Operand),    // Jcc 0x1234 AND Jcc label
+    JrccI(ConditionCode, Operand),   // JRcc -3 AND JRcc label
+    Djnz(Operand),                   // DJNZ -3 AND DJNZ label
+    CallI(Operand),                  // CALL 0x1234 AND CALL label
+    CallIndirect(Register),          // CALL (r1)
+    CallccI(ConditionCode, Operand), // CALLcc 0x1234 AND CALL label
+    Syscall(u8),                     // SYSCALL 0x20
+    CallFar(String),                 // CALL.far label
+    CallFarVia(String, String),      // Call.far label via label
+    JmpFar(String),                  // JMP.far label
+    JmpFarVia(String, String),       // JMP.far label via label
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -137,10 +190,10 @@ pub enum ConditionCode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Directive {
-    Org(Operand),
-    Bank(Operand),
-    Byte(Vec<Operand>),
-    Word(Vec<Operand>),
+    Org(Operand),       // .org 0x1234 AND .org label
+    Bank(u16),          // .bank 3
+    Byte(Vec<u8>),      // .byte 0x01, 0x02, 0x03
+    Word(Vec<Operand>), // .word 0x0001, 0x0002, 0x0003 AND .word label, label, label
 }
 
 // --- Assembly Line Structure ---

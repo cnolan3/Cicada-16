@@ -66,7 +66,7 @@ immediate_hex
 
 indirect = ${ open_paren ~ register ~ close_paren }
 
-absolute = ${ open_paren ~ immediate_hex ~ close_paren }
+absolute = ${ open_paren ~ ( immediate_hex | identifier ) ~ close_paren }
 
 register = ${ reg_prefix ~ reg_num }
 
