@@ -146,6 +146,27 @@ pub fn calculate_instruction_size(instruction: &Instruction) -> u32 {
     }
 }
 
+/// Resolves an operand that can be a label or an immediate value into a 16-bit address.
+fn resolve_label_or_immediate(
+    op: &Operand,
+    symbol_table: &SymbolTable,
+    line_num: usize,
+    current_bank: &u32,
+) -> Result<u16, AssemblyError> {
+    match op {
+        Operand::Immediate(value) => Ok(*value as u16),
+        Operand::Label(label_name) => {
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
+            Ok(target_symbol.logical_address as u16)
+        }
+        _ => Err(AssemblyError::SemanticError {
+            line: line_num,
+            reason: "Expected an immediate value or a label.".to_string(),
+        }),
+    }
+}
+
 /// Helper function to translate a single instruction into bytes during Pass 2.
 pub fn encode_instruction(
     instruction: &Instruction,
@@ -177,17 +198,9 @@ pub fn encode_instruction(
             let opcode = encode_rd_rs_byte(LD_REG_REG_BASE_OPCODE, rd, rs);
             Ok(vec![opcode])
         }
-        // Example: LDI R1, 0xABCD (Opcode: 0x01 + register index)
-        Instruction::Ldi(rd, Operand::Immediate(value)) => {
-            let bytecode = encode_ldi(rd, *value as u16);
-            Ok(bytecode)
-        }
-        // Example: LDI R1, 0xABCD (Opcode: 0x01 + register index)
-        Instruction::Ldi(rd, Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let bytecode = encode_ldi(rd, target_symbol.logical_address as u16);
-            Ok(bytecode)
+        Instruction::Ldi(rd, op) => {
+            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            Ok(encode_ldi(rd, value))
         }
         // indirect-to-register load
         Instruction::LdIndirect(rd, rs) => {
@@ -297,260 +310,134 @@ pub fn encode_instruction(
         }
 
         // --------- Stack Operations ---------
-        Instruction::Push(reg) => {
-            let bytecode = encode_push_r(reg);
-            Ok(bytecode)
-        }
-        Instruction::PushI(Operand::Immediate(value)) => {
-            let [low, high] = (*value as u16).to_le_bytes();
+        Instruction::Push(reg) => Ok(encode_push_r(reg)),
+        Instruction::PushI(op) => {
+            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            let [low, high] = value.to_le_bytes();
             Ok(vec![PUSH_IMM_OPCODE, low, high])
         }
-        Instruction::PushI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![PUSH_IMM_OPCODE, low, high])
-        }
-        Instruction::Pop(reg) => {
-            let bytecode = encode_pop_r(reg);
-            Ok(bytecode)
-        }
+        Instruction::Pop(reg) => Ok(encode_pop_r(reg)),
         Instruction::PushF => Ok(vec![PUSH_F_OPCODE]),
         Instruction::PopF => Ok(vec![POP_F_OPCODE]),
 
         // --------- 16 bit accumulator arithmetic ---------
-        Instruction::AddAcc(rs) => {
-            let opcode = encode_reg_opcode(ADD_ACC_BASE_OPCODE, rs);
-            Ok(vec![opcode])
-        }
-        Instruction::SubAcc(rs) => {
-            let opcode = encode_reg_opcode(SUB_ACC_BASE_OPCODE, rs);
-            Ok(vec![opcode])
-        }
-        Instruction::AndAcc(rs) => {
-            let opcode = encode_reg_opcode(AND_ACC_BASE_OPCODE, rs);
-            Ok(vec![opcode])
-        }
-        Instruction::OrAcc(rs) => {
-            let opcode = encode_reg_opcode(OR_ACC_BASE_OPCODE, rs);
-            Ok(vec![opcode])
-        }
-        Instruction::XorAcc(rs) => {
-            let opcode = encode_reg_opcode(XOR_ACC_BASE_OPCODE, rs);
-            Ok(vec![opcode])
-        }
-        Instruction::CmpAcc(rs) => {
-            let opcode = encode_reg_opcode(CMP_ACC_BASE_OPCODE, rs);
-            Ok(vec![opcode])
-        }
+        Instruction::AddAcc(rs) => Ok(vec![encode_reg_opcode(ADD_ACC_BASE_OPCODE, rs)]),
+        Instruction::SubAcc(rs) => Ok(vec![encode_reg_opcode(SUB_ACC_BASE_OPCODE, rs)]),
+        Instruction::AndAcc(rs) => Ok(vec![encode_reg_opcode(AND_ACC_BASE_OPCODE, rs)]),
+        Instruction::OrAcc(rs) => Ok(vec![encode_reg_opcode(OR_ACC_BASE_OPCODE, rs)]),
+        Instruction::XorAcc(rs) => Ok(vec![encode_reg_opcode(XOR_ACC_BASE_OPCODE, rs)]),
+        Instruction::CmpAcc(rs) => Ok(vec![encode_reg_opcode(CMP_ACC_BASE_OPCODE, rs)]),
         Instruction::NegAcc => Ok(vec![NEG_ACC_OPCODE]),
         Instruction::NotAcc => Ok(vec![NOR_ACC_OPCODE]),
         Instruction::SwapAcc => Ok(vec![SWAP_ACC_OPCODE]),
 
         // --------- 16 bit accumulator immediate arithmetic ---------
-        Instruction::AddAccI(Operand::Immediate(value)) => {
-            let [low, high] = (*value as u16).to_le_bytes();
+        Instruction::AddAccI(op) => {
+            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            let [low, high] = value.to_le_bytes();
             Ok(vec![ADDI_ACC_OPCODE, low, high])
         }
-        Instruction::AddAccI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![ADDI_ACC_OPCODE, low, high])
-        }
-        Instruction::SubAccI(Operand::Immediate(value)) => {
-            let [low, high] = (*value as u16).to_le_bytes();
+        Instruction::SubAccI(op) => {
+            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            let [low, high] = value.to_le_bytes();
             Ok(vec![SUBI_ACC_OPCODE, low, high])
         }
-        Instruction::SubAccI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![SUBI_ACC_OPCODE, low, high])
-        }
-        Instruction::AndAccI(Operand::Immediate(value)) => {
-            let [low, high] = (*value as u16).to_le_bytes();
+        Instruction::AndAccI(op) => {
+            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            let [low, high] = value.to_le_bytes();
             Ok(vec![ANDI_ACC_OPCODE, low, high])
         }
-        Instruction::AndAccI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![ANDI_ACC_OPCODE, low, high])
-        }
-        Instruction::OrAccI(Operand::Immediate(value)) => {
-            let [low, high] = (*value as u16).to_le_bytes();
+        Instruction::OrAccI(op) => {
+            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            let [low, high] = value.to_le_bytes();
             Ok(vec![ORI_ACC_OPCODE, low, high])
         }
-        Instruction::OrAccI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![ORI_ACC_OPCODE, low, high])
-        }
-        Instruction::XorAccI(Operand::Immediate(value)) => {
-            let [low, high] = (*value as u16).to_le_bytes();
+        Instruction::XorAccI(op) => {
+            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            let [low, high] = value.to_le_bytes();
             Ok(vec![XORI_ACC_OPCODE, low, high])
         }
-        Instruction::XorAccI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![XORI_ACC_OPCODE, low, high])
-        }
-        Instruction::CmpAccI(Operand::Immediate(value)) => {
-            let [low, high] = (*value as u16).to_le_bytes();
+        Instruction::CmpAccI(op) => {
+            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            let [low, high] = value.to_le_bytes();
             Ok(vec![CMPI_ACC_OPCODE, low, high])
         }
-        Instruction::CmpAccI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![CMPI_ACC_OPCODE, low, high])
-        }
-        Instruction::AdcAccI(Operand::Immediate(value)) => {
-            let [low, high] = (*value as u16).to_le_bytes();
+        Instruction::AdcAccI(op) => {
+            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            let [low, high] = value.to_le_bytes();
             Ok(vec![ADCI_ACC_OPCODE, low, high])
         }
-        Instruction::AdcAccI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![ADCI_ACC_OPCODE, low, high])
-        }
-        Instruction::SbcAccI(Operand::Immediate(value)) => {
-            let [low, high] = (*value as u16).to_le_bytes();
-            Ok(vec![SBCI_ACC_OPCODE, low, high])
-        }
-        Instruction::SbcAccI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
+        Instruction::SbcAccI(op) => {
+            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            let [low, high] = value.to_le_bytes();
             Ok(vec![SBCI_ACC_OPCODE, low, high])
         }
 
         // --------- 16 bit register-to-register arithmetic ---------
-        Instruction::AddReg(rd, rs) => {
-            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
-            Ok(vec![ADD_OPCODE, byte0])
-        }
-        Instruction::SubReg(rd, rs) => {
-            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
-            Ok(vec![SUB_OPCODE, byte0])
-        }
-        Instruction::AndReg(rd, rs) => {
-            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
-            Ok(vec![AND_OPCODE, byte0])
-        }
-        Instruction::OrReg(rd, rs) => {
-            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
-            Ok(vec![OR_OPCODE, byte0])
-        }
-        Instruction::XorReg(rd, rs) => {
-            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
-            Ok(vec![XOR_OPCODE, byte0])
-        }
-        Instruction::CmpReg(rd, rs) => {
-            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
-            Ok(vec![CMP_OPCODE, byte0])
-        }
-        Instruction::AdcReg(rd, rs) => {
-            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
-            Ok(vec![ADC_OPCODE, byte0])
-        }
-        Instruction::SbcReg(rd, rs) => {
-            let byte0 = encode_rd_rs_byte(0x00, rd, rs);
-            Ok(vec![SBC_OPCODE, byte0])
-        }
+        Instruction::AddReg(rd, rs) => Ok(vec![ADD_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
+        Instruction::SubReg(rd, rs) => Ok(vec![SUB_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
+        Instruction::AndReg(rd, rs) => Ok(vec![AND_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
+        Instruction::OrReg(rd, rs) => Ok(vec![OR_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
+        Instruction::XorReg(rd, rs) => Ok(vec![XOR_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
+        Instruction::CmpReg(rd, rs) => Ok(vec![CMP_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
+        Instruction::AdcReg(rd, rs) => Ok(vec![ADC_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
+        Instruction::SbcReg(rd, rs) => Ok(vec![SBC_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
 
         // --------- 16 bit Immediate-to-register arithmetic ---------
-        Instruction::AddIReg(rd, Operand::Immediate(imm)) => {
+        Instruction::AddIReg(rd, op) => {
+            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
             let rd_index = encode_register_operand(rd);
-            let [low, high] = (*imm as u16).to_le_bytes();
+            let [low, high] = imm.to_le_bytes();
             Ok(vec![ADDI_OPCODE, rd_index, low, high])
         }
-        Instruction::SubIReg(rd, Operand::Immediate(imm)) => {
+        Instruction::SubIReg(rd, op) => {
+            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
             let rd_index = encode_register_operand(rd);
-            let [low, high] = (*imm as u16).to_le_bytes();
+            let [low, high] = imm.to_le_bytes();
             Ok(vec![SUBI_OPCODE, rd_index, low, high])
         }
-        Instruction::AndIReg(rd, Operand::Immediate(imm)) => {
+        Instruction::AndIReg(rd, op) => {
+            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
             let rd_index = encode_register_operand(rd);
-            let [low, high] = (*imm as u16).to_le_bytes();
+            let [low, high] = imm.to_le_bytes();
             Ok(vec![ANDI_OPCODE, rd_index, low, high])
         }
-        Instruction::OrIReg(rd, Operand::Immediate(imm)) => {
+        Instruction::OrIReg(rd, op) => {
+            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
             let rd_index = encode_register_operand(rd);
-            let [low, high] = (*imm as u16).to_le_bytes();
+            let [low, high] = imm.to_le_bytes();
             Ok(vec![ORI_OPCODE, rd_index, low, high])
         }
-        Instruction::XorIReg(rd, Operand::Immediate(imm)) => {
+        Instruction::XorIReg(rd, op) => {
+            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
             let rd_index = encode_register_operand(rd);
-            let [low, high] = (*imm as u16).to_le_bytes();
+            let [low, high] = imm.to_le_bytes();
             Ok(vec![XORI_OPCODE, rd_index, low, high])
         }
-        Instruction::CmpIReg(rd, Operand::Immediate(imm)) => {
+        Instruction::CmpIReg(rd, op) => {
+            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
             let rd_index = encode_register_operand(rd);
-            let [low, high] = (*imm as u16).to_le_bytes();
+            let [low, high] = imm.to_le_bytes();
             Ok(vec![CMPI_OPCODE, rd_index, low, high])
         }
         Instruction::AddSp(offset) => Ok(vec![ADD_SP_OPCODE, *offset as u8]),
-        Instruction::Inc(reg) => {
-            let opcode = encode_reg_opcode(INC_BASE_OPCODE, reg);
-            Ok(vec![opcode])
-        }
-        Instruction::Dec(reg) => {
-            let opcode = encode_reg_opcode(DEC_BASE_OPCODE, reg);
-            Ok(vec![opcode])
-        }
+        Instruction::Inc(reg) => Ok(vec![encode_reg_opcode(INC_BASE_OPCODE, reg)]),
+        Instruction::Dec(reg) => Ok(vec![encode_reg_opcode(DEC_BASE_OPCODE, reg)]),
 
         // --------- 8 bit accumulator arithmetic ---------
-        Instruction::AddBAcc(rs) => {
-            let opcode = encode_reg_opcode(ADDB_BASE_SUB_OPCODE, rs);
-            Ok(vec![FD_PREFIX, opcode])
-        }
-        Instruction::SubBAcc(rs) => {
-            let opcode = encode_reg_opcode(SUBB_BASE_SUB_OPCODE, rs);
-            Ok(vec![FD_PREFIX, opcode])
-        }
-        Instruction::AndBAcc(rs) => {
-            let opcode = encode_reg_opcode(ANDB_BASE_SUB_OPCODE, rs);
-            Ok(vec![FD_PREFIX, opcode])
-        }
-        Instruction::OrBAcc(rs) => {
-            let opcode = encode_reg_opcode(ORB_BASE_SUB_OPCODE, rs);
-            Ok(vec![FD_PREFIX, opcode])
-        }
-        Instruction::XorBAcc(rs) => {
-            let opcode = encode_reg_opcode(XORB_BASE_SUB_OPCODE, rs);
-            Ok(vec![FD_PREFIX, opcode])
-        }
-        Instruction::CmpBAcc(rs) => {
-            let opcode = encode_reg_opcode(CMPB_BASE_SUB_OPCODE, rs);
-            Ok(vec![FD_PREFIX, opcode])
-        }
+        Instruction::AddBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(ADDB_BASE_SUB_OPCODE, rs)]),
+        Instruction::SubBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(SUBB_BASE_SUB_OPCODE, rs)]),
+        Instruction::AndBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(ANDB_BASE_SUB_OPCODE, rs)]),
+        Instruction::OrBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(ORB_BASE_SUB_OPCODE, rs)]),
+        Instruction::XorBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(XORB_BASE_SUB_OPCODE, rs)]),
+        Instruction::CmpBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(CMPB_BASE_SUB_OPCODE, rs)]),
 
         // --------- bit manipulation ---------
-        Instruction::Sra(reg) => {
-            let opcode = encode_reg_opcode(SRA_BASE_SUB_OPCODE, reg);
-            Ok(vec![FD_PREFIX, opcode])
-        }
-        Instruction::Shl(reg) => {
-            let opcode = encode_reg_opcode(SHL_BASE_SUB_OPCODE, reg);
-            Ok(vec![FD_PREFIX, opcode])
-        }
-        Instruction::Shr(reg) => {
-            let opcode = encode_reg_opcode(SHR_BASE_SUB_OPCODE, reg);
-            Ok(vec![FD_PREFIX, opcode])
-        }
-        Instruction::Rol(reg) => {
-            let opcode = encode_reg_opcode(ROL_BASE_SUB_OPCODE, reg);
-            Ok(vec![FD_PREFIX, opcode])
-        }
-        Instruction::Ror(reg) => {
-            let opcode = encode_reg_opcode(ROR_BASE_SUB_OPCODE, reg);
-            Ok(vec![FD_PREFIX, opcode])
-        }
+        Instruction::Sra(reg) => Ok(vec![FD_PREFIX, encode_reg_opcode(SRA_BASE_SUB_OPCODE, reg)]),
+        Instruction::Shl(reg) => Ok(vec![FD_PREFIX, encode_reg_opcode(SHL_BASE_SUB_OPCODE, reg)]),
+        Instruction::Shr(reg) => Ok(vec![FD_PREFIX, encode_reg_opcode(SHR_BASE_SUB_OPCODE, reg)]),
+        Instruction::Rol(reg) => Ok(vec![FD_PREFIX, encode_reg_opcode(ROL_BASE_SUB_OPCODE, reg)]),
+        Instruction::Ror(reg) => Ok(vec![FD_PREFIX, encode_reg_opcode(ROR_BASE_SUB_OPCODE, reg)]),
         Instruction::BitReg(r, b) => {
             let reg = encode_register_operand(r);
             let sub_opcode: u8 = BIT_REG_BASE_SUB_OPCODE + b;
@@ -598,14 +485,9 @@ pub fn encode_instruction(
         }
 
         // --------- Control Flow ---------
-        Instruction::JmpI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![JMP_IMM_OPCODE, low, high])
-        }
-        Instruction::JmpI(Operand::Immediate(addr)) => {
-            let [low, high] = (*addr as u16).to_le_bytes();
+        Instruction::JmpI(op) => {
+            let addr = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            let [low, high] = addr.to_le_bytes();
             Ok(vec![JMP_IMM_OPCODE, low, high])
         }
         Instruction::JmpIndirect(reg) => {
@@ -632,16 +514,10 @@ pub fn encode_instruction(
             };
             Ok(vec![JR_OPCODE, rel as u8])
         }
-        Instruction::JccI(cc, Operand::Immediate(addr)) => {
-            let [low, high] = (*addr as u16).to_le_bytes();
+        Instruction::JccI(cc, op) => {
+            let addr = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
             let opcode = encode_condition_code_opcode(JCC_BASE_OPCODE, cc);
-            Ok(vec![opcode, low, high])
-        }
-        Instruction::JccI(cc, Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            let opcode = encode_condition_code_opcode(JCC_BASE_OPCODE, cc);
+            let [low, high] = addr.to_le_bytes();
             Ok(vec![opcode, low, high])
         }
         Instruction::JrccI(cc, Operand::Immediate(imm)) => {
@@ -686,36 +562,21 @@ pub fn encode_instruction(
             };
             Ok(vec![DJNZ_OPCODE, rel as u8])
         }
-        Instruction::CallI(Operand::Immediate(addr)) => {
-            let bytecode = encode_call_immediate(*addr as u16);
-            Ok(bytecode)
-        }
-        Instruction::CallI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let bytecode = encode_call_immediate(target_symbol.logical_address as u16);
-            Ok(bytecode)
+        Instruction::CallI(op) => {
+            let addr = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
+            Ok(encode_call_immediate(addr))
         }
         Instruction::CallIndirect(reg) => {
             let opcode = encode_reg_opcode(CALL_INDIR_BASE_OPCODE, reg);
             Ok(vec![opcode])
         }
-        Instruction::CallccI(cc, Operand::Immediate(addr)) => {
-            let [low, high] = (*addr as u16).to_le_bytes();
+        Instruction::CallccI(cc, op) => {
+            let addr = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
             let opcode = encode_condition_code_opcode(CALLCC_BASE_OPCODE, cc);
+            let [low, high] = addr.to_le_bytes();
             Ok(vec![opcode, low, high])
         }
-        Instruction::CallccI(cc, Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            let opcode = encode_condition_code_opcode(CALLCC_BASE_OPCODE, cc);
-            Ok(vec![opcode, low, high])
-        }
-        Instruction::Syscall(imm) => {
-            let bytecode = encode_syscall(*imm as u8);
-            Ok(bytecode)
-        }
+        Instruction::Syscall(imm) => Ok(encode_syscall(*imm as u8)),
         Instruction::CallFar(call_label) => {
             let target_symbol = get_symbol(symbol_table, call_label, line_num)?;
 

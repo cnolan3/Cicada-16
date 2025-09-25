@@ -141,33 +141,28 @@ pub fn generate_bytecode(
                     current_address = new_addr;
                 }
                 Directive::Byte(bytes) => {
-                    let mut data_block: Vec<u8> = Vec::new();
-                    for byte in bytes {
-                        data_block.push(*byte);
-                    }
-                    current_address += data_block.len() as u32;
-                    bytecode.extend(data_block);
+                    current_address += bytes.len() as u32;
+                    bytecode.extend_from_slice(bytes);
                 }
                 Directive::Word(words) => {
-                    let mut data_block: Vec<u8> = Vec::new();
-                    for word in words {
-                        match word {
-                            Operand::Immediate(word_data) => {
-                                let [low, high] = (*word_data as u16).to_le_bytes();
-                                data_block.push(low);
-                                data_block.push(high);
+                    let word_bytes: Vec<u8> = words
+                        .iter()
+                        .flat_map(|word| -> Vec<u8> {
+                            match word {
+                                Operand::Immediate(word_data) => {
+                                    (*word_data as u16).to_le_bytes().to_vec()
+                                }
+                                Operand::Label(label_name) => {
+                                    // This unwrap is safe because symbols are validated in pass 1
+                                    let sym = get_symbol(symbol_table, label_name, line.line_number).unwrap();
+                                    (sym.logical_address as u16).to_le_bytes().to_vec()
+                                }
+                                _ => vec![], // Should be unreachable
                             }
-                            Operand::Label(label_name) => {
-                                let sym = get_symbol(symbol_table, label_name, line.line_number)?;
-                                let [low, high] = (sym.logical_address as u16).to_le_bytes();
-                                data_block.push(low);
-                                data_block.push(high);
-                            }
-                            _ => {}
-                        }
-                    }
-                    current_address += data_block.len() as u32;
-                    bytecode.extend(data_block);
+                        })
+                        .collect();
+                    current_address += word_bytes.len() as u32;
+                    bytecode.extend(word_bytes);
                 }
                 _ => {}
             }

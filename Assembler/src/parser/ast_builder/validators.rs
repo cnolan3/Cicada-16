@@ -15,7 +15,7 @@ impl<'a> AstBuilder<'a> {
                 line: self.line_number,
                 reason: "Expected an operand, but found none.".to_string(),
             })?;
-        Ok(build_operand(pair)?)
+        build_operand(pair)
     }
 
     pub fn pop_cc(&mut self) -> Result<ConditionCode> {
@@ -26,7 +26,7 @@ impl<'a> AstBuilder<'a> {
                 line: self.line_number,
                 reason: "Expected a condition code, but found none.".to_string(),
             })?;
-        Ok(build_condition_code(pair))
+        build_condition_code(pair)
     }
 
     // validation helper
@@ -145,14 +145,12 @@ impl<'a> AstBuilder<'a> {
     }
 
     pub fn expect_op_vector(&mut self) -> Result<Vec<Operand>> {
-        let ops = self.pairs.next().unwrap().into_inner();
+        let line = self.line_number;
+        let ops = self.pairs.next().ok_or_else(|| AssemblyError::StructuralError {
+            line,
+            reason: "Expected a list of operands.".to_string()
+        })?.into_inner();
 
-        let mut ret: Vec<Operand> = Vec::new();
-
-        for op in ops {
-            ret.push(build_operand(op)?);
-        }
-
-        Ok(ret)
+        ops.map(build_operand).collect()
     }
 }
