@@ -45,10 +45,12 @@ pub fn pair_to_unsigned_byte(pair: Pair<Rule>) -> Result<u8> {
     let line = pair.as_span().start_pos().line_col().0;
     let val_str = pair.as_str();
 
-    let val = val_str.parse::<i32>().map_err(|_| AssemblyError::StructuralError {
-        line,
-        reason: format!("Invalid immediate value: {}", val_str),
-    })?;
+    let val = val_str
+        .parse::<i32>()
+        .map_err(|_| AssemblyError::StructuralError {
+            line,
+            reason: format!("Invalid immediate value: {}", val_str),
+        })?;
 
     check_unsigned_byte(val, line)?;
 
@@ -60,10 +62,12 @@ pub fn pair_to_signed_byte(pair: Pair<Rule>) -> Result<i8> {
     let line = pair.as_span().start_pos().line_col().0;
     let val_str = pair.as_str();
 
-    let val = val_str.parse::<i32>().map_err(|_| AssemblyError::StructuralError {
-        line,
-        reason: format!("Invalid immediate value: {}", val_str),
-    })?;
+    let val = val_str
+        .parse::<i32>()
+        .map_err(|_| AssemblyError::StructuralError {
+            line,
+            reason: format!("Invalid immediate value: {}", val_str),
+        })?;
 
     check_signed_byte(val, line)?;
 
@@ -75,10 +79,12 @@ pub fn pair_to_unsigned_word(pair: Pair<Rule>) -> Result<u16> {
     let line = pair.as_span().start_pos().line_col().0;
     let val_str = pair.as_str();
 
-    let val = val_str.parse::<i32>().map_err(|_| AssemblyError::StructuralError {
-        line,
-        reason: format!("Invalid immediate value: {}", val_str),
-    })?;
+    let val = val_str
+        .parse::<i32>()
+        .map_err(|_| AssemblyError::StructuralError {
+            line,
+            reason: format!("Invalid immediate value: {}", val_str),
+        })?;
 
     check_unsigned_word(val, line)?;
 
@@ -90,10 +96,12 @@ pub fn pair_to_signed_word(pair: Pair<Rule>) -> Result<i16> {
     let line = pair.as_span().start_pos().line_col().0;
     let val_str = pair.as_str();
 
-    let val = val_str.parse::<i32>().map_err(|_| AssemblyError::StructuralError {
-        line,
-        reason: format!("Invalid immediate value: {}", val_str),
-    })?;
+    let val = val_str
+        .parse::<i32>()
+        .map_err(|_| AssemblyError::StructuralError {
+            line,
+            reason: format!("Invalid immediate value: {}", val_str),
+        })?;
 
     check_signed_word(val, line)?;
 

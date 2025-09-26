@@ -154,7 +154,9 @@ pub fn generate_bytecode(
                                 }
                                 Operand::Label(label_name) => {
                                     // This unwrap is safe because symbols are validated in pass 1
-                                    let sym = get_symbol(symbol_table, label_name, line.line_number).unwrap();
+                                    let sym =
+                                        get_symbol(symbol_table, label_name, &line.line_number)
+                                            .unwrap();
                                     (sym.logical_address as u16).to_le_bytes().to_vec()
                                 }
                                 _ => vec![], // Should be unreachable
@@ -174,7 +176,7 @@ pub fn generate_bytecode(
                 symbol_table,
                 &current_address,
                 &current_bank,
-                line.line_number,
+                &line.line_number,
             )?;
             current_address += instruction_bytes.len() as u32;
             bytecode.extend(instruction_bytes);

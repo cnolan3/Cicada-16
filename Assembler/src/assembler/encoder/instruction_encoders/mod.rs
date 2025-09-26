@@ -14,16 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use thiserror::Error;
-
-#[derive(Error, Debug, PartialEq)]
-pub enum AssemblyError {
-    #[error("Syntax Error: {0}")]
-    PestError(#[from] pest::error::Error<crate::parser::Rule>),
-
-    #[error("Structural Error on line {line}: {reason}")]
-    StructuralError { line: usize, reason: String },
-
-    #[error("Semantic Error on line {line}: {reason}")]
-    SemanticError { line: usize, reason: String },
-}
+pub mod arithmetic;
+pub mod bitwise;
+pub mod control_flow;
+pub mod load_store;
+pub mod misc;
+pub mod stack;

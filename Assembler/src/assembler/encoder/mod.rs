@@ -14,16 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-mod components;
 mod constants;
+mod instruction_encoders;
 mod utility_functions;
 
-use crate::assembler::encoder::constants::*;
-use crate::assembler::encoder::utility_functions::*;
 use crate::assembler::symbol_table::*;
-use crate::ast::{Instruction, Operand};
+use crate::ast::Instruction;
 use crate::errors::AssemblyError;
-use components::*;
+use constants::*;
 
 /// Helper function to determine instruction size in bytes during Pass 1.
 pub fn calculate_instruction_size(instruction: &Instruction) -> u32 {
@@ -146,574 +144,185 @@ pub fn calculate_instruction_size(instruction: &Instruction) -> u32 {
     }
 }
 
-/// Resolves an operand that can be a label or an immediate value into a 16-bit address.
-fn resolve_label_or_immediate(
-    op: &Operand,
-    symbol_table: &SymbolTable,
-    line_num: usize,
-    current_bank: &u32,
-) -> Result<u16, AssemblyError> {
-    match op {
-        Operand::Immediate(value) => Ok(*value as u16),
-        Operand::Label(label_name) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            Ok(target_symbol.logical_address as u16)
-        }
-        _ => Err(AssemblyError::SemanticError {
-            line: line_num,
-            reason: "Expected an immediate value or a label.".to_string(),
-        }),
-    }
-}
-
-/// Helper function to translate a single instruction into bytes during Pass 2.
+// encode instruction wrapper
 pub fn encode_instruction(
     instruction: &Instruction,
     symbol_table: &SymbolTable,
     current_address: &u32,
     current_bank: &u32,
-    line_num: usize,
+    line_num: &usize,
 ) -> Result<Vec<u8>, AssemblyError> {
-    match instruction {
-        // no op (0x00)
-        Instruction::Nop => Ok(vec![NOP_OPCODE]),
-        // Halt
-        Instruction::Halt => Ok(vec![HALT_OPCODE]),
-        // Ccf
-        Instruction::Ccf => Ok(vec![CCF_OPCODE]),
-        // Scf
-        Instruction::Scf => Ok(vec![SCF_OPCODE]),
-        // Rcf
-        Instruction::Rcf => Ok(vec![RCF_OPCODE]),
-        Instruction::Enter => Ok(vec![ENTER_OPCODE]),
-        Instruction::Leave => Ok(vec![LEAVE_OPCODE]),
-        Instruction::Ret => Ok(vec![RET_OPCODE]),
-        Instruction::Reti => Ok(vec![RETI_OPCODE]),
-        Instruction::Ei => Ok(vec![EI_OPCODE]),
-        Instruction::Di => Ok(vec![DI_OPCODE]),
-        // --------- 16 bit Load/Store instructions ---------
-        // register-to-register load
-        Instruction::LdReg(rd, rs) => {
-            let opcode = encode_rd_rs_byte(LD_REG_REG_BASE_OPCODE, rd, rs);
-            Ok(vec![opcode])
-        }
-        Instruction::Ldi(rd, op) => {
-            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            Ok(encode_ldi(rd, value))
-        }
-        // indirect-to-register load
-        Instruction::LdIndirect(rd, rs) => {
-            let sub_opcode = encode_rd_rs_byte(LD_INDIR_BASE_SUB_OPCODE, rd, rs);
-            Ok(vec![FE_PREFIX, sub_opcode])
-        }
-        // absolute-to-register load
-        Instruction::LdAbs(rd, Operand::AbsAddr(addr)) => {
-            let opcode = encode_reg_opcode(LD_ABS_BASE_OPCODE, rd);
-            let [low, high] = (*addr as u16).to_le_bytes();
-            Ok(vec![opcode, low, high])
-        }
-        // absolute-to-register load
-        Instruction::LdAbs(rd, Operand::AbsLabel(label_name)) => {
-            let opcode = encode_reg_opcode(LD_ABS_BASE_OPCODE, rd);
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![opcode, low, high])
-        }
-        // Indexed address register load
-        Instruction::LdIndexed(rd, rs, offset) => {
-            let sub_opcode = encode_rd_rs_byte(LD_INDEX_BASE_SUB_OPCODE, rd, rs);
-            Ok(vec![FF_PREFIX, sub_opcode, *offset as u8])
-        }
-        // Load Pre-decrement
-        Instruction::LdPreDec(rd, rs) => {
-            let sub_opcode = encode_reg_opcode(LD_PRE_DEC_BASE_SUB_OPCODE, rs);
-            let dest = encode_register_operand(rd);
-            Ok(vec![FF_PREFIX, sub_opcode, dest])
-        }
-        // Load Post-Increment
-        Instruction::LdPostInc(rd, rs) => {
-            let sub_opcode = encode_reg_opcode(LD_POST_INC_BASE_SUB_OPCODE, rs);
-            let dest = encode_register_operand(rd);
-            Ok(vec![FF_PREFIX, sub_opcode, dest])
-        }
-        Instruction::StIndirect(rd, rs) => {
-            let sub_opcode = encode_rd_rs_byte(ST_INDIR_BASE_SUB_OPCODE, rd, rs);
-            Ok(vec![FE_PREFIX, sub_opcode])
-        }
-        Instruction::StAbs(Operand::AbsAddr(addr), rs) => {
-            let opcode = encode_reg_opcode(ST_ABS_BASE_OPCODE, rs);
-            let [low, high] = (*addr as u16).to_le_bytes();
-            Ok(vec![opcode, low, high])
-        }
-        Instruction::StAbs(Operand::AbsLabel(label_name), rs) => {
-            let opcode = encode_reg_opcode(ST_ABS_BASE_OPCODE, rs);
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let [low, high] = (target_symbol.logical_address as u16).to_le_bytes();
-            Ok(vec![opcode, low, high])
-        }
-        Instruction::StIndexed(rd, offset, rs) => {
-            let sub_opcode = encode_rd_rs_byte(ST_INDEX_BASE_SUB_OPCODE, rd, rs);
-            Ok(vec![FF_PREFIX, sub_opcode, *offset as u8])
-        }
-        Instruction::StPreDec(rd, rs) => {
-            let sub_opcode = encode_reg_opcode(ST_PRE_DEC_BASE_SUB_OPCODE, rs);
-            let dest = encode_register_operand(rd);
-            Ok(vec![FF_PREFIX, sub_opcode, dest])
-        }
-        Instruction::StPostInc(rd, rs) => {
-            let sub_opcode = encode_reg_opcode(ST_POST_INC_BASE_SUB_OPCODE, rs);
-            let dest = encode_register_operand(rd);
-            Ok(vec![FF_PREFIX, sub_opcode, dest])
-        }
+    let encoder = Encoder::new(
+        instruction,
+        symbol_table,
+        current_address,
+        current_bank,
+        line_num,
+    );
+    encoder.encode_instruction()
+}
 
-        // --------- 8 bit Load/Store instructions ---------
-        Instruction::LdiB(rd, imm8) => {
-            let sub_opcode = encode_reg_opcode(LDIB_BASE_SUB_OPCODE, rd);
-            Ok(vec![FD_PREFIX, sub_opcode, *imm8 as u8])
-        }
-        Instruction::LdBIndirect(rd, rs) => {
-            let sub_opcode = encode_rd_rs_byte(LDB_INDIR_BASE_SUB_OPCODE, rd, rs);
-            Ok(vec![FE_PREFIX, sub_opcode])
-        }
-        Instruction::LdBPreDec(rd, rs) => {
-            let sub_opcode = encode_reg_opcode(LDB_PRE_DEC_BASE_SUB_OPCODE, rs);
-            let dest = encode_register_operand(rd);
-            Ok(vec![FF_PREFIX, sub_opcode, dest])
-        }
-        Instruction::LdBPostInc(rd, rs) => {
-            let sub_opcode = encode_reg_opcode(LDB_POST_INC_BASE_SUB_OPCODE, rs);
-            let dest = encode_register_operand(rd);
-            Ok(vec![FF_PREFIX, sub_opcode, dest])
-        }
-        Instruction::StBIndirect(rd, rs) => {
-            let sub_opcode = encode_rd_rs_byte(STB_INDIR_BASE_SUB_OPCODE, rd, rs);
-            Ok(vec![FE_PREFIX, sub_opcode])
-        }
-        Instruction::StBPreDec(rd, rs) => {
-            let sub_opcode = encode_reg_opcode(STB_PRE_DEC_BASE_SUB_OPCODE, rs);
-            let dest = encode_register_operand(rd);
-            Ok(vec![FF_PREFIX, sub_opcode, dest])
-        }
-        Instruction::StBPostInc(rd, rs) => {
-            let sub_opcode = encode_reg_opcode(STB_POST_INC_BASE_SUB_OPCODE, rs);
-            let dest = encode_register_operand(rd);
-            Ok(vec![FF_PREFIX, sub_opcode, dest])
-        }
+pub struct Encoder<'a> {
+    pub instruction: &'a Instruction,
+    pub symbol_table: &'a SymbolTable,
+    pub current_address: &'a u32,
+    pub current_bank: &'a u32,
+    pub line_num: &'a usize,
+}
 
-        // --------- LEA instruction ---------
-        Instruction::Lea(rd, rs, offset) => {
-            let sub_opcode = encode_rd_rs_byte(LEA_BASE_SUB_OPCODE, rd, rs);
-            Ok(vec![FF_PREFIX, sub_opcode, *offset as u8])
+impl<'a> Encoder<'a> {
+    pub fn new(
+        instruction: &'a Instruction,
+        symbol_table: &'a SymbolTable,
+        current_address: &'a u32,
+        current_bank: &'a u32,
+        line_num: &'a usize,
+    ) -> Self {
+        Self {
+            instruction,
+            symbol_table,
+            current_address,
+            current_bank,
+            line_num,
         }
+    }
 
-        // --------- Stack Operations ---------
-        Instruction::Push(reg) => Ok(encode_push_r(reg)),
-        Instruction::PushI(op) => {
-            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let [low, high] = value.to_le_bytes();
-            Ok(vec![PUSH_IMM_OPCODE, low, high])
-        }
-        Instruction::Pop(reg) => Ok(encode_pop_r(reg)),
-        Instruction::PushF => Ok(vec![PUSH_F_OPCODE]),
-        Instruction::PopF => Ok(vec![POP_F_OPCODE]),
+    /// Helper function to translate a single instruction into bytes during Pass 2.
+    pub fn encode_instruction(self) -> Result<Vec<u8>, AssemblyError> {
+        match self.instruction {
+            Instruction::Nop => self.encode_nop(),
+            Instruction::Halt => self.encode_halt(),
+            Instruction::Ei => self.encode_ei(),
+            Instruction::Di => self.encode_di(),
+            Instruction::Ret => self.encode_ret(),
+            Instruction::Reti => self.encode_reti(),
+            Instruction::Ccf => self.encode_ccf(),
+            Instruction::Scf => self.encode_scf(),
+            Instruction::Rcf => self.encode_rcf(),
+            Instruction::Enter => self.encode_enter(),
+            Instruction::Leave => self.encode_leave(),
 
-        // --------- 16 bit accumulator arithmetic ---------
-        Instruction::AddAcc(rs) => Ok(vec![encode_reg_opcode(ADD_ACC_BASE_OPCODE, rs)]),
-        Instruction::SubAcc(rs) => Ok(vec![encode_reg_opcode(SUB_ACC_BASE_OPCODE, rs)]),
-        Instruction::AndAcc(rs) => Ok(vec![encode_reg_opcode(AND_ACC_BASE_OPCODE, rs)]),
-        Instruction::OrAcc(rs) => Ok(vec![encode_reg_opcode(OR_ACC_BASE_OPCODE, rs)]),
-        Instruction::XorAcc(rs) => Ok(vec![encode_reg_opcode(XOR_ACC_BASE_OPCODE, rs)]),
-        Instruction::CmpAcc(rs) => Ok(vec![encode_reg_opcode(CMP_ACC_BASE_OPCODE, rs)]),
-        Instruction::NegAcc => Ok(vec![NEG_ACC_OPCODE]),
-        Instruction::NotAcc => Ok(vec![NOR_ACC_OPCODE]),
-        Instruction::SwapAcc => Ok(vec![SWAP_ACC_OPCODE]),
+            // Load/Store
+            Instruction::LdReg(rd, rs) => self.encode_ld_reg(rd, rs),
+            Instruction::Ldi(rd, op) => self.encode_ldi(rd, op),
+            Instruction::LdIndirect(rd, rs) => self.encode_ld_indirect(rd, rs),
+            Instruction::LdAbs(rd, op) => self.encode_ld_abs(rd, op),
+            Instruction::LdIndexed(rd, rs, offset) => self.encode_ld_indexed(rd, rs, offset),
+            Instruction::LdPreDec(rd, rs) => self.encode_ld_pre_dec(rd, rs),
+            Instruction::LdPostInc(rd, rs) => self.encode_ld_post_inc(rd, rs),
+            Instruction::StIndirect(rd, rs) => self.encode_st_indirect(rd, rs),
+            Instruction::StAbs(op, rs) => self.encode_st_abs(op, rs),
+            Instruction::StIndexed(rd, offset, rs) => self.encode_st_indexed(rd, offset, rs),
+            Instruction::StPreDec(rd, rs) => self.encode_st_pre_dec(rd, rs),
+            Instruction::StPostInc(rd, rs) => self.encode_st_post_inc(rd, rs),
+            Instruction::LdiB(rd, imm8) => self.encode_ldib(rd, imm8),
+            Instruction::LdBIndirect(rd, rs) => self.encode_ldb_indirect(rd, rs),
+            Instruction::LdBPreDec(rd, rs) => self.encode_ldb_pre_dec(rd, rs),
+            Instruction::LdBPostInc(rd, rs) => self.encode_ldb_post_inc(rd, rs),
+            Instruction::StBIndirect(rd, rs) => self.encode_stb_indirect(rd, rs),
+            Instruction::StBPreDec(rd, rs) => self.encode_stb_pre_dec(rd, rs),
+            Instruction::StBPostInc(rd, rs) => self.encode_stb_post_inc(rd, rs),
+            Instruction::Lea(rd, rs, offset) => self.encode_lea(rd, rs, offset),
 
-        // --------- 16 bit accumulator immediate arithmetic ---------
-        Instruction::AddAccI(op) => {
-            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let [low, high] = value.to_le_bytes();
-            Ok(vec![ADDI_ACC_OPCODE, low, high])
-        }
-        Instruction::SubAccI(op) => {
-            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let [low, high] = value.to_le_bytes();
-            Ok(vec![SUBI_ACC_OPCODE, low, high])
-        }
-        Instruction::AndAccI(op) => {
-            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let [low, high] = value.to_le_bytes();
-            Ok(vec![ANDI_ACC_OPCODE, low, high])
-        }
-        Instruction::OrAccI(op) => {
-            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let [low, high] = value.to_le_bytes();
-            Ok(vec![ORI_ACC_OPCODE, low, high])
-        }
-        Instruction::XorAccI(op) => {
-            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let [low, high] = value.to_le_bytes();
-            Ok(vec![XORI_ACC_OPCODE, low, high])
-        }
-        Instruction::CmpAccI(op) => {
-            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let [low, high] = value.to_le_bytes();
-            Ok(vec![CMPI_ACC_OPCODE, low, high])
-        }
-        Instruction::AdcAccI(op) => {
-            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let [low, high] = value.to_le_bytes();
-            Ok(vec![ADCI_ACC_OPCODE, low, high])
-        }
-        Instruction::SbcAccI(op) => {
-            let value = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let [low, high] = value.to_le_bytes();
-            Ok(vec![SBCI_ACC_OPCODE, low, high])
-        }
+            // Stack
+            Instruction::Push(op) => self.encode_push_reg(op),
+            Instruction::Pop(reg) => self.encode_pop(reg),
+            Instruction::PushI(op) => self.encode_push_imm(op),
+            Instruction::PushF => self.encode_pushf(),
+            Instruction::PopF => self.encode_popf(),
 
-        // --------- 16 bit register-to-register arithmetic ---------
-        Instruction::AddReg(rd, rs) => Ok(vec![ADD_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
-        Instruction::SubReg(rd, rs) => Ok(vec![SUB_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
-        Instruction::AndReg(rd, rs) => Ok(vec![AND_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
-        Instruction::OrReg(rd, rs) => Ok(vec![OR_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
-        Instruction::XorReg(rd, rs) => Ok(vec![XOR_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
-        Instruction::CmpReg(rd, rs) => Ok(vec![CMP_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
-        Instruction::AdcReg(rd, rs) => Ok(vec![ADC_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
-        Instruction::SbcReg(rd, rs) => Ok(vec![SBC_OPCODE, encode_rd_rs_byte(0x00, rd, rs)]),
+            // Arithmetic
+            Instruction::AddAcc(rs) => self.encode_acc_math(ADD_ACC_BASE_OPCODE, rs),
+            Instruction::SubAcc(rs) => self.encode_acc_math(SUB_ACC_BASE_OPCODE, rs),
+            Instruction::AndAcc(rs) => self.encode_acc_math(AND_ACC_BASE_OPCODE, rs),
+            Instruction::OrAcc(rs) => self.encode_acc_math(OR_ACC_BASE_OPCODE, rs),
+            Instruction::XorAcc(rs) => self.encode_acc_math(XOR_ACC_BASE_OPCODE, rs),
+            Instruction::CmpAcc(rs) => self.encode_acc_math(CMP_ACC_BASE_OPCODE, rs),
+            Instruction::NegAcc => Ok(vec![NEG_ACC_OPCODE]),
+            Instruction::NotAcc => Ok(vec![NOR_ACC_OPCODE]),
+            Instruction::SwapAcc => Ok(vec![SWAP_ACC_OPCODE]),
+            Instruction::AddAccI(op) => self.encode_acc_imm_math(ADDI_ACC_OPCODE, op),
+            Instruction::SubAccI(op) => self.encode_acc_imm_math(SUBI_ACC_OPCODE, op),
+            Instruction::AndAccI(op) => self.encode_acc_imm_math(ANDI_ACC_OPCODE, op),
+            Instruction::OrAccI(op) => self.encode_acc_imm_math(ORI_ACC_OPCODE, op),
+            Instruction::XorAccI(op) => self.encode_acc_imm_math(XORI_ACC_OPCODE, op),
+            Instruction::CmpAccI(op) => self.encode_acc_imm_math(CMPI_ACC_OPCODE, op),
+            Instruction::AdcAccI(op) => self.encode_acc_imm_math(ADCI_ACC_OPCODE, op),
+            Instruction::SbcAccI(op) => self.encode_acc_imm_math(SBCI_ACC_OPCODE, op),
+            Instruction::AddReg(rd, rs) => self.encode_reg_math(ADD_OPCODE, rd, rs),
+            Instruction::SubReg(rd, rs) => self.encode_reg_math(SUB_OPCODE, rd, rs),
+            Instruction::AndReg(rd, rs) => self.encode_reg_math(AND_OPCODE, rd, rs),
+            Instruction::OrReg(rd, rs) => self.encode_reg_math(OR_OPCODE, rd, rs),
+            Instruction::XorReg(rd, rs) => self.encode_reg_math(XOR_OPCODE, rd, rs),
+            Instruction::CmpReg(rd, rs) => self.encode_reg_math(CMP_OPCODE, rd, rs),
+            Instruction::AdcReg(rd, rs) => self.encode_reg_math(ADC_OPCODE, rd, rs),
+            Instruction::SbcReg(rd, rs) => self.encode_reg_math(SBC_OPCODE, rd, rs),
+            Instruction::AddIReg(rd, op) => self.encode_reg_imm_math(ADDI_OPCODE, rd, op),
+            Instruction::SubIReg(rd, op) => self.encode_reg_imm_math(SUBI_OPCODE, rd, op),
+            Instruction::AndIReg(rd, op) => self.encode_reg_imm_math(ANDI_OPCODE, rd, op),
+            Instruction::OrIReg(rd, op) => self.encode_reg_imm_math(ORI_OPCODE, rd, op),
+            Instruction::XorIReg(rd, op) => self.encode_reg_imm_math(XORI_OPCODE, rd, op),
+            Instruction::CmpIReg(rd, op) => self.encode_reg_imm_math(CMPI_OPCODE, rd, op),
+            Instruction::AddSp(offset) => self.encode_add_sp(offset),
+            Instruction::Inc(reg) => self.encode_inc(reg),
+            Instruction::Dec(reg) => self.encode_dec(reg),
+            Instruction::AddBAcc(rs) => self.encode_acc_byte_math(ADDB_BASE_SUB_OPCODE, rs),
+            Instruction::SubBAcc(rs) => self.encode_acc_byte_math(SUBB_BASE_SUB_OPCODE, rs),
+            Instruction::AndBAcc(rs) => self.encode_acc_byte_math(ANDB_BASE_SUB_OPCODE, rs),
+            Instruction::OrBAcc(rs) => self.encode_acc_byte_math(ORB_BASE_SUB_OPCODE, rs),
+            Instruction::XorBAcc(rs) => self.encode_acc_byte_math(XORB_BASE_SUB_OPCODE, rs),
+            Instruction::CmpBAcc(rs) => self.encode_acc_byte_math(CMPB_BASE_SUB_OPCODE, rs),
 
-        // --------- 16 bit Immediate-to-register arithmetic ---------
-        Instruction::AddIReg(rd, op) => {
-            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
-            Ok(vec![ADDI_OPCODE, rd_index, low, high])
-        }
-        Instruction::SubIReg(rd, op) => {
-            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
-            Ok(vec![SUBI_OPCODE, rd_index, low, high])
-        }
-        Instruction::AndIReg(rd, op) => {
-            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
-            Ok(vec![ANDI_OPCODE, rd_index, low, high])
-        }
-        Instruction::OrIReg(rd, op) => {
-            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
-            Ok(vec![ORI_OPCODE, rd_index, low, high])
-        }
-        Instruction::XorIReg(rd, op) => {
-            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
-            Ok(vec![XORI_OPCODE, rd_index, low, high])
-        }
-        Instruction::CmpIReg(rd, op) => {
-            let imm = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let rd_index = encode_register_operand(rd);
-            let [low, high] = imm.to_le_bytes();
-            Ok(vec![CMPI_OPCODE, rd_index, low, high])
-        }
-        Instruction::AddSp(offset) => Ok(vec![ADD_SP_OPCODE, *offset as u8]),
-        Instruction::Inc(reg) => Ok(vec![encode_reg_opcode(INC_BASE_OPCODE, reg)]),
-        Instruction::Dec(reg) => Ok(vec![encode_reg_opcode(DEC_BASE_OPCODE, reg)]),
+            // Bitwise
+            Instruction::Sra(reg) => self.encode_shift(SRA_BASE_SUB_OPCODE, reg),
+            Instruction::Shl(reg) => self.encode_shift(SHL_BASE_SUB_OPCODE, reg),
+            Instruction::Shr(reg) => self.encode_shift(SHR_BASE_SUB_OPCODE, reg),
+            Instruction::Rol(reg) => self.encode_shift(ROL_BASE_SUB_OPCODE, reg),
+            Instruction::Ror(reg) => self.encode_shift(ROR_BASE_SUB_OPCODE, reg),
+            Instruction::BitReg(r, b) => self.encode_bit_reg(r, b),
+            Instruction::SetReg(r, b) => self.encode_set_reg(r, b),
+            Instruction::ResReg(r, b) => self.encode_res_reg(r, b),
+            Instruction::BitAbs(op, b) => self.encode_bit_abs(op, b),
+            Instruction::SetAbs(op, b) => self.encode_set_abs(op, b),
+            Instruction::ResAbs(op, b) => self.encode_res_abs(op, b),
+            Instruction::BitIndirect(r, b) => self.encode_bit_indirect(r, b),
+            Instruction::SetIndirect(r, b) => self.encode_set_indirect(r, b),
+            Instruction::ResIndirect(r, b) => self.encode_res_indirect(r, b),
 
-        // --------- 8 bit accumulator arithmetic ---------
-        Instruction::AddBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(ADDB_BASE_SUB_OPCODE, rs)]),
-        Instruction::SubBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(SUBB_BASE_SUB_OPCODE, rs)]),
-        Instruction::AndBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(ANDB_BASE_SUB_OPCODE, rs)]),
-        Instruction::OrBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(ORB_BASE_SUB_OPCODE, rs)]),
-        Instruction::XorBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(XORB_BASE_SUB_OPCODE, rs)]),
-        Instruction::CmpBAcc(rs) => Ok(vec![FD_PREFIX, encode_reg_opcode(CMPB_BASE_SUB_OPCODE, rs)]),
-
-        // --------- bit manipulation ---------
-        Instruction::Sra(reg) => Ok(vec![FD_PREFIX, encode_reg_opcode(SRA_BASE_SUB_OPCODE, reg)]),
-        Instruction::Shl(reg) => Ok(vec![FD_PREFIX, encode_reg_opcode(SHL_BASE_SUB_OPCODE, reg)]),
-        Instruction::Shr(reg) => Ok(vec![FD_PREFIX, encode_reg_opcode(SHR_BASE_SUB_OPCODE, reg)]),
-        Instruction::Rol(reg) => Ok(vec![FD_PREFIX, encode_reg_opcode(ROL_BASE_SUB_OPCODE, reg)]),
-        Instruction::Ror(reg) => Ok(vec![FD_PREFIX, encode_reg_opcode(ROR_BASE_SUB_OPCODE, reg)]),
-        Instruction::BitReg(r, b) => {
-            let reg = encode_register_operand(r);
-            let sub_opcode: u8 = BIT_REG_BASE_SUB_OPCODE + b;
-            Ok(vec![FD_PREFIX, sub_opcode, reg])
-        }
-        Instruction::SetReg(r, b) => {
-            let reg = encode_register_operand(r);
-            let sub_opcode: u8 = SET_REG_BASE_SUB_OPCODE + b;
-            Ok(vec![FD_PREFIX, sub_opcode, reg])
-        }
-        Instruction::ResReg(r, b) => {
-            let reg = encode_register_operand(r);
-            let sub_opcode: u8 = RES_REG_BASE_SUB_OPCODE + b;
-            Ok(vec![FD_PREFIX, sub_opcode, reg])
-        }
-        Instruction::BitAbs(Operand::AbsAddr(addr), b) => {
-            let [low, high] = (*addr as u16).to_le_bytes();
-            let sub_opcode: u8 = BIT_ABS_BASE_SUB_OPCODE + b;
-            Ok(vec![FD_PREFIX, sub_opcode, low, high])
-        }
-        Instruction::SetAbs(Operand::AbsAddr(addr), b) => {
-            let [low, high] = (*addr as u16).to_le_bytes();
-            let sub_opcode: u8 = SET_ABS_BASE_SUB_OPCODE + b;
-            Ok(vec![FD_PREFIX, sub_opcode, low, high])
-        }
-        Instruction::ResAbs(Operand::AbsAddr(addr), b) => {
-            let [low, high] = (*addr as u16).to_le_bytes();
-            let sub_opcode: u8 = RES_ABS_BASE_SUB_OPCODE + b;
-            Ok(vec![FD_PREFIX, sub_opcode, low, high])
-        }
-        Instruction::BitIndirect(r, b) => {
-            let reg = encode_register_operand(r);
-            let sub_opcode: u8 = BIT_INDIR_BASE_SUB_OPCODE + b;
-            Ok(vec![FD_PREFIX, sub_opcode, reg])
-        }
-        Instruction::SetIndirect(r, b) => {
-            let reg = encode_register_operand(r);
-            let sub_opcode: u8 = SET_INDIR_BASE_SUB_OPCODE + b;
-            Ok(vec![FD_PREFIX, sub_opcode, reg])
-        }
-        Instruction::ResIndirect(r, b) => {
-            let reg = encode_register_operand(r);
-            let sub_opcode: u8 = RES_INDIR_BASE_SUB_OPCODE + b;
-            Ok(vec![FD_PREFIX, sub_opcode, reg])
-        }
-
-        // --------- Control Flow ---------
-        Instruction::JmpI(op) => {
-            let addr = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let [low, high] = addr.to_le_bytes();
-            Ok(vec![JMP_IMM_OPCODE, low, high])
-        }
-        Instruction::JmpIndirect(reg) => {
-            let opcode = encode_reg_opcode(JMP_INDIR_BASE_OPCODE, reg);
-            Ok(vec![opcode])
-        }
-        Instruction::JrI(Operand::Immediate(imm)) => {
-            let rel = *imm as i8;
-            Ok(vec![JR_OPCODE, rel as u8])
-        }
-        Instruction::JrI(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let rel: i32 = target_symbol.logical_address as i32 - *current_address as i32;
-            if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Label \"{}\" too far away for relative jump, must be within {} bytes of JR instruction",
-                        label_name,
-                        i8::MAX
-                    ),
-                });
-            };
-            Ok(vec![JR_OPCODE, rel as u8])
-        }
-        Instruction::JccI(cc, op) => {
-            let addr = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let opcode = encode_condition_code_opcode(JCC_BASE_OPCODE, cc);
-            let [low, high] = addr.to_le_bytes();
-            Ok(vec![opcode, low, high])
-        }
-        Instruction::JrccI(cc, Operand::Immediate(imm)) => {
-            let rel = *imm as i8;
-            let opcode = encode_condition_code_opcode(JRCC_BASE_OPCODE, cc);
-            Ok(vec![opcode, rel as u8])
-        }
-        Instruction::JrccI(cc, Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let rel: i32 = target_symbol.logical_address as i32 - *current_address as i32;
-            if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Label \"{}\" too far away for relative jump, must be within {} bytes of JRcc instruction",
-                        label_name,
-                        i8::MAX
-                    ),
-                });
-            };
-            let opcode = encode_condition_code_opcode(JRCC_BASE_OPCODE, cc);
-            Ok(vec![opcode, rel as u8])
-        }
-        Instruction::Djnz(Operand::Immediate(imm)) => {
-            let rel = *imm as i8;
-            Ok(vec![DJNZ_OPCODE, rel as u8])
-        }
-        Instruction::Djnz(Operand::Label(label_name)) => {
-            let target_symbol =
-                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
-            let rel: i32 = target_symbol.logical_address as i32 - *current_address as i32;
-            if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Label \"{}\" too far away for relative jump, must be within {} bytes of DJNZ instruction",
-                        label_name,
-                        i8::MAX
-                    ),
-                });
-            };
-            Ok(vec![DJNZ_OPCODE, rel as u8])
-        }
-        Instruction::CallI(op) => {
-            let addr = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            Ok(encode_call_immediate(addr))
-        }
-        Instruction::CallIndirect(reg) => {
-            let opcode = encode_reg_opcode(CALL_INDIR_BASE_OPCODE, reg);
-            Ok(vec![opcode])
-        }
-        Instruction::CallccI(cc, op) => {
-            let addr = resolve_label_or_immediate(op, symbol_table, line_num, current_bank)?;
-            let opcode = encode_condition_code_opcode(CALLCC_BASE_OPCODE, cc);
-            let [low, high] = addr.to_le_bytes();
-            Ok(vec![opcode, low, high])
-        }
-        Instruction::Syscall(imm) => Ok(encode_syscall(*imm as u8)),
-        Instruction::CallFar(call_label) => {
-            let target_symbol = get_symbol(symbol_table, call_label, line_num)?;
-
-            if target_symbol.bank == 0 {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Label \"{}\" exists in bank 0, use a normal CALL instruction instead.",
-                        call_label
-                    ),
-                });
-            } else if target_symbol.bank == *current_bank {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Label \"{}\" exists in the same bank as the CALL.far instruction, use a normal CALL instruction instead.",
-                        call_label
-                    ),
-                });
+            // Control Flow
+            Instruction::JmpI(op) => self.encode_jmp_imm(op),
+            Instruction::JmpIndirect(reg) => self.encode_jmp_indirect(reg),
+            Instruction::JrI(op) => self.encode_jr(op),
+            Instruction::JccI(cc, op) => self.encode_jcc(cc, op),
+            Instruction::JrccI(cc, op) => self.encode_jrcc(cc, op),
+            Instruction::Djnz(op) => self.encode_djnz(op),
+            Instruction::CallI(op) => self.encode_call_imm(op),
+            Instruction::CallIndirect(reg) => self.encode_call_indirect(reg),
+            Instruction::CallccI(cc, op) => self.encode_callcc(cc, op),
+            Instruction::Syscall(imm) => self.encode_syscall_imm(imm),
+            Instruction::CallFar(call_label) => self.encode_call_far(call_label),
+            Instruction::CallFarVia(call_label, via_label) => {
+                self.encode_call_far_via(call_label, via_label)
             }
-
-            let final_bytecode = encode_far(target_symbol, 0x21);
-            Ok(final_bytecode)
+            Instruction::JmpFar(label_name) => self.encode_jmp_far(label_name),
+            Instruction::JmpFarVia(call_label, via_label) => {
+                self.encode_jmp_far_via(call_label, via_label)
+            }
         }
-        Instruction::CallFarVia(call_label, via_label) => {
-            let call_symbol = get_symbol(symbol_table, call_label, line_num)?;
-            let via_symbol = get_symbol(symbol_table, via_label, line_num)?;
-
-            if call_symbol.bank == 0 {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Label \"{}\" exists in bank 0, use a normal CALL instruction instead.",
-                        call_label
-                    ),
-                });
-            } else if call_symbol.bank == *current_bank {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Label \"{}\" exists in the same bank as the CALL.far instruction, use a normal CALL instruction instead.",
-                        call_label
-                    ),
-                });
-            }
-
-            if via_symbol.bank != 0 {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Custom CALL.far via trampoline label must exist in bank 0, \"{}\" found in bank {}",
-                        via_label, via_symbol.bank,
-                    ),
-                });
-            }
-
-            let final_bytecode = encode_far_via(call_symbol, via_symbol);
-            Ok(final_bytecode)
-        }
-        Instruction::JmpFar(label_name) => {
-            let target_symbol = get_symbol(symbol_table, label_name, line_num)?;
-
-            if target_symbol.bank == 0 {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Label \"{}\" exists in bank 0, use a normal JMP instruction instead.",
-                        label_name
-                    ),
-                });
-            } else if target_symbol.bank == *current_bank {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Label \"{}\" exists in the same bank as the JMP.far instruction, use a normal JMP instruction instead.",
-                        label_name
-                    ),
-                });
-            }
-
-            let final_bytecode = encode_far(target_symbol, 0x22);
-            Ok(final_bytecode)
-        }
-        Instruction::JmpFarVia(call_label, via_label) => {
-            let call_symbol = get_symbol(symbol_table, call_label, line_num)?;
-            let via_symbol = get_symbol(symbol_table, via_label, line_num)?;
-
-            if call_symbol.bank == 0 {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Label \"{}\" exists in bank 0, use a normal JMP instruction instead.",
-                        call_label
-                    ),
-                });
-            } else if call_symbol.bank == *current_bank {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Label \"{}\" exists in the same bank as the JMP.far instruction, use a normal JMP instruction instead.",
-                        call_label
-                    ),
-                });
-            }
-
-            if via_symbol.bank != 0 {
-                return Err(AssemblyError::SemanticError {
-                    line: line_num,
-                    reason: format!(
-                        "Custom JMP.far via trampoline label must exist in bank 0, \"{}\" found in bank {}",
-                        via_label, via_symbol.bank,
-                    ),
-                });
-            }
-
-            let final_bytecode = encode_far_via(call_symbol, via_symbol);
-            Ok(final_bytecode)
-        }
-
-        // ... add encoding logic for every instruction variant based on your opcode map ...
-        _ => Err(AssemblyError::SemanticErrorNoLine {
-            reason: "Invalid Instruction".to_string(),
-        }),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{ConditionCode, Register};
+    use crate::ast::{ConditionCode, Operand, Register};
 
     #[test]
     fn test_encode_instruction_nop() {
         let instruction = Instruction::Nop;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x00]
         );
     }
@@ -723,7 +332,7 @@ mod tests {
         let instruction = Instruction::SubAcc(Register::R1);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x21]
         );
     }
@@ -733,7 +342,7 @@ mod tests {
         let instruction = Instruction::AndReg(Register::R2, Register::R3);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x12, (2 << 3) | 3]
         );
     }
@@ -743,7 +352,7 @@ mod tests {
         let instruction = Instruction::OrReg(Register::R4, Register::R5);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x13, (4 << 3) | 5]
         );
     }
@@ -753,7 +362,7 @@ mod tests {
         let instruction = Instruction::XorReg(Register::R6, Register::R7);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x14, (6 << 3) | 7]
         );
     }
@@ -763,7 +372,7 @@ mod tests {
         let instruction = Instruction::CmpReg(Register::R0, Register::R1);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x15, (0 << 3) | 1]
         );
     }
@@ -773,7 +382,7 @@ mod tests {
         let instruction = Instruction::AdcReg(Register::R2, Register::R3);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x16, (2 << 3) | 3]
         );
     }
@@ -783,7 +392,7 @@ mod tests {
         let instruction = Instruction::SbcReg(Register::R4, Register::R5);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x17, (4 << 3) | 5]
         );
     }
@@ -793,7 +402,7 @@ mod tests {
         let instruction = Instruction::AndAcc(Register::R1);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x29]
         );
     }
@@ -803,7 +412,7 @@ mod tests {
         let instruction = Instruction::OrAcc(Register::R2);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x32]
         );
     }
@@ -813,7 +422,7 @@ mod tests {
         let instruction = Instruction::XorAcc(Register::R3);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x3B]
         );
     }
@@ -823,7 +432,7 @@ mod tests {
         let instruction = Instruction::CmpAcc(Register::R4);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x44]
         );
     }
@@ -833,7 +442,7 @@ mod tests {
         let instruction = Instruction::AddAccI(Operand::Immediate(0x1234));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xC0, 0x34, 0x12]
         );
     }
@@ -850,7 +459,7 @@ mod tests {
             },
         );
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xC0, 0x68, 0x24]
         );
     }
@@ -860,7 +469,7 @@ mod tests {
         let instruction = Instruction::SubAccI(Operand::Immediate(0x00FF));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xC1, 0xFF, 0x00]
         );
     }
@@ -870,7 +479,7 @@ mod tests {
         let instruction = Instruction::AndAccI(Operand::Immediate(0x0F0F));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xC2, 0x0F, 0x0F]
         );
     }
@@ -880,7 +489,7 @@ mod tests {
         let instruction = Instruction::OrAccI(Operand::Immediate(0x8000));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xC3, 0x00, 0x80]
         );
     }
@@ -890,7 +499,7 @@ mod tests {
         let instruction = Instruction::XorAccI(Operand::Immediate(0xAAAA));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xC4, 0xAA, 0xAA]
         );
     }
@@ -900,7 +509,7 @@ mod tests {
         let instruction = Instruction::CmpAccI(Operand::Immediate(0x0A0B));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xC5, 0x0B, 0x0A]
         );
     }
@@ -910,7 +519,7 @@ mod tests {
         let instruction = Instruction::AdcAccI(Operand::Immediate(0xFFFF));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xC6, 0xFF, 0xFF]
         );
     }
@@ -920,7 +529,7 @@ mod tests {
         let instruction = Instruction::SbcAccI(Operand::Immediate(0x1234));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xC7, 0x34, 0x12]
         );
     }
@@ -930,7 +539,7 @@ mod tests {
         let instruction = Instruction::AddSp(-5);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x6C, 0xFB]
         );
     }
@@ -940,7 +549,7 @@ mod tests {
         let instruction = Instruction::Push(Register::R2);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x6F]
         );
     }
@@ -950,7 +559,7 @@ mod tests {
         let instruction = Instruction::PushI(Operand::Immediate(0x1234));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x7D, 0x34, 0x12]
         );
     }
@@ -967,7 +576,7 @@ mod tests {
             },
         );
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x7D, 0x57, 0x13]
         );
     }
@@ -977,7 +586,7 @@ mod tests {
         let instruction = Instruction::PushF;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x7E]
         );
     }
@@ -987,7 +596,7 @@ mod tests {
         let instruction = Instruction::Pop(Register::R3);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x78]
         );
     }
@@ -997,7 +606,7 @@ mod tests {
         let instruction = Instruction::PopF;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x7F]
         );
     }
@@ -1007,7 +616,7 @@ mod tests {
         let instruction = Instruction::NegAcc;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x48]
         );
     }
@@ -1017,7 +626,7 @@ mod tests {
         let instruction = Instruction::NotAcc;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x49]
         );
     }
@@ -1027,7 +636,7 @@ mod tests {
         let instruction = Instruction::SwapAcc;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x4A]
         );
     }
@@ -1037,7 +646,7 @@ mod tests {
         let instruction = Instruction::Ccf;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x4B]
         );
     }
@@ -1047,7 +656,7 @@ mod tests {
         let instruction = Instruction::Scf;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x4C]
         );
     }
@@ -1057,7 +666,7 @@ mod tests {
         let instruction = Instruction::Rcf;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x4D]
         );
     }
@@ -1067,7 +676,7 @@ mod tests {
         let instruction = Instruction::Enter;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x4F]
         );
     }
@@ -1077,7 +686,7 @@ mod tests {
         let instruction = Instruction::Leave;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x50]
         );
     }
@@ -1087,7 +696,7 @@ mod tests {
         let instruction = Instruction::Ret;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xF9]
         );
     }
@@ -1097,7 +706,7 @@ mod tests {
         let instruction = Instruction::Reti;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFA]
         );
     }
@@ -1107,7 +716,7 @@ mod tests {
         let instruction = Instruction::Ei;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFB]
         );
     }
@@ -1117,7 +726,7 @@ mod tests {
         let instruction = Instruction::Di;
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFC]
         );
     }
@@ -1127,7 +736,7 @@ mod tests {
         let instruction = Instruction::Inc(Register::R1);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xE2]
         );
     }
@@ -1137,7 +746,7 @@ mod tests {
         let instruction = Instruction::Dec(Register::R2);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xDB]
         );
     }
@@ -1147,7 +756,7 @@ mod tests {
         let instruction = Instruction::CallI(Operand::Immediate(0x1234));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xC8, 0x34, 0x12]
         );
     }
@@ -1164,7 +773,7 @@ mod tests {
             },
         );
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0x4100, &1, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0x4100, &1, &0).unwrap(),
             vec![0xC8, 0x21, 0x43]
         );
     }
@@ -1174,7 +783,7 @@ mod tests {
         let instruction = Instruction::CallIndirect(Register::R4);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xCD] // 0xC9 + 4
         );
     }
@@ -1184,7 +793,7 @@ mod tests {
         let instruction = Instruction::CallccI(ConditionCode::C, Operand::Immediate(0x1122));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xD5, 0x22, 0x11] // 0xD1 + 4
         );
     }
@@ -1202,7 +811,7 @@ mod tests {
             },
         );
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0x4100, &1, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0x4100, &1, &0).unwrap(),
             vec![0xD8, 0x21, 0x43] // 0xD1 + 7
         );
     }
@@ -1212,7 +821,7 @@ mod tests {
         let instruction = Instruction::Syscall(0x1A);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0x4E, 0x1A]
         );
     }
@@ -1222,7 +831,7 @@ mod tests {
         let instruction = Instruction::LdAbs(Register::R1, Operand::AbsAddr(0x1234));
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xEA, 0x34, 0x12] // 0xE9 + 1
         );
     }
@@ -1232,7 +841,7 @@ mod tests {
         let instruction = Instruction::StAbs(Operand::AbsAddr(0x4321), Register::R2);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xF3, 0x21, 0x43] // 0xF1 + 2
         );
     }
@@ -1242,7 +851,7 @@ mod tests {
         let instruction = Instruction::StIndirect(Register::R1, Register::R2);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFE, 0x4A] // 0x40 | (1 << 3) | 2
         );
     }
@@ -1252,7 +861,7 @@ mod tests {
         let instruction = Instruction::Sra(Register::R0);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x00]
         );
     }
@@ -1262,7 +871,7 @@ mod tests {
         let instruction = Instruction::Shl(Register::R1);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x09]
         );
     }
@@ -1272,7 +881,7 @@ mod tests {
         let instruction = Instruction::Shr(Register::R2);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x12]
         );
     }
@@ -1282,7 +891,7 @@ mod tests {
         let instruction = Instruction::Rol(Register::R3);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x1B]
         );
     }
@@ -1292,7 +901,7 @@ mod tests {
         let instruction = Instruction::Ror(Register::R4);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x24]
         );
     }
@@ -1302,7 +911,7 @@ mod tests {
         let instruction = Instruction::AddBAcc(Register::R1);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x29] // 0x28 + 1
         );
     }
@@ -1312,7 +921,7 @@ mod tests {
         let instruction = Instruction::SubBAcc(Register::R2);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x32] // 0x30 + 2
         );
     }
@@ -1322,7 +931,7 @@ mod tests {
         let instruction = Instruction::AndBAcc(Register::R3);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x3B] // 0x38 + 3
         );
     }
@@ -1332,7 +941,7 @@ mod tests {
         let instruction = Instruction::OrBAcc(Register::R4);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x44] // 0x40 + 4
         );
     }
@@ -1342,7 +951,7 @@ mod tests {
         let instruction = Instruction::XorBAcc(Register::R5);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x4D] // 0x48 + 5
         );
     }
@@ -1352,7 +961,7 @@ mod tests {
         let instruction = Instruction::CmpBAcc(Register::R6);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x56] // 0x50 + 6
         );
     }
@@ -1362,7 +971,7 @@ mod tests {
         let instruction = Instruction::LdiB(Register::R1, 0xAB);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0xA1, 0xAB] // 0xA0 + 1
         );
     }
@@ -1372,7 +981,7 @@ mod tests {
         let instruction = Instruction::BitReg(Register::R1, 7);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x5F, 1]
         );
     }
@@ -1382,7 +991,7 @@ mod tests {
         let instruction = Instruction::SetAbs(Operand::AbsAddr(0x1234), 0);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x78, 0x34, 0x12]
         );
     }
@@ -1392,7 +1001,7 @@ mod tests {
         let instruction = Instruction::ResIndirect(Register::R2, 3);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFD, 0x9B, 2]
         );
     }
@@ -1402,7 +1011,7 @@ mod tests {
         let instruction = Instruction::LdIndexed(Register::R0, Register::R1, 16);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0x01, 16]
         );
     }
@@ -1412,7 +1021,7 @@ mod tests {
         let instruction = Instruction::StIndexed(Register::R2, -1, Register::R3);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0x53, 255]
         );
     }
@@ -1422,7 +1031,7 @@ mod tests {
         let instruction = Instruction::Lea(Register::R4, Register::R5, 32);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0xA5, 32]
         );
     }
@@ -1432,7 +1041,7 @@ mod tests {
         let instruction = Instruction::LdPostInc(Register::R6, Register::R7);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0xC7, 6]
         );
     }
@@ -1442,7 +1051,7 @@ mod tests {
         let instruction = Instruction::StPostInc(Register::R0, Register::R1);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0xC9, 0]
         );
     }
@@ -1452,7 +1061,7 @@ mod tests {
         let instruction = Instruction::LdPreDec(Register::R2, Register::R3);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0xD3, 2]
         );
     }
@@ -1462,7 +1071,7 @@ mod tests {
         let instruction = Instruction::StPreDec(Register::R4, Register::R5);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0xDD, 4]
         );
     }
@@ -1472,7 +1081,7 @@ mod tests {
         let instruction = Instruction::LdBPostInc(Register::R6, Register::R7);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0xE7, 6]
         );
     }
@@ -1482,7 +1091,7 @@ mod tests {
         let instruction = Instruction::StBPostInc(Register::R0, Register::R1);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0xE9, 0]
         );
     }
@@ -1492,7 +1101,7 @@ mod tests {
         let instruction = Instruction::LdBPreDec(Register::R2, Register::R3);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0xF3, 2]
         );
     }
@@ -1502,7 +1111,7 @@ mod tests {
         let instruction = Instruction::StBPreDec(Register::R4, Register::R5);
         let symbol_table = SymbolTable::new();
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0xFD, 4]
         );
     }
@@ -1519,7 +1128,7 @@ mod tests {
             },
         );
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0x1100, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0x1100, &0, &0).unwrap(),
             vec![0x05, 0x01, 0x00, 0x06, 0x21, 0x43, 0x4E, 0x21]
         );
     }
@@ -1535,7 +1144,7 @@ mod tests {
                 bank: 0,
             },
         );
-        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, 1);
+        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, &1);
         assert!(result.is_err_and(|e| {
             e == AssemblyError::SemanticError {
                 line: 1,
@@ -1557,7 +1166,7 @@ mod tests {
                 bank: 1,
             },
         );
-        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, 1);
+        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, &1);
         assert!(result.is_err_and(|e| {
             e == AssemblyError::SemanticError {
                 line: 1,
@@ -1587,7 +1196,7 @@ mod tests {
             },
         );
         assert_eq!(
-            encode_instruction(&instruction, &symbol_table, &0x1100, &0, 0).unwrap(),
+            encode_instruction(&instruction, &symbol_table, &0x1100, &0, &0).unwrap(),
             vec![0x05, 0x01, 0x00, 0x06, 0x21, 0x43, 0xC8, 0x00, 0x02]
         );
     }
@@ -1610,7 +1219,7 @@ mod tests {
                 bank: 0,
             },
         );
-        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, 1);
+        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, &1);
         assert!(result.is_err_and(|e| {
             e == AssemblyError::SemanticError {
                 line: 1,
@@ -1639,7 +1248,7 @@ mod tests {
                 bank: 0,
             },
         );
-        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, 1);
+        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, &1);
         assert!(result.is_err_and(|e| {
             e == AssemblyError::SemanticError {
                 line: 1,
@@ -1668,7 +1277,7 @@ mod tests {
                 bank: 1,
             },
         );
-        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, 1);
+        let result = encode_instruction(&instruction, &symbol_table, &0x5432, &1, &1);
         assert!(result.is_err_and(|e| {
             e == AssemblyError::SemanticError {
                 line: 1,

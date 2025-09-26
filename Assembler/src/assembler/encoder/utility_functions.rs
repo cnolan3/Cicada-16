@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use crate::ast::{ConditionCode, Register};
+use crate::assembler::symbol_table::{SymbolTable, get_and_check_symbol};
+use crate::ast::{ConditionCode, Operand, Register};
+use crate::errors::AssemblyError;
 
 // helper function to encode a register operand
 pub fn encode_register_operand(reg: &Register) -> u8 {
@@ -54,4 +56,50 @@ pub fn encode_rd_rs_byte(base_val: u8, rd: &Register, rs: &Register) -> u8 {
 
 pub fn encode_reg_opcode(base_opcode: u8, r: &Register) -> u8 {
     base_opcode + encode_register_operand(r)
+}
+
+/// Resolves an operand that can be a label or an immediate value into a 16-bit address.
+pub fn resolve_label_or_immediate(
+    op: &Operand,
+    symbol_table: &SymbolTable,
+    line_num: &usize,
+    current_bank: &u32,
+) -> Result<u16, AssemblyError> {
+    match op {
+        Operand::Immediate(value) => Ok(*value as u16),
+        Operand::Label(label_name) => {
+            let target_symbol =
+                get_and_check_symbol(symbol_table, label_name, line_num, current_bank)?;
+            Ok(target_symbol.logical_address as u16)
+        }
+        _ => Err(AssemblyError::SemanticError {
+            line: *line_num,
+            reason: "Expected an immediate value or a label.".to_string(),
+        }),
+    }
+}
+
+
+pub fn resolve_absolute(
+    op: &Operand,
+    symbol_table: &SymbolTable,
+    line_num: &usize,
+    current_bank: &u32,
+) -> Result<u16, AssemblyError> {
+    match op {
+        Operand::AbsAddr(addr) => Ok(*addr),
+        Operand::AbsLabel(label) => {
+            let symbol = get_and_check_symbol(
+                symbol_table,
+                label,
+                line_num,
+                current_bank,
+            )?;
+            Ok(symbol.logical_address as u16)
+        }
+        _ => Err(AssemblyError::SemanticError {
+            line: *line_num,
+            reason: "Expected an absolute address or label.".to_string(),
+        }),
+    }
 }
