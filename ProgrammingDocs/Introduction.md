@@ -8,11 +8,11 @@ The Cicada-16 is a 16-bit CISC-style microprocessor. It features a straightforwa
 
 ### Key Features
 
-*   **16-bit Data Path**: The primary data size is 16 bits (a "word").
-*   **8 General-Purpose Registers**: A set of 8 versatile 16-bit registers.
-*   **16-bit Address Bus**: Can address up to 64 KB of memory per bank.
-*   **Memory Banking**: The architecture supports memory banking to extend beyond the 64 KB address space, with each bank being 16 KB in size.
-*   **Implicit Accumulator**: Many arithmetic and logic operations implicitly use the `R0` register as an accumulator for more compact instruction encoding.
+- **16-bit Data Path**: The primary data size is 16 bits (a "word").
+- **8 General-Purpose Registers**: A set of 8 versatile 16-bit registers.
+- **16-bit Address Bus**: Can address up to 64 KB of memory per bank.
+- **Memory Banking**: The architecture supports memory banking to extend beyond the 64 KB address space, with each bank being 16 KB in size.
+- **Implicit Accumulator**: Many arithmetic and logic operations implicitly use the `R0` register as an accumulator for more compact instruction encoding.
 
 ## Assembly Language Syntax
 
@@ -39,8 +39,8 @@ my_label:
 
 Numbers can be specified in decimal or hexadecimal format.
 
-*   **Decimal**: Standard base-10 numbers (e.g., `10`, `255`, `-5`).
-*   **Hexadecimal**: Prefixed with `0x` or `$` (e.g., `0xFF`, `$1A00`).
+- **Decimal**: Standard base-10 numbers (e.g., `10`, `255`, `-5`).
+- **Hexadecimal**: Prefixed with `0x` or `$` (e.g., `0xFF`, `$1A00`).
 
 ### Registers
 
@@ -54,3 +54,8 @@ Directives are special commands for the assembler that are not translated into m
 .org 0x100   ; Assemble the following code starting at address 0x100
 .byte 1, 2, 3 ; Define a sequence of bytes
 ```
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

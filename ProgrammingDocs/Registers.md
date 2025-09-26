@@ -6,7 +6,7 @@ This document describes the user-accessible registers in the Cicada-16 CPU.
 
 The CPU has eight 16-bit general-purpose registers, designated `R0` through `R7`.
 
-*   **`R0` - `R7`**: These registers can be used for storing 16-bit data or addresses. Most instructions can operate on any of these registers.
+- **`R0` - `R7`**: These registers can be used for storing 16-bit data or addresses. Most instructions can operate on any of these registers.
 
 ### R0 as Accumulator
 
@@ -20,8 +20,8 @@ For example, the `ADD R1` instruction is equivalent to `R0 = R0 + R1`.
 
 `SP` is the 16-bit Stack Pointer. It holds the address of the top of the stack. The stack grows downwards in memory.
 
-*   **`PUSH`**: When a value is pushed onto the stack, `SP` is decremented before the value is written.
-*   **`POP`**: When a value is popped from the stack, the value is read from the address in `SP`, and then `SP` is incremented.
+- **`PUSH`**: When a value is pushed onto the stack, `SP` is decremented before the value is written.
+- **`POP`**: When a value is popped from the stack, the value is read from the address in `SP`, and then `SP` is incremented.
 
 The `SP` is also implicitly used by `CALL` and `RET` instructions.
 
@@ -31,9 +31,14 @@ The `SP` is also implicitly used by `CALL` and `RET` instructions.
 
 The primary flags are:
 
-*   **Z (Zero Flag)**: Set if the result of an operation is zero; cleared otherwise.
-*   **N (Negative Flag)**: Set if the most significant bit (MSB) of the result is 1; cleared otherwise.
-*   **C (Carry Flag)**: Set if an operation resulted in a carry out of the most significant bit. This is used for unsigned arithmetic.
-*   **V (Overflow Flag)**: Set if an operation resulted in a signed overflow (e.g., adding two large positive numbers results in a negative number). This is used for signed arithmetic.
+- **Z (Zero Flag)**: Set if the result of an operation is zero; cleared otherwise.
+- **N (Negative Flag)**: Set if the most significant bit (MSB) of the result is 1; cleared otherwise.
+- **C (Carry Flag)**: Set if an operation resulted in a carry out of the most significant bit. This is used for unsigned arithmetic.
+- **V (Overflow Flag)**: Set if an operation resulted in a signed overflow (e.g., adding two large positive numbers results in a negative number). This is used for signed arithmetic.
 
 Conditional jump and call instructions (`Jcc`, `JRcc`, `CALLcc`) use the state of these flags to determine whether to execute.
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

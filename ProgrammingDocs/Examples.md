@@ -17,7 +17,7 @@ start:
 
 print_loop:
     LD.b R3, (R1)+      ; Load a character from the message, post-increment address
-    
+
     ; Hypothetical SYSCALL 0x01: Print the character in the lower byte of R3
     SYSCALL 0x01
 
@@ -27,7 +27,7 @@ print_loop:
 end_loop:
     HALT                ; Halt the CPU
 
-; --- Data --- 
+; --- Data ---
 message:
     .byte 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21 ; "Hello, World!"
 msg_len: .word 13
@@ -79,7 +79,7 @@ This example shows how to define and use a simple subroutine with `CALL` and `RE
 start:
     LDI R0, 12          ; Load a value into the accumulator
     CALL multiply_by_two  ; Call the subroutine
-    
+
     ; After returning, R0 will hold the value 24
 
     LDI R0, 5
@@ -97,3 +97,8 @@ multiply_by_two:
     SHL R0              ; Logical shift left is equivalent to multiplying by 2
     RET                 ; Return to the caller
 ```
+
+---
+
+© 2025 Connor Nolan. This work is licensed under a
+[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
