@@ -29,7 +29,11 @@ impl<'a> AstBuilder<'a> {
         match src {
             Operand::Register(rs) => Ok(Instruction::LdReg(rd, rs)),
             Operand::AbsAddr(_) | Operand::AbsLabel(_) => Ok(Instruction::LdAbs(rd, src)),
-            Operand::Indexed(rs, offset) => Ok(Instruction::LdIndexed(rd, rs, offset)),
+            Operand::Indexed(rs, offset) => Ok(Instruction::LdIndexed(
+                rd,
+                rs,
+                Operand::Immediate(offset as i32),
+            )),
             Operand::Indirect(rs) => Ok(Instruction::LdIndirect(rd, rs)),
             Operand::PreDecrement(rs) => Ok(Instruction::LdPreDec(rd, rs)),
             Operand::PostIncrement(rs) => Ok(Instruction::LdPostInc(rd, rs)),

@@ -300,7 +300,9 @@ byte_directive = { ^".byte" ~ data_operand_list }
 
 word_directive = { ^".word" ~ data_operand_list }
 
-directive = { org_directive | bank_directive | byte_directive | word_directive }
+define_directive = { ^".define" ~ operand ~ operand }
+
+directive = { org_directive | bank_directive | byte_directive | word_directive | define_directive }
 
 // --- Core Rules ---
 

@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 use crate::parser::AstBuilder;
-use crate::parser::Instruction;
 use crate::parser::ast_builder::constants::*;
+use crate::parser::{Instruction, Operand};
 use anyhow::{Context, Result};
 
 impl<'a> AstBuilder<'a> {
@@ -47,7 +47,7 @@ impl<'a> AstBuilder<'a> {
     pub fn build_add_sp(mut self) -> Result<Instruction> {
         let val = self.expect_signed_byte().context(INVALID_OP_MSG)?;
 
-        Ok(Instruction::AddSp(val))
+        Ok(Instruction::AddSp(Operand::Immediate(val as i32)))
     }
 
     // build and check operands for an add.b instruction

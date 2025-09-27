@@ -105,4 +105,22 @@ impl<'a> AstBuilder<'a> {
 
         Ok(Directive::Word(words))
     }
+
+    // build a word data directive
+    pub fn build_define_directive(mut self) -> Result<Directive> {
+        let label = self.expect_label().context("Invalid define label.")?;
+        let value = self.pop_operand().context("Invalid define value.")?;
+
+        match value {
+            Operand::Immediate(_) => Ok(Directive::Define(label, value)),
+            // TODO: allow more value operand types in the future, like expressions
+            _ => {
+                return Err(AssemblyError::StructuralError {
+                    line: self.line_number,
+                    reason: ".define value must be a number.".to_string(),
+                }
+                .into());
+            }
+        }
+    }
 }
