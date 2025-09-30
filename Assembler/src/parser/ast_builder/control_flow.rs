@@ -104,7 +104,9 @@ impl<'a> AstBuilder<'a> {
 
     // build and check operands for a SYSCALL instruction
     pub fn build_syscall(mut self) -> Result<Instruction> {
-        let index = self.expect_unsigned_byte().context(INVALID_OP_MSG)?;
+        let index = self
+            .expect_unsigned_byte_or_label()
+            .context(INVALID_OP_MSG)?;
 
         Ok(Instruction::Syscall(index))
     }

@@ -117,11 +117,12 @@ pub fn build_absolute(pair: Pair<Rule>) -> Result<Operand> {
                     line,
                     reason: "Expected a hex value body.".to_string(),
                 })?;
-            let value =
-                u16::from_str_radix(hex.as_str(), 16).map_err(|_| AssemblyError::StructuralError {
+            let value = u16::from_str_radix(hex.as_str(), 16).map_err(|_| {
+                AssemblyError::StructuralError {
                     line,
                     reason: format!("Invalid hex value: {}", hex.as_str()),
-                })?;
+                }
+            })?;
             Ok(Operand::AbsAddr(value))
         }
         Rule::identifier => Ok(Operand::AbsLabel(inner.as_str().to_string())),
@@ -186,18 +187,26 @@ pub fn build_indexed(pair: Pair<Rule>) -> Result<Operand> {
             line,
             reason: "Expected a register for indexed addressing.".to_string(),
         })?;
-    let imm_pair = inner
-        .next()
-        .ok_or_else(|| AssemblyError::StructuralError {
-            line,
-            reason: "Expected an offset for indexed addressing.".to_string(),
-        })?;
+    let op_pair = inner.next().ok_or_else(|| AssemblyError::StructuralError {
+        line,
+        reason: "Expected an offset for indexed addressing.".to_string(),
+    })?;
 
     let reg = pair_to_reg(reg_pair)?;
 
-    let imm = pair_to_signed_byte(imm_pair).context("Invalid offset for indexed operand.")?;
-
-    Ok(Operand::Indexed(reg, imm))
+    match op_pair.as_rule() {
+        Rule::immediate_hex | Rule::immediate_dec => {
+            let imm =
+                pair_to_signed_byte(op_pair).context("Invalid offset for indexed operand.")?;
+            Ok(Operand::Indexed(reg, imm))
+        }
+        Rule::label => Ok(Operand::IndexedLabel(reg, op_pair.as_str().to_string())),
+        _ => Err(AssemblyError::StructuralError {
+            line,
+            reason: "Expected an immediate value or label for offset.".to_string(),
+        }
+        .into()),
+    }
 }
 
 pub fn build_condition_code(pair: Pair<Rule>) -> Result<ConditionCode> {

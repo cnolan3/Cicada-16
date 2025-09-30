@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+use crate::assembler::encoder::Encoder;
 use crate::assembler::encoder::constants::*;
 use crate::assembler::encoder::utility_functions::*;
-use crate::assembler::encoder::Encoder;
 use crate::ast::{Operand, Register};
 use crate::errors::AssemblyError;
 
@@ -25,11 +25,7 @@ impl<'a> Encoder<'a> {
         Ok(vec![encode_reg_opcode(base_opcode, rs)])
     }
 
-    pub fn encode_acc_imm_math(
-        self,
-        opcode: u8,
-        op: &Operand,
-    ) -> Result<Vec<u8>, AssemblyError> {
+    pub fn encode_acc_imm_math(self, opcode: u8, op: &Operand) -> Result<Vec<u8>, AssemblyError> {
         let value =
             resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
         let [low, high] = value.to_le_bytes();
@@ -58,8 +54,9 @@ impl<'a> Encoder<'a> {
         Ok(vec![opcode, rd_index, low, high])
     }
 
-    pub fn encode_add_sp(self, offset: &i8) -> Result<Vec<u8>, AssemblyError> {
-        Ok(vec![ADD_SP_OPCODE, *offset as u8])
+    pub fn encode_add_sp(self, offset: &Operand) -> Result<Vec<u8>, AssemblyError> {
+        let imm = self.expect_immediate(offset)?;
+        Ok(vec![ADD_SP_OPCODE, imm as u8])
     }
 
     pub fn encode_inc(self, reg: &Register) -> Result<Vec<u8>, AssemblyError> {

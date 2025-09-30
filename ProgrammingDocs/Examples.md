@@ -10,10 +10,11 @@ This program prints the string "Hello, World!" to the console using a hypothetic
 
 ```asm
 .org 0x100
+.define MSG_LEN 13
 
 start:
-    LDI R1, message   ; Load the address of the message into R1
-    LDI R2, msg_len     ; Load the length of the message into R2
+    LDI R1, message     ; Load the address of the message into R1
+    LDI R2, MSG_LEN     ; Load the length of the message into R2
 
 print_loop:
     LD.b R3, (R1)+      ; Load a character from the message, post-increment address
@@ -30,7 +31,6 @@ end_loop:
 ; --- Data ---
 message:
     .byte 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21 ; "Hello, World!"
-msg_len: .word 13
 ```
 
 ---

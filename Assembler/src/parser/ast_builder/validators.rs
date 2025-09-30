@@ -60,6 +60,25 @@ impl<'a> AstBuilder<'a> {
         }
     }
 
+    // validate an unsigned byte or label
+    pub fn expect_unsigned_byte_or_label(&mut self) -> Result<Operand> {
+        let op = self.pop_operand()?;
+
+        match op {
+            Operand::Immediate(imm) => {
+                check_unsigned_byte(imm, self.line_number)
+                    .context("Expected an unsigned byte value.")?;
+                Ok(op)
+            }
+            Operand::Label(_) => Ok(op),
+            _ => Err(AssemblyError::StructuralError {
+                line: self.line_number,
+                reason: "Expected an immediate byte value or label.".to_string(),
+            }
+            .into()),
+        }
+    }
+
     // validate a signed byte
     pub fn expect_signed_byte(&mut self) -> Result<i8> {
         let op = self.pop_operand()?;
@@ -76,6 +95,25 @@ impl<'a> AstBuilder<'a> {
         }
     }
 
+    // validate a signed byte or label
+    pub fn expect_signed_byte_or_label(&mut self) -> Result<Operand> {
+        let op = self.pop_operand()?;
+
+        match op {
+            Operand::Immediate(imm) => {
+                check_signed_byte(imm, self.line_number)
+                    .context("Expected a signed byte value.")?;
+                Ok(op)
+            }
+            Operand::Label(_) => Ok(op),
+            _ => Err(AssemblyError::StructuralError {
+                line: self.line_number,
+                reason: "Expected an immediate byte value.".to_string(),
+            }
+            .into()),
+        }
+    }
+
     // valide bit identifier
     pub fn expect_bit_id(&mut self) -> Result<u8> {
         let op = self.pop_operand()?;
@@ -89,6 +127,24 @@ impl<'a> AstBuilder<'a> {
                 reason: "Expected an immediate value.".to_string(),
             }
             .into())
+        }
+    }
+
+    // valide bit identifier or label
+    pub fn expect_bit_id_or_label(&mut self) -> Result<Operand> {
+        let op = self.pop_operand()?;
+
+        match op {
+            Operand::Immediate(imm) => {
+                check_bit_id(imm, self.line_number).context("Expected a bit ID value.")?;
+                Ok(op)
+            }
+            Operand::Label(_) => Ok(op),
+            _ => Err(AssemblyError::StructuralError {
+                line: self.line_number,
+                reason: "Expected an immediate value.".to_string(),
+            }
+            .into()),
         }
     }
 
@@ -146,10 +202,14 @@ impl<'a> AstBuilder<'a> {
 
     pub fn expect_op_vector(&mut self) -> Result<Vec<Operand>> {
         let line = self.line_number;
-        let ops = self.pairs.next().ok_or_else(|| AssemblyError::StructuralError {
-            line,
-            reason: "Expected a list of operands.".to_string()
-        })?.into_inner();
+        let ops = self
+            .pairs
+            .next()
+            .ok_or_else(|| AssemblyError::StructuralError {
+                line,
+                reason: "Expected a list of operands.".to_string(),
+            })?
+            .into_inner();
 
         ops.map(build_operand).collect()
     }

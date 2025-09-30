@@ -308,7 +308,7 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert_eq!(
             lines[0].instruction,
-            Some(Instruction::LdiB(Register::R1, 0xAB))
+            Some(Instruction::LdiB(Register::R1, Operand::Immediate(0xAB)))
         );
     }
 
@@ -321,7 +321,11 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert_eq!(
             lines[0].instruction,
-            Some(Instruction::LdIndexed(Register::R0, Register::R1, 16))
+            Some(Instruction::LdIndexed(
+                Register::R0,
+                Register::R1,
+                Operand::Immediate(16)
+            ))
         );
     }
 
@@ -334,7 +338,11 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert_eq!(
             lines[0].instruction,
-            Some(Instruction::StIndexed(Register::R2, -1, Register::R3))
+            Some(Instruction::StIndexed(
+                Register::R2,
+                Operand::Immediate(-1),
+                Register::R3
+            ))
         );
     }
 
@@ -347,7 +355,11 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert_eq!(
             lines[0].instruction,
-            Some(Instruction::Lea(Register::R4, Register::R5, 32))
+            Some(Instruction::Lea(
+                Register::R4,
+                Register::R5,
+                Operand::Immediate(32)
+            ))
         );
     }
 
@@ -464,7 +476,7 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert_eq!(
             lines[0].instruction,
-            Some(Instruction::BitReg(Register::R1, 7))
+            Some(Instruction::BitReg(Register::R1, Operand::Immediate(7)))
         );
     }
 
@@ -477,7 +489,10 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert_eq!(
             lines[0].instruction,
-            Some(Instruction::SetAbs(Operand::AbsAddr(0x1234), 0))
+            Some(Instruction::SetAbs(
+                Operand::Immediate(0x1234),
+                Operand::Immediate(0)
+            ))
         );
     }
 
@@ -490,7 +505,10 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert_eq!(
             lines[0].instruction,
-            Some(Instruction::ResIndirect(Register::R2, 3))
+            Some(Instruction::ResIndirect(
+                Register::R2,
+                Operand::Immediate(3)
+            ))
         );
     }
 
@@ -552,7 +570,10 @@ mod tests {
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
-        assert_eq!(lines[0].directive, Some(Directive::Bank(0x3)));
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::Bank(Operand::Immediate(0x3)))
+        );
     }
 
     #[test]
@@ -562,7 +583,10 @@ mod tests {
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
-        assert_eq!(lines[0].directive, Some(Directive::Bank(5)));
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::Bank(Operand::Immediate(5)))
+        );
     }
 
     // #[test]

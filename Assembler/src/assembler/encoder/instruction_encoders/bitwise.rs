@@ -29,60 +29,72 @@ impl<'a> Encoder<'a> {
         Ok(vec![FD_PREFIX, encode_reg_opcode(base_sub_opcode, reg)])
     }
 
-    pub fn encode_bit_reg(self, r: &Register, b: &u8) -> Result<Vec<u8>, AssemblyError> {
+    pub fn encode_bit_reg(self, r: &Register, b: &Operand) -> Result<Vec<u8>, AssemblyError> {
         let reg = encode_register_operand(r);
-        let sub_opcode: u8 = BIT_REG_BASE_SUB_OPCODE + b;
+        let imm = self.expect_immediate(b)?;
+        let sub_opcode: u8 = BIT_REG_BASE_SUB_OPCODE + imm as u8;
         Ok(vec![FD_PREFIX, sub_opcode, reg])
     }
 
-    pub fn encode_set_reg(self, r: &Register, b: &u8) -> Result<Vec<u8>, AssemblyError> {
+    pub fn encode_set_reg(self, r: &Register, b: &Operand) -> Result<Vec<u8>, AssemblyError> {
         let reg = encode_register_operand(r);
-        let sub_opcode: u8 = SET_REG_BASE_SUB_OPCODE + b;
+        let imm = self.expect_immediate(b)?;
+        let sub_opcode: u8 = SET_REG_BASE_SUB_OPCODE + imm as u8;
         Ok(vec![FD_PREFIX, sub_opcode, reg])
     }
 
-    pub fn encode_res_reg(self, r: &Register, b: &u8) -> Result<Vec<u8>, AssemblyError> {
+    pub fn encode_res_reg(self, r: &Register, b: &Operand) -> Result<Vec<u8>, AssemblyError> {
         let reg = encode_register_operand(r);
-        let sub_opcode: u8 = RES_REG_BASE_SUB_OPCODE + b;
+        let imm = self.expect_immediate(b)?;
+        let sub_opcode: u8 = RES_REG_BASE_SUB_OPCODE + imm as u8;
         Ok(vec![FD_PREFIX, sub_opcode, reg])
     }
 
-    pub fn encode_bit_abs(self, op: &Operand, b: &u8) -> Result<Vec<u8>, AssemblyError> {
-        let sub_opcode: u8 = BIT_ABS_BASE_SUB_OPCODE + b;
-        let addr = resolve_absolute(op, self.symbol_table, self.line_num, self.current_bank)?;
+    pub fn encode_bit_abs(&self, op: &Operand, b: &Operand) -> Result<Vec<u8>, AssemblyError> {
+        let imm = self.expect_immediate(b)?;
+        let sub_opcode: u8 = BIT_ABS_BASE_SUB_OPCODE + imm as u8;
+        let addr =
+            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
         let [low, high] = addr.to_le_bytes();
         Ok(vec![FD_PREFIX, sub_opcode, low, high])
     }
 
-    pub fn encode_set_abs(self, op: &Operand, b: &u8) -> Result<Vec<u8>, AssemblyError> {
-        let sub_opcode: u8 = SET_ABS_BASE_SUB_OPCODE + b;
-        let addr = resolve_absolute(op, self.symbol_table, self.line_num, self.current_bank)?;
+    pub fn encode_set_abs(&self, op: &Operand, b: &Operand) -> Result<Vec<u8>, AssemblyError> {
+        let imm = self.expect_immediate(b)?;
+        let sub_opcode: u8 = SET_ABS_BASE_SUB_OPCODE + imm as u8;
+        let addr =
+            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
         let [low, high] = addr.to_le_bytes();
         Ok(vec![FD_PREFIX, sub_opcode, low, high])
     }
 
-    pub fn encode_res_abs(self, op: &Operand, b: &u8) -> Result<Vec<u8>, AssemblyError> {
-        let sub_opcode: u8 = RES_ABS_BASE_SUB_OPCODE + b;
-        let addr = resolve_absolute(op, self.symbol_table, self.line_num, self.current_bank)?;
+    pub fn encode_res_abs(self, op: &Operand, b: &Operand) -> Result<Vec<u8>, AssemblyError> {
+        let imm = self.expect_immediate(b)?;
+        let sub_opcode: u8 = RES_ABS_BASE_SUB_OPCODE + imm as u8;
+        let addr =
+            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
         let [low, high] = addr.to_le_bytes();
         Ok(vec![FD_PREFIX, sub_opcode, low, high])
     }
 
-    pub fn encode_bit_indirect(self, r: &Register, b: &u8) -> Result<Vec<u8>, AssemblyError> {
+    pub fn encode_bit_indirect(self, r: &Register, b: &Operand) -> Result<Vec<u8>, AssemblyError> {
         let reg = encode_register_operand(r);
-        let sub_opcode: u8 = BIT_INDIR_BASE_SUB_OPCODE + b;
+        let imm = self.expect_immediate(b)?;
+        let sub_opcode: u8 = BIT_INDIR_BASE_SUB_OPCODE + imm as u8;
         Ok(vec![FD_PREFIX, sub_opcode, reg])
     }
 
-    pub fn encode_set_indirect(self, r: &Register, b: &u8) -> Result<Vec<u8>, AssemblyError> {
+    pub fn encode_set_indirect(self, r: &Register, b: &Operand) -> Result<Vec<u8>, AssemblyError> {
         let reg = encode_register_operand(r);
-        let sub_opcode: u8 = SET_INDIR_BASE_SUB_OPCODE + b;
+        let imm = self.expect_immediate(b)?;
+        let sub_opcode: u8 = SET_INDIR_BASE_SUB_OPCODE + imm as u8;
         Ok(vec![FD_PREFIX, sub_opcode, reg])
     }
 
-    pub fn encode_res_indirect(self, r: &Register, b: &u8) -> Result<Vec<u8>, AssemblyError> {
+    pub fn encode_res_indirect(self, r: &Register, b: &Operand) -> Result<Vec<u8>, AssemblyError> {
         let reg = encode_register_operand(r);
-        let sub_opcode: u8 = RES_INDIR_BASE_SUB_OPCODE + b;
+        let imm = self.expect_immediate(b)?;
+        let sub_opcode: u8 = RES_INDIR_BASE_SUB_OPCODE + imm as u8;
         Ok(vec![FD_PREFIX, sub_opcode, reg])
     }
 }

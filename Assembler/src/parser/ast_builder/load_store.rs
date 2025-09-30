@@ -28,8 +28,16 @@ impl<'a> AstBuilder<'a> {
 
         match src {
             Operand::Register(rs) => Ok(Instruction::LdReg(rd, rs)),
-            Operand::AbsAddr(_) | Operand::AbsLabel(_) => Ok(Instruction::LdAbs(rd, src)),
-            Operand::Indexed(rs, offset) => Ok(Instruction::LdIndexed(rd, rs, offset)),
+            Operand::AbsAddr(addr) => Ok(Instruction::LdAbs(rd, Operand::Immediate(addr as i32))),
+            Operand::AbsLabel(label) => Ok(Instruction::LdAbs(rd, Operand::Label(label))),
+            Operand::Indexed(rs, offset) => Ok(Instruction::LdIndexed(
+                rd,
+                rs,
+                Operand::Immediate(offset as i32),
+            )),
+            Operand::IndexedLabel(rs, label) => {
+                Ok(Instruction::LdIndexed(rd, rs, Operand::Label(label)))
+            }
             Operand::Indirect(rs) => Ok(Instruction::LdIndirect(rd, rs)),
             Operand::PreDecrement(rs) => Ok(Instruction::LdPreDec(rd, rs)),
             Operand::PostIncrement(rs) => Ok(Instruction::LdPostInc(rd, rs)),
@@ -47,11 +55,19 @@ impl<'a> AstBuilder<'a> {
         let rs = self.expect_register().context(INVALID_SRC_OP_MSG)?;
 
         match dest {
-            Operand::AbsAddr(_) | Operand::AbsLabel(_) => Ok(Instruction::StAbs(dest, rs)),
+            Operand::AbsAddr(addr) => Ok(Instruction::StAbs(Operand::Immediate(addr as i32), rs)),
+            Operand::AbsLabel(label) => Ok(Instruction::StAbs(Operand::Label(label), rs)),
             Operand::Indirect(rd) => Ok(Instruction::StIndirect(rd, rs)),
             Operand::PostIncrement(rd) => Ok(Instruction::StPostInc(rd, rs)),
             Operand::PreDecrement(rd) => Ok(Instruction::StPreDec(rd, rs)),
-            Operand::Indexed(rd, offset) => Ok(Instruction::StIndexed(rd, offset, rs)),
+            Operand::Indexed(rd, offset) => Ok(Instruction::StIndexed(
+                rd,
+                Operand::Immediate(offset as i32),
+                rs,
+            )),
+            Operand::IndexedLabel(rd, label) => {
+                Ok(Instruction::StIndexed(rd, Operand::Label(label), rs))
+            }
             _ => Err(AssemblyError::StructuralError {
                 line: self.line_number,
                 reason: "Invalid desitination operand to ST instruction.".to_string(),
@@ -109,7 +125,9 @@ impl<'a> AstBuilder<'a> {
     // build and check operands for a load byte immediate instruction
     pub fn build_ldi_b(mut self) -> Result<Instruction> {
         let rd = self.expect_register().context(INVALID_DEST_OP_MSG)?;
-        let src = self.expect_unsigned_byte().context(INVALID_SRC_OP_MSG)?;
+        let src = self
+            .expect_unsigned_byte_or_label()
+            .context(INVALID_SRC_OP_MSG)?;
 
         Ok(Instruction::LdiB(rd, src))
     }
@@ -120,7 +138,10 @@ impl<'a> AstBuilder<'a> {
         let src = self.pop_operand().context(INVALID_SRC_OP_MSG)?;
 
         match src {
-            Operand::Indexed(rs, offset) => Ok(Instruction::Lea(rd, rs, offset)),
+            Operand::Indexed(rs, offset) => {
+                Ok(Instruction::Lea(rd, rs, Operand::Immediate(offset as i32)))
+            }
+            Operand::IndexedLabel(rs, label) => Ok(Instruction::Lea(rd, rs, Operand::Label(label))),
             _ => Err(AssemblyError::StructuralError {
                 line: self.line_number,
                 reason: "Invalid operands to LEA instruction.".to_string(),

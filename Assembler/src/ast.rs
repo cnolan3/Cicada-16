@@ -16,7 +16,7 @@ limitations under the License.
 
 // --- Operands ---
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Register {
     R0,
     R1,
@@ -36,8 +36,9 @@ pub enum Operand {
     Indirect(Register), // e.g., (R1)
     AbsAddr(u16),       // e.g., (0x2020)
     AbsLabel(String),
-    Indexed(Register, i8), // e.g., (R1, 0x10) or (R1, -2)
-    Label(String),         // e.g., my_label
+    Indexed(Register, i8),          // e.g., (R1, 0x10) or (R1, -2)
+    IndexedLabel(Register, String), // e.g., (R1, const_val)
+    Label(String),                  // e.g., my_label
     PreDecrement(Register),
     PostIncrement(Register),
 }
@@ -61,21 +62,21 @@ pub enum Instruction {
     Leave,
 
     // 16 bit Load/Store instructions
-    LdReg(Register, Register),         // LD r1, r2
-    Ldi(Register, Operand),            // LDI r1, 0x1234 AND LDI r1, label
-    LdIndirect(Register, Register),    // LD r1, (r2)
-    LdAbs(Register, Operand),          // LD r1, (0x1234) AND LD r1, (label)
-    LdIndexed(Register, Register, i8), // LD r1, (r2, 3)
-    LdPreDec(Register, Register),      // LD r1, -(r2)
-    LdPostInc(Register, Register),     // LD r1, (r2)+
-    StIndirect(Register, Register),    // St (r1), r2
-    StAbs(Operand, Register),          // St (0x1234), r1 AND LD (label), r1
-    StIndexed(Register, i8, Register), // St (r1, 4), r2
-    StPreDec(Register, Register),      // St -(r1), r2
-    StPostInc(Register, Register),     // St (r1)+, r2
+    LdReg(Register, Register),              // LD r1, r2
+    Ldi(Register, Operand),                 // LDI r1, 0x1234 AND LDI r1, label
+    LdIndirect(Register, Register),         // LD r1, (r2)
+    LdAbs(Register, Operand),               // LD r1, (0x1234) AND LD r1, (label)
+    LdIndexed(Register, Register, Operand), // LD r1, (r2, 3)
+    LdPreDec(Register, Register),           // LD r1, -(r2)
+    LdPostInc(Register, Register),          // LD r1, (r2)+
+    StIndirect(Register, Register),         // St (r1), r2
+    StAbs(Operand, Register),               // St (0x1234), r1 AND LD (label), r1
+    StIndexed(Register, Operand, Register), // St (r1, 4), r2
+    StPreDec(Register, Register),           // St -(r1), r2
+    StPostInc(Register, Register),          // St (r1)+, r2
 
     // 8 bit Load/Store instructions
-    LdiB(Register, u8),              // LDI.b r1, 0x12
+    LdiB(Register, Operand),         // LDI.b r1, 0x12
     LdBIndirect(Register, Register), // LD.b r1, (r2)
     LdBPreDec(Register, Register),   // LD.b r1, -(r2)
     LdBPostInc(Register, Register),  // LD.b r1, (r2)+
@@ -84,7 +85,7 @@ pub enum Instruction {
     StBPostInc(Register, Register),  // St.b (r1)+, r2
 
     // LEA
-    Lea(Register, Register, i8), // LEA r1, (r2, 0x12)
+    Lea(Register, Register, Operand), // LEA r1, (r2, 0x12)
 
     // Stack Operations
     Push(Register), // PUSH r1
@@ -131,7 +132,7 @@ pub enum Instruction {
     OrIReg(Register, Operand),  // OR r1, 0x1234 AND OR r1, label
     XorIReg(Register, Operand), // XOR r1, 0x1234 AND XOR r1, label
     CmpIReg(Register, Operand), // CMP r1, 0x1234 AND CMP r1, label
-    AddSp(i8),                  // ADD SP, -3
+    AddSp(Operand),             // ADD SP, -3
     Inc(Register),              // INC r1,
     Dec(Register),              // DEC r1,
 
@@ -144,20 +145,20 @@ pub enum Instruction {
     CmpBAcc(Register), // CMP.b r1
 
     // bit manipulation
-    Sra(Register),             // SRA r1
-    Shl(Register),             // SHL r1
-    Shr(Register),             // SHR r1
-    Rol(Register),             // ROL r1
-    Ror(Register),             // ROR r1
-    BitReg(Register, u8),      // BIT r1, 3
-    SetReg(Register, u8),      // SET r1, 3
-    ResReg(Register, u8),      // RES r1, 3
-    BitAbs(Operand, u8),       // BIT (0x1234), 3
-    SetAbs(Operand, u8),       // SET (0x1234), 3
-    ResAbs(Operand, u8),       // RES (0x1234), 3
-    BitIndirect(Register, u8), // BIT (r1), 3
-    SetIndirect(Register, u8), // SET (r1), 3
-    ResIndirect(Register, u8), // RES (r1), 3
+    Sra(Register),                  // SRA r1
+    Shl(Register),                  // SHL r1
+    Shr(Register),                  // SHR r1
+    Rol(Register),                  // ROL r1
+    Ror(Register),                  // ROR r1
+    BitReg(Register, Operand),      // BIT r1, 3
+    SetReg(Register, Operand),      // SET r1, 3
+    ResReg(Register, Operand),      // RES r1, 3
+    BitAbs(Operand, Operand),       // BIT (0x1234), 3
+    SetAbs(Operand, Operand),       // SET (0x1234), 3
+    ResAbs(Operand, Operand),       // RES (0x1234), 3
+    BitIndirect(Register, Operand), // BIT (r1), 3
+    SetIndirect(Register, Operand), // SET (r1), 3
+    ResIndirect(Register, Operand), // RES (r1), 3
 
     // Control Flow
     JmpI(Operand),                   // JMP 0x1234 AND JMP label
@@ -169,7 +170,7 @@ pub enum Instruction {
     CallI(Operand),                  // CALL 0x1234 AND CALL label
     CallIndirect(Register),          // CALL (r1)
     CallccI(ConditionCode, Operand), // CALLcc 0x1234 AND CALL label
-    Syscall(u8),                     // SYSCALL 0x20
+    Syscall(Operand),                // SYSCALL 0x20
     CallFar(String),                 // CALL.far label
     CallFarVia(String, String),      // Call.far label via label
     JmpFar(String),                  // JMP.far label
@@ -190,10 +191,11 @@ pub enum ConditionCode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Directive {
-    Org(Operand),       // .org 0x1234 AND .org label
-    Bank(u16),          // .bank 3
-    Byte(Vec<u8>),      // .byte 0x01, 0x02, 0x03
-    Word(Vec<Operand>), // .word 0x0001, 0x0002, 0x0003 AND .word label, label, label
+    Org(Operand),            // .org 0x1234 AND .org label
+    Bank(Operand),           // .bank 3
+    Byte(Vec<Operand>),      // .byte 0x01, 0x02, 0x03
+    Word(Vec<Operand>),      // .word 0x0001, 0x0002, 0x0003 AND .word label, label, label
+    Define(String, Operand), // .define label 0x01
 }
 
 // --- Assembly Line Structure ---

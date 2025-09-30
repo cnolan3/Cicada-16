@@ -74,7 +74,7 @@ immediate_hex = ${ hex_prefix ~ hex_body }
 
 immediate_dec = @{ ("-")? ~ ASCII_DIGIT+ }
 
-indexed = { open_paren ~ register ~ "," ~ immediate_dec ~ close_paren }
+indexed = { open_paren ~ register ~ "," ~ (immediate_dec | identifier) ~ close_paren }
 
 predec = ${ "-(" ~ register ~ ")" }
 
@@ -300,7 +300,9 @@ byte_directive = { ^".byte" ~ data_operand_list }
 
 word_directive = { ^".word" ~ data_operand_list }
 
-directive = { org_directive | bank_directive | byte_directive | word_directive }
+define_directive = { ^".define" ~ operand ~ operand }
+
+directive = { org_directive | bank_directive | byte_directive | word_directive | define_directive }
 
 // --- Core Rules ---
 

@@ -20,7 +20,6 @@ use crate::parser::ast_builder::constants::*;
 use crate::parser::ast_builder::utility_functions::*;
 use crate::parser::{Directive, Operand};
 use anyhow::{Context, Result};
-use std::u16;
 
 impl<'a> AstBuilder<'a> {
     // build an origin directive
@@ -44,9 +43,10 @@ impl<'a> AstBuilder<'a> {
                     }
                     .into())
                 } else {
-                    Ok(Directive::Bank(val as u16))
+                    Ok(Directive::Bank(id))
                 }
             }
+            Operand::Label(_) => Ok(Directive::Bank(id)),
             _ => Err(AssemblyError::StructuralError {
                 line: self.line_number,
                 reason: ".bank argument must be an immediate value.".to_string(),
@@ -58,14 +58,15 @@ impl<'a> AstBuilder<'a> {
     // build a byte data directive
     pub fn build_byte_directive(mut self) -> Result<Directive> {
         let ops = self.expect_op_vector().context("Invalid byte list.")?;
-        let mut bytes: Vec<u8> = Vec::new();
+        let mut bytes: Vec<Operand> = Vec::new();
 
         for op in ops {
             match op {
                 Operand::Immediate(val) => {
                     check_unsigned_byte(val, self.line_number)?;
-                    bytes.push(val as u8);
+                    bytes.push(op);
                 }
+                Operand::Label(_) => bytes.push(op),
                 _ => {
                     return Err(AssemblyError::StructuralError {
                         line: self.line_number,
@@ -104,5 +105,23 @@ impl<'a> AstBuilder<'a> {
         }
 
         Ok(Directive::Word(words))
+    }
+
+    // build a word data directive
+    pub fn build_define_directive(mut self) -> Result<Directive> {
+        let label = self.expect_label().context("Invalid define label.")?;
+        let value = self.pop_operand().context("Invalid define value.")?;
+
+        match value {
+            Operand::Immediate(_) => Ok(Directive::Define(label, value)),
+            // TODO: allow more value operand types in the future, like expressions
+            _ => {
+                return Err(AssemblyError::StructuralError {
+                    line: self.line_number,
+                    reason: ".define value must be a number.".to_string(),
+                }
+                .into());
+            }
+        }
     }
 }

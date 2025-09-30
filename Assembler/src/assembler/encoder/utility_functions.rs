@@ -79,7 +79,6 @@ pub fn resolve_label_or_immediate(
     }
 }
 
-
 pub fn resolve_absolute(
     op: &Operand,
     symbol_table: &SymbolTable,
@@ -89,12 +88,7 @@ pub fn resolve_absolute(
     match op {
         Operand::AbsAddr(addr) => Ok(*addr),
         Operand::AbsLabel(label) => {
-            let symbol = get_and_check_symbol(
-                symbol_table,
-                label,
-                line_num,
-                current_bank,
-            )?;
+            let symbol = get_and_check_symbol(symbol_table, label, line_num, current_bank)?;
             Ok(symbol.logical_address as u16)
         }
         _ => Err(AssemblyError::SemanticError {

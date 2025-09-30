@@ -23,6 +23,23 @@ my_data:
     .byte 10
 ```
 
+## .define
+
+Creates a named constant that can be used in place of an immediate value.
+
+- **Syntax**: `.define NAME value`
+- **Operands**:
+    - `NAME`: An identifier for the constant.
+    - `value`: A 16-bit immediate value.
+- **Description**: The `.define` directive is used to create a constant. The assembler will substitute every occurrence of `NAME` with its corresponding `value` during a pre-processing pass. This is useful for defining configuration values and other "magic numbers" in a readable way. Unlike labels, defined constants do not have an address.
+
+```asm
+.define SCREEN_WIDTH 320
+.define SCREEN_HEIGHT 240
+
+LDI R1, SCREEN_WIDTH ; This is assembled as LDI R1, 320
+```
+
 ## .bank
 
 Selects the memory bank to which subsequent code and data will be assembled.

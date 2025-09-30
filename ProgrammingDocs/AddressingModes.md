@@ -16,6 +16,12 @@ In immediate mode, the operand is a constant value that is encoded as part of th
 - **Syntax**: `value` (decimal or hex)
 - **Example**: `LDI R1, 0x1234` - Loads the 16-bit constant `0x1234` into register `R1`.
 
+> **Note:** You can use the `.define` directive to create named constants. The assembler will substitute the constant's name with its value before assembling. This is a powerful way to make your code more readable and maintainable, and is a form of immediate addressing.
+> ```asm
+> .define SCREEN_WIDTH 320
+> LDI R1, SCREEN_WIDTH ; Assembled as LDI R1, 320
+> ```
+
 ## Absolute
 
 In absolute mode, the instruction contains a fixed 16-bit address that points to the location of the operand in memory.

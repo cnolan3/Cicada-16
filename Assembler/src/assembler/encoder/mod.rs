@@ -16,6 +16,7 @@ limitations under the License.
 
 mod constants;
 mod instruction_encoders;
+mod operand_validators;
 mod utility_functions;
 
 use crate::assembler::symbol_table::*;
@@ -162,6 +163,7 @@ pub fn encode_instruction(
     encoder.encode_instruction()
 }
 
+#[derive(Copy, Clone)]
 pub struct Encoder<'a> {
     pub instruction: &'a Instruction,
     pub symbol_table: &'a SymbolTable,
@@ -536,7 +538,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_add_sp() {
-        let instruction = Instruction::AddSp(-5);
+        let instruction = Instruction::AddSp(Operand::Immediate(-5));
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
@@ -818,7 +820,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_syscall() {
-        let instruction = Instruction::Syscall(0x1A);
+        let instruction = Instruction::Syscall(Operand::Immediate(0x1A));
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
@@ -828,7 +830,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_ld_absolute() {
-        let instruction = Instruction::LdAbs(Register::R1, Operand::AbsAddr(0x1234));
+        let instruction = Instruction::LdAbs(Register::R1, Operand::Immediate(0x1234));
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
@@ -838,7 +840,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_st_absolute() {
-        let instruction = Instruction::StAbs(Operand::AbsAddr(0x4321), Register::R2);
+        let instruction = Instruction::StAbs(Operand::Immediate(0x4321), Register::R2);
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
@@ -968,7 +970,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_ldi_b() {
-        let instruction = Instruction::LdiB(Register::R1, 0xAB);
+        let instruction = Instruction::LdiB(Register::R1, Operand::Immediate(0xAB));
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
@@ -978,7 +980,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_bit_register() {
-        let instruction = Instruction::BitReg(Register::R1, 7);
+        let instruction = Instruction::BitReg(Register::R1, Operand::Immediate(7));
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
@@ -988,7 +990,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_set_absolute() {
-        let instruction = Instruction::SetAbs(Operand::AbsAddr(0x1234), 0);
+        let instruction = Instruction::SetAbs(Operand::Immediate(0x1234), Operand::Immediate(0));
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
@@ -998,7 +1000,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_res_indirect() {
-        let instruction = Instruction::ResIndirect(Register::R2, 3);
+        let instruction = Instruction::ResIndirect(Register::R2, Operand::Immediate(3));
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
@@ -1008,7 +1010,8 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_ld_indexed() {
-        let instruction = Instruction::LdIndexed(Register::R0, Register::R1, 16);
+        let instruction =
+            Instruction::LdIndexed(Register::R0, Register::R1, Operand::Immediate(16));
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
@@ -1018,7 +1021,8 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_st_indexed() {
-        let instruction = Instruction::StIndexed(Register::R2, -1, Register::R3);
+        let instruction =
+            Instruction::StIndexed(Register::R2, Operand::Immediate(-1), Register::R3);
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
@@ -1028,7 +1032,7 @@ mod tests {
 
     #[test]
     fn test_encode_instruction_lea_indexed() {
-        let instruction = Instruction::Lea(Register::R4, Register::R5, 32);
+        let instruction = Instruction::Lea(Register::R4, Register::R5, Operand::Immediate(32));
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),

@@ -14,19 +14,76 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+mod constant_table;
 mod encoder;
+mod preprocessor;
 mod symbol_table;
 
 use crate::ast::{AssemblyLine, Directive, Operand};
 use crate::errors::AssemblyError;
+use constant_table::*;
 use symbol_table::*;
 
 const BANK_SIZE: u32 = 16384;
+
+/// Pass 0: build the constant table
+pub fn build_constant_table(lines: &[AssemblyLine]) -> Result<ConstantTable, AssemblyError> {
+    let mut constant_table = ConstantTable::new();
+
+    for line in lines {
+        // handle directives
+        if let Some(directive) = &line.directive {
+            match directive {
+                Directive::Define(label, op) => {
+                    if constant_table.contains_key(label) {
+                        return Err(AssemblyError::SemanticError {
+                            line: line.line_number,
+                            reason: format!("Duplicate constant definition: {}", label),
+                        });
+                    }
+
+                    match op {
+                        Operand::Immediate(value) => {
+                            constant_table.insert(label.clone(), value.clone());
+                        }
+                        _ => {
+                            return Err(AssemblyError::SemanticError {
+                                line: line.line_number,
+                                reason: "Invalid value for .define statement.".to_string(),
+                            });
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    Ok(constant_table)
+}
+
+/// Pass 0.5: Replace constant values
+pub fn process_constants(
+    lines: &mut [AssemblyLine],
+    constant_table: &ConstantTable,
+) -> Result<(), AssemblyError> {
+    for line in lines {
+        if let Some(instruction) = &mut line.instruction {
+            preprocessor::constant::process_instruction_constants(
+                instruction,
+                constant_table,
+                &line.line_number,
+            )?;
+        }
+    }
+    Ok(())
+}
 
 /// Pass 1: Build the symbol table.
 pub fn build_symbol_table(
     lines: &[AssemblyLine],
     start_addr: &u16,
+    constant_table: &ConstantTable,
 ) -> Result<SymbolTable, AssemblyError> {
     let mut symbol_table = SymbolTable::new();
     let mut current_address: u32 = start_addr.clone() as u32; // Start address after cartridge header
@@ -39,6 +96,14 @@ pub fn build_symbol_table(
                 return Err(AssemblyError::SemanticError {
                     line: line.line_number,
                     reason: format!("Duplicate label definition: {}", label),
+                });
+            }
+
+            // check to see if there is already a constant defined with the same name
+            if constant_table.contains_key(label) {
+                return Err(AssemblyError::SemanticError {
+                    line: line.line_number,
+                    reason: format!("Label already defined as a constant: {}", label),
                 });
             }
 
@@ -77,7 +142,7 @@ pub fn build_symbol_table(
                     current_address = new_addr;
                     current_bank = current_address / BANK_SIZE;
                 }
-                Directive::Bank(num) => {
+                Directive::Bank(Operand::Immediate(num)) => {
                     if *num as u32 <= current_bank {
                         return Err(AssemblyError::SemanticError {
                             line: line.line_number,
@@ -130,7 +195,7 @@ pub fn generate_bytecode(
                     }
                     current_address = new_addr;
                 }
-                Directive::Bank(num) => {
+                Directive::Bank(Operand::Immediate(num)) => {
                     let new_addr = *num as u32 * BANK_SIZE;
                     if new_addr > current_address {
                         let padding_size = (new_addr - current_address) as usize;
@@ -141,8 +206,19 @@ pub fn generate_bytecode(
                     current_address = new_addr;
                 }
                 Directive::Byte(bytes) => {
-                    current_address += bytes.len() as u32;
-                    bytecode.extend_from_slice(bytes);
+                    let byte_vec: Vec<u8> = bytes
+                        .iter()
+                        .flat_map(|byte| -> Vec<u8> {
+                            match byte {
+                                Operand::Immediate(byte_data) => {
+                                    vec![*byte_data as u8]
+                                }
+                                _ => vec![], // Should be unreachable
+                            }
+                        })
+                        .collect();
+                    current_address += byte_vec.len() as u32;
+                    bytecode.extend(byte_vec);
                 }
                 Directive::Word(words) => {
                     let word_bytes: Vec<u8> = words

@@ -142,6 +142,7 @@ impl<'a> AstBuilder<'a> {
             Rule::bank_directive => self.build_bank_directive(),
             Rule::byte_directive => self.build_byte_directive(),
             Rule::word_directive => self.build_word_directive(),
+            Rule::define_directive => self.build_define_directive(),
             _ => unreachable!("Unknown directive rule: {:?}", self.rule),
         }
     }

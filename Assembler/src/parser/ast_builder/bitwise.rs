@@ -59,12 +59,15 @@ impl<'a> AstBuilder<'a> {
     // build and check operands for a bit check instruction
     pub fn build_bit(mut self) -> Result<Instruction> {
         let op = self.pop_operand().context(INVALID_OP_MSG)?;
-        let bit = self.expect_bit_id().context("Invalid bit ID operand.")?;
+        let bit = self
+            .expect_bit_id_or_label()
+            .context("Invalid bit ID operand.")?;
 
         match op {
             Operand::Register(r) => Ok(Instruction::BitReg(r, bit)),
             Operand::Indirect(r) => Ok(Instruction::BitIndirect(r, bit)),
-            Operand::AbsAddr(_) | Operand::AbsLabel(_) => Ok(Instruction::BitAbs(op, bit)),
+            Operand::AbsAddr(addr) => Ok(Instruction::BitAbs(Operand::Immediate(addr as i32), bit)),
+            Operand::AbsLabel(label) => Ok(Instruction::BitAbs(Operand::Label(label), bit)),
             _ => {
                 Err(AssemblyError::StructuralError {
                     line: self.line_number,
@@ -77,12 +80,15 @@ impl<'a> AstBuilder<'a> {
     // build and check operands for a set instruction
     pub fn build_set(mut self) -> Result<Instruction> {
         let op = self.pop_operand().context(INVALID_OP_MSG)?;
-        let bit = self.expect_bit_id().context("Invalid bit ID operand.")?;
+        let bit = self
+            .expect_bit_id_or_label()
+            .context("Invalid bit ID operand.")?;
 
         match op {
             Operand::Register(r) => Ok(Instruction::SetReg(r, bit)),
             Operand::Indirect(r) => Ok(Instruction::SetIndirect(r, bit)),
-            Operand::AbsAddr(_) | Operand::AbsLabel(_) => Ok(Instruction::SetAbs(op, bit)),
+            Operand::AbsAddr(addr) => Ok(Instruction::SetAbs(Operand::Immediate(addr as i32), bit)),
+            Operand::AbsLabel(label) => Ok(Instruction::SetAbs(Operand::Label(label), bit)),
             _ => {
                 Err(AssemblyError::StructuralError {
                     line: self.line_number,
@@ -95,12 +101,15 @@ impl<'a> AstBuilder<'a> {
     // build and check operands for a res instruction
     pub fn build_res(mut self) -> Result<Instruction> {
         let op = self.pop_operand().context(INVALID_OP_MSG)?;
-        let bit = self.expect_bit_id().context("Invalid bit ID operand.")?;
+        let bit = self
+            .expect_bit_id_or_label()
+            .context("Invalid bit ID operand.")?;
 
         match op {
             Operand::Register(r) => Ok(Instruction::ResReg(r, bit)),
             Operand::Indirect(r) => Ok(Instruction::ResIndirect(r, bit)),
-            Operand::AbsAddr(_) | Operand::AbsLabel(_) => Ok(Instruction::ResAbs(op, bit)),
+            Operand::AbsAddr(addr) => Ok(Instruction::ResAbs(Operand::Immediate(addr as i32), bit)),
+            Operand::AbsLabel(label) => Ok(Instruction::ResAbs(Operand::Label(label), bit)),
             _ => {
                 Err(AssemblyError::StructuralError {
                     line: self.line_number,

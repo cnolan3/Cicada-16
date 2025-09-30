@@ -44,7 +44,8 @@ impl<'a> Encoder<'a> {
 
     pub fn encode_ld_abs(self, rd: &Register, op: &Operand) -> Result<Vec<u8>, AssemblyError> {
         let opcode = encode_reg_opcode(LD_ABS_BASE_OPCODE, rd);
-        let addr = resolve_absolute(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let addr =
+            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
         let [low, high] = addr.to_le_bytes();
         Ok(vec![opcode, low, high])
     }
@@ -53,10 +54,11 @@ impl<'a> Encoder<'a> {
         self,
         rd: &Register,
         rs: &Register,
-        offset: &i8,
+        offset: &Operand,
     ) -> Result<Vec<u8>, AssemblyError> {
         let sub_opcode = encode_rd_rs_byte(LD_INDEX_BASE_SUB_OPCODE, rd, rs);
-        Ok(vec![FF_PREFIX, sub_opcode, *offset as u8])
+        let imm = self.expect_immediate(offset)?;
+        Ok(vec![FF_PREFIX, sub_opcode, imm as u8])
     }
 
     pub fn encode_ld_pre_dec(self, rd: &Register, rs: &Register) -> Result<Vec<u8>, AssemblyError> {
@@ -86,7 +88,8 @@ impl<'a> Encoder<'a> {
 
     pub fn encode_st_abs(self, op: &Operand, rs: &Register) -> Result<Vec<u8>, AssemblyError> {
         let opcode = encode_reg_opcode(ST_ABS_BASE_OPCODE, rs);
-        let addr = resolve_absolute(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let addr =
+            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
         let [low, high] = addr.to_le_bytes();
         Ok(vec![opcode, low, high])
     }
@@ -94,11 +97,12 @@ impl<'a> Encoder<'a> {
     pub fn encode_st_indexed(
         self,
         rd: &Register,
-        offset: &i8,
+        offset: &Operand,
         rs: &Register,
     ) -> Result<Vec<u8>, AssemblyError> {
         let sub_opcode = encode_rd_rs_byte(ST_INDEX_BASE_SUB_OPCODE, rd, rs);
-        Ok(vec![FF_PREFIX, sub_opcode, *offset as u8])
+        let imm = self.expect_immediate(offset)?;
+        Ok(vec![FF_PREFIX, sub_opcode, imm as u8])
     }
 
     pub fn encode_st_pre_dec(self, rd: &Register, rs: &Register) -> Result<Vec<u8>, AssemblyError> {
@@ -117,9 +121,10 @@ impl<'a> Encoder<'a> {
         Ok(vec![FF_PREFIX, sub_opcode, dest])
     }
 
-    pub fn encode_ldib(self, rd: &Register, imm8: &u8) -> Result<Vec<u8>, AssemblyError> {
+    pub fn encode_ldib(self, rd: &Register, imm8: &Operand) -> Result<Vec<u8>, AssemblyError> {
         let sub_opcode = encode_reg_opcode(LDIB_BASE_SUB_OPCODE, rd);
-        Ok(vec![FD_PREFIX, sub_opcode, *imm8])
+        let imm = self.expect_immediate(imm8)?;
+        Ok(vec![FD_PREFIX, sub_opcode, imm as u8])
     }
 
     pub fn encode_ldb_indirect(
@@ -184,10 +189,11 @@ impl<'a> Encoder<'a> {
         self,
         rd: &Register,
         rs: &Register,
-        offset: &i8,
+        offset: &Operand,
     ) -> Result<Vec<u8>, AssemblyError> {
         let sub_opcode = encode_rd_rs_byte(LEA_BASE_SUB_OPCODE, rd, rs);
-        Ok(vec![FF_PREFIX, sub_opcode, *offset as u8])
+        let imm = self.expect_immediate(offset)?;
+        Ok(vec![FF_PREFIX, sub_opcode, imm as u8])
     }
 }
 

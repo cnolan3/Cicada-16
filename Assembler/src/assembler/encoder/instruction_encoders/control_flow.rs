@@ -145,8 +145,9 @@ impl<'a> Encoder<'a> {
         Ok(vec![opcode, low, high])
     }
 
-    pub fn encode_syscall_imm(self, imm: &u8) -> Result<Vec<u8>, AssemblyError> {
-        Ok(encode_syscall_data(*imm))
+    pub fn encode_syscall_imm(self, imm: &Operand) -> Result<Vec<u8>, AssemblyError> {
+        let val = self.expect_immediate(imm)?;
+        Ok(encode_syscall_data(val as u8))
     }
 
     pub fn encode_call_far(self, call_label: &String) -> Result<Vec<u8>, AssemblyError> {

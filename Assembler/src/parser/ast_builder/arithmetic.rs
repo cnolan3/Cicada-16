@@ -45,7 +45,7 @@ impl<'a> AstBuilder<'a> {
 
     // build and check operands for a ADD SP instruction
     pub fn build_add_sp(mut self) -> Result<Instruction> {
-        let val = self.expect_signed_byte().context(INVALID_OP_MSG)?;
+        let val = self.expect_signed_byte_or_label().context(INVALID_OP_MSG)?;
 
         Ok(Instruction::AddSp(val))
     }
