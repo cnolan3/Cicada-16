@@ -179,14 +179,18 @@ pub fn build_symbol_table(
                     current_address = new_physical_addr;
                 }
                 Directive::Bank(Operand::Immediate(num)) => {
-                    if *num as u32 <= current_bank {
+                    if (*num as u32) < current_bank {
                         return Err(AssemblyError::SemanticError {
                             line: line.line_number,
                             reason: ".bank directive cannot move to a previous bank.".to_string(),
                         });
                     }
-                    current_bank = *num as u32;
-                    current_address = current_bank * BANK_SIZE;
+
+                    // if trying to select the already currently selected bank, do nothing
+                    if *num as u32 != current_bank {
+                        current_bank = *num as u32;
+                        current_address = current_bank * BANK_SIZE;
+                    }
                 }
                 Directive::Byte(bytes) => {
                     current_address += bytes.len() as u32;
