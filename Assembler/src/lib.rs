@@ -24,7 +24,7 @@ pub mod parser;
 extern crate pest;
 extern crate pest_derive;
 
-pub fn assemble(source_code: &str, start_addr: u16) -> Result<Vec<u8>> {
+pub fn assemble(source_code: &str, start_addr: u16, final_logical_addr: u16) -> Result<Vec<u8>> {
     let mut parsed_lines =
         parser::parse_source(source_code).context("Failed during parsing stage")?;
 
@@ -34,8 +34,13 @@ pub fn assemble(source_code: &str, start_addr: u16) -> Result<Vec<u8>> {
     assembler::process_constants(&mut parsed_lines, &constant_table)
         .context("Failed during assembler phase 0.5")?;
 
-    let symbol_table = assembler::build_symbol_table(&parsed_lines, &start_addr, &constant_table)
-        .context("Failed during assembler phase 1")?;
+    let symbol_table = assembler::build_symbol_table(
+        &parsed_lines,
+        &start_addr,
+        &final_logical_addr,
+        &constant_table,
+    )
+    .context("Failed during assembler phase 1")?;
 
     let machine_code = assembler::generate_bytecode(&parsed_lines, &symbol_table, &start_addr)
         .context("Failed during assembler phase 2")?;

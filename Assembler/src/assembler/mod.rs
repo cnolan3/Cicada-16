@@ -83,6 +83,7 @@ pub fn process_constants(
 pub fn build_symbol_table(
     lines: &[AssemblyLine],
     start_addr: &u16,
+    final_logical_addr: &u16,
     constant_table: &ConstantTable,
 ) -> Result<SymbolTable, AssemblyError> {
     let mut symbol_table = SymbolTable::new();
@@ -130,17 +131,52 @@ pub fn build_symbol_table(
         if let Some(directive) = &line.directive {
             match directive {
                 Directive::Org(Operand::Immediate(addr)) => {
+                    let new_logical_addr = *addr as u32;
+
+                    if new_logical_addr > *final_logical_addr as u32 {
+                        return Err(AssemblyError::SemanticError {
+                            line: line.line_number,
+                            reason: format!(
+                                ".org directive cannot move beyond the final logical address for a rom (final addr: 0x{:04x}).",
+                                final_logical_addr
+                            ),
+                        });
+                    }
+
+                    if current_bank == 0 && new_logical_addr > 0x3FFF {
+                        return Err(AssemblyError::SemanticError {
+                            line: line.line_number,
+                            reason: format!(
+                                "Currently selected bank is bank 0, the given .org address (0x{:04x}) is outside of the bank 0 fixed address space 0x0000-0x3FFF.",
+                                new_logical_addr
+                            ),
+                        });
+                    }
+
+                    if current_bank != 0 && new_logical_addr < 0x4000 {
+                        return Err(AssemblyError::SemanticError {
+                            line: line.line_number,
+                            reason: format!(
+                                "Currently selected bank is bank {} (a switchable bank), the given .org address (0x{:04x}) is outside of the switchable bank address space 0x4000-0x7FFF.",
+                                current_bank, new_logical_addr
+                            ),
+                        });
+                    }
+
+                    // calculate the new physical address
+                    let new_physical_addr =
+                        calculate_physical_addr(&(new_logical_addr as u16), &current_bank);
+
                     // It's good practice to ensure .org doesn't move backwards,
                     // as it can overwrite previous label definitions.
-                    let new_addr = *addr as u32;
-                    if new_addr < current_address {
+                    if new_physical_addr < current_address {
                         return Err(AssemblyError::SemanticError {
                             line: line.line_number,
                             reason: ".org directive cannot move the address backwards.".to_string(),
                         });
                     }
-                    current_address = new_addr;
-                    current_bank = current_address / BANK_SIZE;
+
+                    current_address = new_physical_addr;
                 }
                 Directive::Bank(Operand::Immediate(num)) => {
                     if *num as u32 <= current_bank {
@@ -188,12 +224,13 @@ pub fn generate_bytecode(
         if let Some(directive) = &line.directive {
             match directive {
                 Directive::Org(Operand::Immediate(addr)) => {
-                    let new_addr = *addr as u32;
-                    if new_addr > current_address {
-                        let padding_size = (new_addr - current_address) as usize;
+                    let new_addr = *addr as u16;
+                    let new_physical_addr = calculate_physical_addr(&new_addr, &current_bank);
+                    if new_physical_addr > current_address {
+                        let padding_size = (new_physical_addr - current_address) as usize;
                         bytecode.resize(bytecode.len() + padding_size, 0x00);
                     }
-                    current_address = new_addr;
+                    current_address = new_physical_addr;
                 }
                 Directive::Bank(Operand::Immediate(num)) => {
                     let new_addr = *num as u32 * BANK_SIZE;
@@ -274,4 +311,12 @@ pub fn generate_bytecode(
 
     // final bytecode
     Ok(bytecode)
+}
+
+fn calculate_physical_addr(logical_addr: &u16, bank: &u32) -> u32 {
+    if *bank <= 1 {
+        *logical_addr as u32
+    } else {
+        (*bank as u32 * BANK_SIZE) + (*logical_addr as u32 - 0x4000)
+    }
 }

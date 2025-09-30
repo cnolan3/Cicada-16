@@ -24,8 +24,7 @@ use crate::errors::AssemblyError;
 
 impl<'a> Encoder<'a> {
     pub fn encode_jmp_imm(self, op: &Operand) -> Result<Vec<u8>, AssemblyError> {
-        let addr =
-            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let addr = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
         let [low, high] = addr.to_le_bytes();
         Ok(vec![JMP_IMM_OPCODE, low, high])
     }
@@ -63,8 +62,7 @@ impl<'a> Encoder<'a> {
     }
 
     pub fn encode_jcc(self, cc: &ConditionCode, op: &Operand) -> Result<Vec<u8>, AssemblyError> {
-        let addr =
-            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let addr = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
         let opcode = encode_condition_code_opcode(JCC_BASE_OPCODE, cc);
         let [low, high] = addr.to_le_bytes();
         Ok(vec![opcode, low, high])
@@ -128,8 +126,7 @@ impl<'a> Encoder<'a> {
     }
 
     pub fn encode_call_imm(self, op: &Operand) -> Result<Vec<u8>, AssemblyError> {
-        let addr =
-            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let addr = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
         Ok(encode_call_immediate_data(addr))
     }
 
@@ -138,8 +135,7 @@ impl<'a> Encoder<'a> {
     }
 
     pub fn encode_callcc(self, cc: &ConditionCode, op: &Operand) -> Result<Vec<u8>, AssemblyError> {
-        let addr =
-            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let addr = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
         let opcode = encode_condition_code_opcode(CALLCC_BASE_OPCODE, cc);
         let [low, high] = addr.to_le_bytes();
         Ok(vec![opcode, low, high])

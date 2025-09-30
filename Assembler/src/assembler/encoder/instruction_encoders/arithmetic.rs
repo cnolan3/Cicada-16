@@ -26,8 +26,7 @@ impl<'a> Encoder<'a> {
     }
 
     pub fn encode_acc_imm_math(self, opcode: u8, op: &Operand) -> Result<Vec<u8>, AssemblyError> {
-        let value =
-            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let value = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
         let [low, high] = value.to_le_bytes();
         Ok(vec![opcode, low, high])
     }
@@ -47,8 +46,7 @@ impl<'a> Encoder<'a> {
         rd: &Register,
         op: &Operand,
     ) -> Result<Vec<u8>, AssemblyError> {
-        let imm =
-            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let imm = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
         let rd_index = encode_register_operand(rd);
         let [low, high] = imm.to_le_bytes();
         Ok(vec![opcode, rd_index, low, high])

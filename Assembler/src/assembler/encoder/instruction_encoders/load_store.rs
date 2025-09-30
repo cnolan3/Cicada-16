@@ -26,8 +26,7 @@ impl<'a> Encoder<'a> {
     }
 
     pub fn encode_ldi(self, rd: &Register, op: &Operand) -> Result<Vec<u8>, AssemblyError> {
-        let addr =
-            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let addr = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
         Ok(encode_ldi_data(rd, addr))
     }
 
@@ -44,8 +43,7 @@ impl<'a> Encoder<'a> {
 
     pub fn encode_ld_abs(self, rd: &Register, op: &Operand) -> Result<Vec<u8>, AssemblyError> {
         let opcode = encode_reg_opcode(LD_ABS_BASE_OPCODE, rd);
-        let addr =
-            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let addr = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
         let [low, high] = addr.to_le_bytes();
         Ok(vec![opcode, low, high])
     }
@@ -88,8 +86,7 @@ impl<'a> Encoder<'a> {
 
     pub fn encode_st_abs(self, op: &Operand, rs: &Register) -> Result<Vec<u8>, AssemblyError> {
         let opcode = encode_reg_opcode(ST_ABS_BASE_OPCODE, rs);
-        let addr =
-            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let addr = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
         let [low, high] = addr.to_le_bytes();
         Ok(vec![opcode, low, high])
     }

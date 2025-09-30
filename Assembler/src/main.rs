@@ -42,10 +42,12 @@ enum Commands {
 fn main() -> Result<()> {
     let opts: Opts = Opts::parse();
     let mut start_addr: u16 = 0x0100;
+    let mut final_logical_addr: u16 = 0x7FFF;
 
     match &opts.command {
         Some(Commands::Boot) => {
             start_addr = 0x0000;
+            final_logical_addr = 0x3FFF;
         }
         None => {}
     }
@@ -55,7 +57,7 @@ fn main() -> Result<()> {
 
     print!("{}", source_code);
 
-    let final_rom = assemble(&source_code, start_addr)?;
+    let final_rom = assemble(&source_code, start_addr, final_logical_addr)?;
 
     fs::write(&opts.output, final_rom)?;
     println!(

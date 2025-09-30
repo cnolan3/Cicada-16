@@ -26,8 +26,7 @@ impl<'a> Encoder<'a> {
     }
 
     pub fn encode_push_imm(self, op: &Operand) -> Result<Vec<u8>, AssemblyError> {
-        let value =
-            resolve_label_or_immediate(op, self.symbol_table, self.line_num, self.current_bank)?;
+        let value = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
         let [low, high] = value.to_le_bytes();
         Ok(vec![PUSH_IMM_OPCODE, low, high])
     }
