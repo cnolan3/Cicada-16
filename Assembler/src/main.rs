@@ -18,55 +18,54 @@ use anyhow::Result;
 use cicasm::assemble;
 use cicasm::file_reader::AsmFileReader;
 use clap::Parser as clap_parser;
-use clap::Subcommand;
+use std::env;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
 #[derive(clap_parser)]
-#[clap(version = "0.3.4", author = "Connor Nolan")]
+#[clap(version = "0.3.5", author = "Connor Nolan")]
 struct Opts {
-    #[clap(short, long)]
+    /// Input file to assemble
     input: PathBuf,
-    #[clap(short, long)]
-    output: PathBuf,
-    #[command(subcommand)]
-    command: Option<Commands>,
-}
 
-#[derive(Subcommand)]
-enum Commands {
+    /// Assembled output file path (optional, default: ./assembled.bin)
+    #[clap(short, long)]
+    output: Option<PathBuf>,
+
     /// Assemble program as a boot ROM (no header, starts at 0x0000, 16 KiB max, must have
     /// interrupt vector table at 0x3FE0-0x3FFF)
-    Boot,
+    #[clap(short, long)]
+    boot: bool,
 }
 
 fn main() -> Result<()> {
     let opts: Opts = Opts::parse();
     let mut start_addr: u16 = 0x0100;
     let mut final_logical_addr: u16 = 0x7FFF;
+    let mut output_path: PathBuf = env::current_dir()?;
+    output_path.push("assembled.bin");
 
-    match &opts.command {
-        Some(Commands::Boot) => {
-            start_addr = 0x0000;
-            final_logical_addr = 0x3FFF;
-        }
-        None => {}
+    if let Some(out) = opts.output {
+        output_path = out;
     }
 
-    // let source_code = fs::read_to_string(&opts.input)
-    //     .with_context(|| format!("Failed to read input file: {}", opts.input.display()))?;
+    if opts.boot {
+        start_addr = 0x0000;
+        final_logical_addr = 0x3FFF;
+    }
 
     let reader = AsmFileReader;
     let input_path: &Path = Path::new(&opts.input);
 
     let final_rom = assemble(input_path, start_addr, final_logical_addr, &reader)?;
 
-    fs::write(&opts.output, final_rom)?;
+    fs::write(&output_path, final_rom)?;
+
     println!(
         "Successfully assembled {} to {}",
         opts.input.display(),
-        opts.output.display()
+        output_path.display()
     );
 
     Ok(())
