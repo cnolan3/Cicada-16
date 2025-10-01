@@ -100,5 +100,114 @@ multiply_by_two:
 
 ---
 
+### Example 4: Project Structure with Includes
+
+As projects grow, keeping all the code in a single file becomes unmanageable. The `.include` directive is essential for organizing a large project. A common and powerful pattern is to use a "master" assembly file as the entry point, which does little more than include all the other pieces of the project in the correct order.
+
+This approach allows you to separate constants, variables, and different logical blocks of code into their own files.
+
+#### Project File Structure
+
+Imagine your project is laid out like this:
+
+```
+/my_game
+|-- main.asm          (Master entry point)
+|-- constants.asm     (Game-wide constants)
+|-- memory.asm        (RAM variable definitions)
+`-- logic/
+    |-- player.asm    (Player control logic)
+    `-- graphics.asm  (Graphics subroutines)
+```
+
+#### File Contents
+
+Here's what each file might look like.
+
+**`constants.asm`**
+```asm
+; This file contains all global constants.
+
+.define SCREEN_WIDTH 320
+.define SCREEN_HEIGHT 240
+.define PLAYER_SPEED 2
+```
+
+**`memory.asm`**
+```asm
+; This file defines the layout of variables in RAM.
+.org 0x8000 ; Start of RAM
+
+player_x: .word 0
+player_y: .word 0
+score:    .word 0
+```
+
+**`logic/graphics.asm`**
+```asm
+; Graphics-related subroutines.
+
+draw_player:
+    ; Code to draw the player at (player_x, player_y)
+    ; ...
+    RET
+```
+
+**`logic/player.asm`**
+```asm
+; Player-related logic.
+
+update_player_position:
+    ; Code to read controller input and update player_x/player_y
+    ; ...
+    RET
+```
+
+**`main.asm` (The Master Include File)**
+```asm
+; Master entry point for the entire project.
+; This file defines the overall structure and memory layout by including
+; all other components in the correct order.
+
+; --- Bank 0: Kernel and Main Logic ---
+.bank 0
+.org 0x100
+
+; First, include all constants so they are available everywhere.
+.include "constants.asm"
+
+; Next, define the memory layout by including the variables file.
+; This doesn't generate code here, but it's good practice to have it
+; early so the assembler knows about the variable labels.
+.include "memory.asm"
+
+; The actual entry point of the program.
+start:
+    ; Initialization code...
+    CALL init_graphics
+    
+main_loop:
+    CALL update_player_position
+    CALL draw_player
+    JMP main_loop
+
+; --- Bank 1: Subroutines ---
+.bank 1
+.org 0x4000 ; Start of Bank 1
+
+; Include all our code subroutines here.
+.include "logic/graphics.asm"
+.include "logic/player.asm"
+
+init_graphics:
+    ; Code to set up the screen
+    ; ...
+    RET
+```
+
+This structure makes the code much easier to navigate and maintain. The `main.asm` file gives a high-level overview of the entire program's composition.
+
+---
+
 © 2025 Connor Nolan. This work is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

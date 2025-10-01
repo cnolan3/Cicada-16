@@ -57,6 +57,25 @@ bank1_start:
     NOP
 ```
 
+## .include
+
+Includes another source file into the current file at the location of the directive.
+
+- **Syntax**: `.include "path/to/file.asm"`
+- **Operand**: A string literal containing the path to the source file to be included.
+- **Description**: The `.include` directive instructs the assembler to pause parsing the current file and begin parsing the specified file. Once the included file is fully parsed, the assembler resumes parsing the original file. This allows you to split your code into multiple files for better organization. Paths are resolved relative to the file containing the `.include` directive.
+
+```asm
+; main.asm
+.org 0x100
+.include "constants.asm"
+.include "subroutines.asm"
+
+start:
+    LDI R1, MY_CONSTANT ; MY_CONSTANT is defined in constants.asm
+    CALL my_subroutine  ; my_subroutine is defined in subroutines.asm
+```
+
 ## .byte
 
 Defines one or more 8-bit constant values.

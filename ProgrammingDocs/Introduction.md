@@ -48,12 +48,13 @@ The 8 general-purpose registers are referred to as `R0` through `R7`. The stack 
 
 ### Directives
 
-Directives are special commands for the assembler that are not translated into machine code but control how the code is assembled. They begin with a period (`.`).
+Directives are special commands for the assembler that are not translated into machine code but control how the code is assembled. They begin with a period (`.`)
 
 ```asm
-.define MY_CONST 10 ; Define a constant
-.org 0x100   ; Assemble the following code starting at address 0x100
-.byte 1, 2, 3 ; Define a sequence of bytes
+.define MY_CONST 10   ; Define a constant
+.org 0x100            ; Assemble the following code starting at address 0x100
+.byte 1, 2, 3         ; Define a sequence of bytes
+.include "macros.asm" ; Include another source file
 ```
 
 ---
