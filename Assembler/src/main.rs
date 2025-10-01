@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use anyhow::{Context, Result};
-use casm::assemble;
-use casm::file_reader::AsmFileReader;
+use anyhow::Result;
+use cicasm::assemble;
+use cicasm::file_reader::AsmFileReader;
 use clap::Parser as clap_parser;
 use clap::Subcommand;
 use std::fs;
