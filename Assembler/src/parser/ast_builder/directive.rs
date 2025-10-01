@@ -124,4 +124,20 @@ impl<'a> AstBuilder<'a> {
             }
         }
     }
+
+    // build an include directive
+    pub fn build_include_directive(mut self) -> Result<Directive> {
+        let op = self.pop_operand().context("Invalid include value.")?;
+
+        match op {
+            Operand::String(s) => Ok(Directive::Include(s)),
+            _ => {
+                return Err(AssemblyError::StructuralError {
+                    line: self.line_number,
+                    reason: ".include value must be a path string.".to_string(),
+                }
+                .into());
+            }
+        }
+    }
 }

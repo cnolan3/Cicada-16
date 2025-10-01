@@ -26,4 +26,7 @@ pub enum AssemblyError {
 
     #[error("Semantic Error on line {line}: {reason}")]
     SemanticError { line: usize, reason: String },
+
+    #[error("Circular Include Error on line {line}: {reason}")]
+    CircularIncludeError { line: usize, reason: String },
 }

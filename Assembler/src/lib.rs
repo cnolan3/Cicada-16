@@ -14,19 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+use std::path::{Path, PathBuf};
+
 use anyhow::{Context, Result};
+use file_reader::FileReader;
+use std::collections::HashSet;
 
 pub mod assembler;
 pub mod ast;
 pub mod errors;
+pub mod file_reader;
 pub mod parser;
 
 extern crate pest;
 extern crate pest_derive;
 
-pub fn assemble(source_code: &str, start_addr: u16, final_logical_addr: u16) -> Result<Vec<u8>> {
-    let mut parsed_lines =
-        parser::parse_source(source_code).context("Failed during parsing stage")?;
+pub fn assemble<F: FileReader>(
+    source_path: &Path,
+    start_addr: u16,
+    final_logical_addr: u16,
+    reader: &F,
+) -> Result<Vec<u8>> {
+    let mut include_stack: HashSet<PathBuf> = HashSet::new();
+    let mut parsed_lines = parser::parse_source_recursive(source_path, &mut include_stack, reader)
+        .context("Failed during parsing stage")?;
 
     let constant_table = assembler::build_constant_table(&parsed_lines)
         .context("Failed during assembler phase 0")?;

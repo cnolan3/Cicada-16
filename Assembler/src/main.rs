@@ -16,9 +16,11 @@ limitations under the License.
 
 use anyhow::{Context, Result};
 use casm::assemble;
+use casm::file_reader::AsmFileReader;
 use clap::Parser as clap_parser;
 use clap::Subcommand;
 use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 
 #[derive(clap_parser)]
@@ -52,12 +54,13 @@ fn main() -> Result<()> {
         None => {}
     }
 
-    let source_code = fs::read_to_string(&opts.input)
-        .with_context(|| format!("Failed to read input file: {}", opts.input.display()))?;
+    // let source_code = fs::read_to_string(&opts.input)
+    //     .with_context(|| format!("Failed to read input file: {}", opts.input.display()))?;
 
-    print!("{}", source_code);
+    let reader = AsmFileReader;
+    let input_path: &Path = Path::new(&opts.input);
 
-    let final_rom = assemble(&source_code, start_addr, final_logical_addr)?;
+    let final_rom = assemble(input_path, start_addr, final_logical_addr, &reader)?;
 
     fs::write(&opts.output, final_rom)?;
     println!(

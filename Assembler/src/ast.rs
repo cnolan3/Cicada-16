@@ -41,6 +41,7 @@ pub enum Operand {
     Label(String),                  // e.g., my_label
     PreDecrement(Register),
     PostIncrement(Register),
+    String(String),
 }
 
 // --- Instructions ---
@@ -196,6 +197,7 @@ pub enum Directive {
     Byte(Vec<Operand>),      // .byte 0x01, 0x02, 0x03
     Word(Vec<Operand>),      // .word 0x0001, 0x0002, 0x0003 AND .word label, label, label
     Define(String, Operand), // .define label 0x01
+    Include(String),         // .include path
 }
 
 // --- Assembly Line Structure ---

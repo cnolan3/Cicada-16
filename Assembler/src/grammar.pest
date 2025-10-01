@@ -56,6 +56,7 @@ predec
 | register
 | identifier
 | indexed
+| str_literal
 }
 
 data_operand = {
@@ -79,6 +80,10 @@ indexed = { open_paren ~ register ~ "," ~ (immediate_dec | identifier) ~ close_p
 predec = ${ "-(" ~ register ~ ")" }
 
 postinc = ${ "(" ~ register ~ ")+" }
+
+str_val = @{ (ASCII_ALPHANUMERIC | "." | "/" | "_" | "-")+ }
+
+str_literal = ${ "\"" ~ str_val ~ "\"" }
 
 // --- Condition Codes ---
 
@@ -302,7 +307,16 @@ word_directive = { ^".word" ~ data_operand_list }
 
 define_directive = { ^".define" ~ operand ~ operand }
 
-directive = { org_directive | bank_directive | byte_directive | word_directive | define_directive }
+include_directive = { ^".include" ~ operand }
+
+directive = {
+org_directive
+| bank_directive
+| byte_directive
+| word_directive
+| define_directive
+| include_directive
+}
 
 // --- Core Rules ---
 

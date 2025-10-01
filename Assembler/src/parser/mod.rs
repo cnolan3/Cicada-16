@@ -17,20 +17,37 @@ limitations under the License.
 mod ast_builder;
 
 use crate::ast::*;
-use anyhow::Result;
+use crate::errors::AssemblyError;
+use crate::file_reader::FileReader;
+use anyhow::{Context, Result};
 use ast_builder::AstBuilder;
 use pest::Parser;
 use pest::iterators::Pair;
 use pest_derive::Parser;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 
 // Derive the parser from our grammar file.
 #[derive(Parser)]
 #[grammar = "./grammar.pest"]
 pub struct CicadaParser;
 
-// Main parsing function that takes the entire source code string.
-pub fn parse_source(source: &str) -> Result<Vec<AssemblyLine>> {
-    let pairs = CicadaParser::parse(Rule::program, source)?;
+// main parser function, recursively discovers and opens source files
+pub fn parse_source_recursive<F: FileReader>(
+    file_path: &Path,
+    include_stack: &mut HashSet<PathBuf>,
+    reader: &F,
+) -> Result<Vec<AssemblyLine>> {
+    include_stack.insert(file_path.to_path_buf());
+
+    let source = reader.read_to_string(file_path).with_context(|| {
+        format!(
+            "Failed to read input file: {}",
+            file_path.to_path_buf().display()
+        )
+    })?;
+
+    let pairs = CicadaParser::parse(Rule::program, &source)?;
     let mut ast = Vec::new();
 
     for line_pair in pairs
@@ -75,9 +92,28 @@ pub fn parse_source(source: &str) -> Result<Vec<AssemblyLine>> {
             || assembly_line.instruction.is_some()
             || assembly_line.directive.is_some()
         {
-            ast.push(assembly_line);
+            if let Some(Directive::Include(inc_str)) = assembly_line.directive {
+                // include directive detected, recurse and insert the sub ast
+                let inc_path = Path::new(&inc_str);
+
+                if include_stack.contains(inc_path) {
+                    return Err(AssemblyError::CircularIncludeError {
+                        line: assembly_line.line_number,
+                        reason: format!("Circular include detected. ({})", inc_str),
+                    }
+                    .into());
+                }
+
+                let sub_ast = parse_source_recursive(inc_path, include_stack, reader)?;
+                ast.extend(sub_ast);
+            } else {
+                // not include directive, insert normal assemblyline
+                ast.push(assembly_line);
+            }
         }
     }
+
+    include_stack.remove(file_path);
 
     Ok(ast)
 }
@@ -97,11 +133,44 @@ fn build_directive(pair: Pair<Rule>) -> Result<Directive> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+
+    // A mock file reader for testing that uses an in-memory HashMap as a virtual file system.
+    #[derive(Default)]
+    struct MockFileReader {
+        files: HashMap<PathBuf, String>,
+    }
+
+    impl MockFileReader {
+        /// A helper function to populate the virtual file system for a test.
+        fn add_file(&mut self, path: &str, content: &str) {
+            self.files.insert(PathBuf::from(path), content.to_string());
+        }
+    }
+
+    impl FileReader for MockFileReader {
+        fn read_to_string(&self, path: &Path) -> Result<String> {
+            self.files
+                .get(path)
+                .cloned()
+                .ok_or_else(|| anyhow::anyhow!("Mock file not found: {}", path.display()))
+        }
+    }
+
+    /// Helper function to simplify calling the parser with mock data.
+    fn parse_test_source(source: &str) -> Result<Vec<AssemblyLine>> {
+        let mut mock_reader = MockFileReader::default();
+        let file_path = Path::new("test.asm");
+        mock_reader.add_file(file_path.to_str().unwrap(), source);
+
+        let mut include_stack = HashSet::new();
+        parse_source_recursive(file_path, &mut include_stack, &mock_reader)
+    }
 
     #[test]
     fn test_parse_nop() {
         let source = "nop\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -112,7 +181,7 @@ mod tests {
     #[test]
     fn test_parse_sub_acc() {
         let source = "sub r1\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -126,7 +195,7 @@ mod tests {
     #[test]
     fn test_parse_and_reg_reg() {
         let source = "and r2, r3\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -140,7 +209,7 @@ mod tests {
     #[test]
     fn test_parse_or_reg_reg() {
         let source = "or r4, r5\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -154,7 +223,7 @@ mod tests {
     #[test]
     fn test_parse_xor_reg_reg() {
         let source = "xor r6, r7\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -168,7 +237,7 @@ mod tests {
     #[test]
     fn test_parse_cmp_reg_reg() {
         let source = "cmp r0, r1\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -182,7 +251,7 @@ mod tests {
     #[test]
     fn test_parse_adc_reg_reg() {
         let source = "adc r2, r3\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -196,7 +265,7 @@ mod tests {
     #[test]
     fn test_parse_sbc_reg_reg() {
         let source = "sbc r4, r5\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -210,7 +279,7 @@ mod tests {
     #[test]
     fn test_parse_and_acc() {
         let source = "and r1\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -224,7 +293,7 @@ mod tests {
     #[test]
     fn test_parse_add_b() {
         let source = "add.b r1\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -237,7 +306,7 @@ mod tests {
     #[test]
     fn test_parse_sub_b() {
         let source = "sub.b r2\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -250,7 +319,7 @@ mod tests {
     #[test]
     fn test_parse_and_b() {
         let source = "and.b r3\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -263,7 +332,7 @@ mod tests {
     #[test]
     fn test_parse_or_b() {
         let source = "or.b r4\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -276,7 +345,7 @@ mod tests {
     #[test]
     fn test_parse_xor_b() {
         let source = "xor.b r5\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -289,7 +358,7 @@ mod tests {
     #[test]
     fn test_parse_cmp_b() {
         let source = "cmp.b r6\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -302,7 +371,7 @@ mod tests {
     #[test]
     fn test_parse_ldi_b() {
         let source = "ldi.b r1, 0xAB\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -315,7 +384,7 @@ mod tests {
     #[test]
     fn test_parse_ld_indexed() {
         let source = "ld r0, (r1, 16)\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -332,7 +401,7 @@ mod tests {
     #[test]
     fn test_parse_st_indexed() {
         let source = "st (r2, -1), r3\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -349,7 +418,7 @@ mod tests {
     #[test]
     fn test_parse_lea_indexed() {
         let source = "lea r4, (r5, 32)\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -366,7 +435,7 @@ mod tests {
     #[test]
     fn test_parse_ld_post_increment() {
         let source = "ld r6, (r7)+\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -379,7 +448,7 @@ mod tests {
     #[test]
     fn test_parse_st_post_increment() {
         let source = "st (r0)+, r1\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -392,7 +461,7 @@ mod tests {
     #[test]
     fn test_parse_ld_pre_decrement() {
         let source = "ld r2, -(r3)\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -405,7 +474,7 @@ mod tests {
     #[test]
     fn test_parse_st_pre_decrement() {
         let source = "st -(r4), r5\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -418,7 +487,7 @@ mod tests {
     #[test]
     fn test_parse_ld_b_post_increment() {
         let source = "ld.b r6, (r7)+\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -431,7 +500,7 @@ mod tests {
     #[test]
     fn test_parse_st_b_post_increment() {
         let source = "st.b (r0)+, r1\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -444,7 +513,7 @@ mod tests {
     #[test]
     fn test_parse_ld_b_pre_decrement() {
         let source = "ld.b r2, -(r3)\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -457,7 +526,7 @@ mod tests {
     #[test]
     fn test_parse_st_b_pre_decrement() {
         let source = "st.b -(r4), r5\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -470,7 +539,7 @@ mod tests {
     #[test]
     fn test_parse_bit_register() {
         let source = "bit r1, 7\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -483,7 +552,7 @@ mod tests {
     #[test]
     fn test_parse_set_absolute() {
         let source = "set (0x1234), 0\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -499,7 +568,7 @@ mod tests {
     #[test]
     fn test_parse_res_indirect() {
         let source = "res (r2), 3\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -515,7 +584,7 @@ mod tests {
     #[test]
     fn test_parse_org_directive_hex() {
         let source = ".org 0x3000\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -528,7 +597,7 @@ mod tests {
     #[test]
     fn test_parse_org_directive_dec() {
         let source = ".org 500\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -541,7 +610,7 @@ mod tests {
     // #[test]
     // fn test_parse_org_directive_incorrect_operand() {
     //     let source = ".org R0\n";
-    //     let result = parse_source(source);
+    //     let result = parse_test_source(source);
     //     assert!(result.is_err_and(|e| {
     //         e == AssemblyError::StructuralError {
     //             line: 1,
@@ -553,7 +622,7 @@ mod tests {
     // #[test]
     // fn test_parse_org_directive_out_of_bound() {
     //     let source = ".org 0x12345\n";
-    //     let result = parse_source(source);
+    //     let result = parse_test_source(source);
     //     assert!(result.is_err_and(|e| {
     //         e == AssemblyError::StructuralError {
     //             line: 1,
@@ -566,7 +635,7 @@ mod tests {
     #[test]
     fn test_parse_bank_directive_hex() {
         let source = ".bank 0x3\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -579,7 +648,7 @@ mod tests {
     #[test]
     fn test_parse_bank_directive_dec() {
         let source = ".bank 5\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -592,7 +661,7 @@ mod tests {
     // #[test]
     // fn test_parse_bank_directive_incorrect_operand() {
     //     let source = ".bank R0\n";
-    //     let result = parse_source(source);
+    //     let result = parse_test_source(source);
     //     assert!(result.is_err_and(|e| {
     //         e == AssemblyError::StructuralError {
     //             line: 1,
@@ -604,7 +673,7 @@ mod tests {
     // #[test]
     // fn test_parse_bank_directive_out_of_bound() {
     //     let source = ".bank 300\n";
-    //     let result = parse_source(source);
+    //     let result = parse_test_source(source);
     //     assert!(result.is_err_and(|e| {
     //         e == AssemblyError::StructuralError {
     //             line: 1,
@@ -616,7 +685,7 @@ mod tests {
     #[test]
     fn test_parse_call_far() {
         let source = "CALL.far LABEL\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -629,7 +698,7 @@ mod tests {
     // #[test]
     // fn test_parse_call_far_invalid_operand() {
     //     let source = "CALL.far 300\n";
-    //     let result = parse_source(source);
+    //     let result = parse_test_source(source);
     //     assert!(result.is_err_and(|e| {
     //         e == AssemblyError::StructuralError {
     //             line: 1,
@@ -641,7 +710,7 @@ mod tests {
     #[test]
     fn test_parse_call_far_via() {
         let source = "CALL.far LABEL via TRAMP\n";
-        let result = parse_source(source);
+        let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
         assert_eq!(lines.len(), 1);
@@ -657,7 +726,7 @@ mod tests {
     // #[test]
     // fn test_parse_call_far_via_invalid_operand() {
     //     let source = "CALL.far 300 via TRAMP\n";
-    //     let result = parse_source(source);
+    //     let result = parse_test_source(source);
     //     assert!(result.is_err_and(|e| {
     //         e == AssemblyError::StructuralError {
     //             line: 1,
@@ -669,7 +738,7 @@ mod tests {
     // #[test]
     // fn test_parse_call_far_via_invalid_via_operand() {
     //     let source = "CALL.far LABEL via 200\n";
-    //     let result = parse_source(source);
+    //     let result = parse_test_source(source);
     //     assert!(result.is_err_and(|e| {
     //         e == AssemblyError::StructuralError {
     //             line: 1,

@@ -24,6 +24,7 @@ pub fn build_operand(pair: Pair<Rule>) -> Result<Operand> {
         Rule::predec => build_pre_decrement(inner_pair),
         Rule::postinc => build_post_increment(inner_pair),
         Rule::indexed => build_indexed(inner_pair),
+        Rule::str_literal => build_string_literal(inner_pair),
         _ => unreachable!("Unknown operand rule: {:?}", inner_pair.as_rule()),
     }
 }
@@ -204,6 +205,24 @@ pub fn build_indexed(pair: Pair<Rule>) -> Result<Operand> {
         _ => Err(AssemblyError::StructuralError {
             line,
             reason: "Expected an immediate value or label for offset.".to_string(),
+        }
+        .into()),
+    }
+}
+
+pub fn build_string_literal(pair: Pair<Rule>) -> Result<Operand> {
+    let line = pair.as_span().start_pos().line_col().0;
+    let mut inner = pair.into_inner();
+    let op_pair = inner.next().ok_or_else(|| AssemblyError::StructuralError {
+        line,
+        reason: "Expected a string literal.".to_string(),
+    })?;
+
+    match op_pair.as_rule() {
+        Rule::str_val => Ok(Operand::String(op_pair.as_str().to_string())),
+        _ => Err(AssemblyError::StructuralError {
+            line,
+            reason: "Expected a string.".to_string(),
         }
         .into()),
     }
