@@ -62,33 +62,33 @@ All instruction cycle counts in this document are given in **T-cycles**.
 
 **These instructions move data between registers and memory. Memory is byte-addressable. 16-bit word accesses must be aligned to an even address. Attempting an unaligned 16-bit access will trigger a Bus Error fault. Cycle counts are listed as `HRAM/Other` for instructions that can target memory (HRAM = `FE00-FFFF`; Other = all non-HRAM regions). If only one value is shown, the instruction does not access HRAM-addressable memory.**
 
-| Mnemonic         | Operands       | Bytes | Cycles | Description                                                                                               |
-| :--------------- | :------------- | :---- | :----- | :-------------------------------------------------------------------------------------------------------- |
-| LD rd, rs        | R1, R2         | 1     | 4      | Copies the 16-bit value of R2 into R1.                                                                    |
-| LDI r, n16       | R0, 0x8000     | 3     | 12     | Loads the immediate 16-bit value 0x8000 into R0.                                                          |
-| LD rd, (rs)      | R2, (R3)       | 2     | 12/16  | Loads the 16-bit word from the address in R3 into R2. (Prefixed)                                          |
-| LD.b rd, (rs)    | R2, (R3)       | 2     | 10/12  | Loads the 8-bit byte from the address in R3 into the low byte of R2, and zero-extends it. (Prefixed)      |
-| ST (rd), rs      | (R4), R5       | 2     | 12/16  | Stores the 16-bit word from R5 into the memory address pointed to by R4. (Prefixed)                       |
-| ST.b (rd), rs    | (R4), R5       | 2     | 10/12  | Stores the low 8-bit byte from R5 into the memory address pointed to by R4. (Prefixed)                    |
-| LD rd, (rs, n8)  | R2, (R3, 0x10) | 3     | 16/20  | Loads the 16-bit word from the address in R3 + signed 8-bit offset into R2. (Prefixed)                    |
-| ST (rd, n8), rs  | (R4, 0x10), R5 | 3     | 16/20  | Stores the 16-bit word from R5 into the memory address pointed to by R4 + signed 8-bit offset. (Prefixed) |
-| LEA rd, (rs, n8) | R1, (R2, 0x10) | 3     | 12     | Calculates the address R2 + signed 8-bit offset and stores it in R1. (Prefixed)                           |
-| LD r, (n16)      | R0, (0xC000)   | 3     | 16/20  | Loads a 16-bit word from the absolute address 0xC000 into R0.                                             |
-| ST (n16), r      | (0xC000), R0   | 3     | 16/20  | Stores the 16-bit word in R0 to the absolute address 0xC000.                                              |
-| LDI.b rd, n8     | R0, 0xAB       | 3     | 12     | Loads the immediate 8-bit value into the low byte of rd, and zero-extends it. (Prefixed)                  |
-| LD rd, (rs)+     | R0, (R1)+      | 3     | 16/20  | Loads a word from the address in rs into rd, then increments rs by 2. (Prefixed)                          |
-| ST (rd)+, rs     | (R1)+, R0      | 3     | 16/20  | Stores the word from rs to the address in rd, then increments rd by 2. (Prefixed)                         |
-| LD.b rd, (rs)+   | R0, (R1)+      | 3     | 14/16  | Loads a byte from the address in rs into rd, zero-extends it, then increments rs by 1. (Prefixed)         |
-| ST.b (rd)+, rs   | (R1)+, R0      | 3     | 14/16  | Stores the low byte from rs to the address in rd, then increments rs by 1. (Prefixed)                     |
-| LD rd, -(rs)     | R0, -(R1)      | 3     | 16/20  | Decrements rs by 2, then loads a word from the new address in rs into rd. (Prefixed)                      |
-| ST -(rd), rs     | -(R1), R0      | 3     | 16/20  | Decrements rd by 2, then stores the word from rs to the new address in rd. (Prefixed)                     |
-| LD.b rd, -(rs)   | R0, -(R1)      | 3     | 14/16  | Decrements rs by 1, then loads a byte from the new address in rs into rd and zero-extends it. (Prefixed)  |
-| ST.b -(rd), rs   | -(R1), R0      | 3     | 14/16  | Decrements rd by 1, then stores the low byte from rs to the new address in rd. (Prefixed)                 |
-| PUSH r           | R0             | 1     | 12     | Pushes the value of a register onto the stack. Decrements SP by 2.                                        |
-| POP r            | R0             | 1     | 12     | Pops a value from the stack into a register. Increments SP by 2.                                          |
-| PUSH n16         | 0x1234         | 3     | 20     | Pushes an immediate 16-bit value onto the stack. Decrements SP by 2.                                      |
-| PUSH F           |                | 1     | 12     | Pushes the Flags register (F) onto the stack. Decrements SP by 2.                                         |
-| POP F            |                | 1     | 12     | Pops a value from the stack into the Flags register (F). Increments SP by 2.                              |
+| Mnemonic          | Operands       | Bytes | Cycles | Description                                                                                               |
+| :---------------- | :------------- | :---- | :----- | :-------------------------------------------------------------------------------------------------------- |
+| LD rd, rs         | R1, R2         | 1     | 4      | Copies the 16-bit value of R2 into R1.                                                                    |
+| LDI r, n16        | R0, 0x8000     | 3     | 12     | Loads the immediate 16-bit value 0x8000 into R0.                                                          |
+| LD rd, (rs)       | R2, (R3)       | 2     | 12/16  | Loads the 16-bit word from the address in R3 into R2. (Prefixed)                                          |
+| LD.b rd, (rs)     | R2, (R3)       | 2     | 10/12  | Loads the 8-bit byte from the address in R3 into the low byte of R2, and zero-extends it. (Prefixed)      |
+| ST (rd), rs       | (R4), R5       | 2     | 12/16  | Stores the 16-bit word from R5 into the memory address pointed to by R4. (Prefixed)                       |
+| ST.b (rd), rs     | (R4), R5       | 2     | 10/12  | Stores the low 8-bit byte from R5 into the memory address pointed to by R4. (Prefixed)                    |
+| LD rd, (rs, n8s)  | R2, (R3, 0x10) | 3     | 16/20  | Loads the 16-bit word from the address in R3 + signed 8-bit offset into R2. (Prefixed)                    |
+| ST (rd, n8s), rs  | (R4, 0x10), R5 | 3     | 16/20  | Stores the 16-bit word from R5 into the memory address pointed to by R4 + signed 8-bit offset. (Prefixed) |
+| LEA rd, (rs, n8s) | R1, (R2, 0x10) | 3     | 12     | Calculates the address R2 + signed 8-bit offset and stores it in R1. (Prefixed)                           |
+| LD r, (n16)       | R0, (0xC000)   | 3     | 16/20  | Loads a 16-bit word from the absolute address 0xC000 into R0.                                             |
+| ST (n16), r       | (0xC000), R0   | 3     | 16/20  | Stores the 16-bit word in R0 to the absolute address 0xC000.                                              |
+| LDI.b rd, n8      | R0, 0xAB       | 3     | 12     | Loads the immediate 8-bit value into the low byte of rd, and zero-extends it. (Prefixed)                  |
+| LD rd, (rs)+      | R0, (R1)+      | 3     | 16/20  | Loads a word from the address in rs into rd, then increments rs by 2. (Prefixed)                          |
+| ST (rd)+, rs      | (R1)+, R0      | 3     | 16/20  | Stores the word from rs to the address in rd, then increments rd by 2. (Prefixed)                         |
+| LD.b rd, (rs)+    | R0, (R1)+      | 3     | 14/16  | Loads a byte from the address in rs into rd, zero-extends it, then increments rs by 1. (Prefixed)         |
+| ST.b (rd)+, rs    | (R1)+, R0      | 3     | 14/16  | Stores the low byte from rs to the address in rd, then increments rs by 1. (Prefixed)                     |
+| LD rd, -(rs)      | R0, -(R1)      | 3     | 16/20  | Decrements rs by 2, then loads a word from the new address in rs into rd. (Prefixed)                      |
+| ST -(rd), rs      | -(R1), R0      | 3     | 16/20  | Decrements rd by 2, then stores the word from rs to the new address in rd. (Prefixed)                     |
+| LD.b rd, -(rs)    | R0, -(R1)      | 3     | 14/16  | Decrements rs by 1, then loads a byte from the new address in rs into rd and zero-extends it. (Prefixed)  |
+| ST.b -(rd), rs    | -(R1), R0      | 3     | 14/16  | Decrements rd by 1, then stores the low byte from rs to the new address in rd. (Prefixed)                 |
+| PUSH r            | R0             | 1     | 12     | Pushes the value of a register onto the stack. Decrements SP by 2.                                        |
+| POP r             | R0             | 1     | 12     | Pops a value from the stack into a register. Increments SP by 2.                                          |
+| PUSH n16          | 0x1234         | 3     | 20     | Pushes an immediate 16-bit value onto the stack. Decrements SP by 2.                                      |
+| PUSH F            |                | 1     | 12     | Pushes the Flags register (F) onto the stack. Decrements SP by 2.                                         |
+| POP F             |                | 1     | 12     | Pops a value from the stack into the Flags register (F). Increments SP by 2.                              |
 
 #### **Post-Increment and Pre-Decrement Addressing**
 
@@ -193,10 +193,10 @@ The post-increment and pre-decrement addressing modes are powerful features for 
 | :--------- | :-------- | :---- | :----- | :--------------------------------------------------------------------------------------------------------------------------------- |
 | JMP n16    | 0x1234    | 3     | 12     | Unconditional jump to absolute address n16.                                                                                        |
 | JMP (r)    | (R0)      | 1     | 4      | Unconditional jump to address stored in register r.                                                                                |
-| JR n8      | $10       | 2     | 8      | Unconditional relative jump by signed offset n8.                                                                                   |
+| JR n8s     | $10       | 2     | 8      | Unconditional relative jump by signed offset n8.                                                                                   |
 | Jcc n16    | Z, 0x1234 | 3     | 12     | Conditional jump to n16 if condition cc is met.                                                                                    |
-| JRcc n8    | NZ, -$4   | 2     | 8      | Conditional relative jump by n8 if condition cc is met.                                                                            |
-| DJNZ n8    | -$4       | 2     | 8      | Decrement R5 and jump relative if not zero.                                                                                        |
+| JRcc n8s   | NZ, -$4   | 2     | 8      | Conditional relative jump by n8 if condition cc is met.                                                                            |
+| DJNZ n8s   | -$4       | 2     | 8      | Decrement R5 and jump relative if not zero.                                                                                        |
 | CALL n16   | 0x2000    | 3     | 20     | Call subroutine at address n16. Pushes PC+3 onto stack.                                                                            |
 | CALL (r)   | (R0)      | 1     | 12     | Call subroutine at address in register r. Pushes PC+1 onto stack.                                                                  |
 | CALLcc n16 | C, 0x2000 | 3     | 12/20  | Conditional call if condition cc is met.                                                                                           |
@@ -211,7 +211,6 @@ The post-increment and pre-decrement addressing modes are powerful features for 
 The `ENTER` and `LEAVE` instructions simplify the creation and destruction of stack frames for subroutines, a common practice in compiled languages like C. They automate the process of managing the frame pointer (R6).
 
 - **`ENTER`**: This instruction creates a new stack frame. It performs two actions:
-
   1.  It pushes the current value of the frame pointer (R6) onto the stack.
   2.  It copies the current value of the stack pointer (R7) into the frame pointer (R6).
       This is equivalent to `PUSH R6` followed by `LD R6, R7`. This establishes a new frame, and local variables for the subroutine can then be accessed via negative offsets from R6.

@@ -41,7 +41,6 @@ The "Cycles" column in the tables below denotes the number of T-cycles required 
 These values are calculated based on the following rules:
 
 1.  **Fetch Cost (F):** The cost to read an instruction from memory is 4 T-cycles per byte.
-
     - `Fetch Cost = (Instruction Size in Bytes) * 4`
 
 2.  **Execution Cost (E):** This is the cost of any work done after fetching, primarily memory access. Simple internal register operations have an execution cost of 0.
@@ -183,19 +182,19 @@ For instructions with memory access, cycle counts may be presented as `HRAM/WRAM
 
 ## FF Prefix Map (Advanced Addressing 2)
 
-| Opcode (Hex) | Mnemonic         | Bytes | Cycles           | Description                                                                                      |
-| :----------- | :--------------- | :---- | :--------------- | :----------------------------------------------------------------------------------------------- |
-| 00-3F        | LD rd, (rs, n8)  | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF b'00dddsss n8`. Load word from rs + offset.                                   |
-| 40-7F        | ST (rd, n8), rs  | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF b'01dddsss n8`. Store word to rd + offset.                                    |
-| 80-BF        | LEA rd, (rs, n8) | 3     | 12 (12 : 0)      | `(3 bytes) => 0xFF b'10dddsss n8`. Load effective address rs + offset into rd.                   |
-| C0-C7        | LD rd, (rs)+     | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xC0+rs b'00000ddd'`. Load word from (rs) into rd, then increments rs by 2.   |
-| C8-CF        | ST (rd)+, rs     | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xC8+rs b'00000ddd'`. Store word from rs into (rd), then increments rd by 2.  |
-| D0-D7        | LD rd, -(rs)     | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xD0+rs b'00000ddd'`. Decrements rs by 2, then loads word from (rs) into rd.  |
-| D8-DF        | ST -(rd), rs     | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xD8+rs b'00000ddd'`. Decrements rd by 2, then stores word from rs into (rd). |
-| E0-E7        | LD.b rd, (rs)+   | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xE0+rs b'00000ddd'`. Load byte from (rs) into rd, then increments rs by 1.   |
-| E8-EF        | ST.b (rd)+, rs   | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xE8+rs b'00000ddd'`. Store byte from rs into (rd), then increments rd by 1.  |
-| F0-F7        | LD.b rd, -(rs)   | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xF0+rs b'00000ddd'`. Decrements rs by 1, then loads byte from (rs) into rd.  |
-| F8-FF        | ST.b -(rd), rs   | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xF8+rs b'00000ddd'`. Decrements rd by 1, then stores byte from rs into (rd). |
+| Opcode (Hex) | Mnemonic          | Bytes | Cycles           | Description                                                                                      |
+| :----------- | :---------------- | :---- | :--------------- | :----------------------------------------------------------------------------------------------- |
+| 00-3F        | LD rd, (rs, n8s)  | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF b'00dddsss n8`. Load word from rs + offset.                                   |
+| 40-7F        | ST (rd, n8s), rs  | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF b'01dddsss n8`. Store word to rd + offset.                                    |
+| 80-BF        | LEA rd, (rs, n8s) | 3     | 12 (12 : 0)      | `(3 bytes) => 0xFF b'10dddsss n8`. Load effective address rs + offset into rd.                   |
+| C0-C7        | LD rd, (rs)+      | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xC0+rs b'00000ddd'`. Load word from (rs) into rd, then increments rs by 2.   |
+| C8-CF        | ST (rd)+, rs      | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xC8+rs b'00000ddd'`. Store word from rs into (rd), then increments rd by 2.  |
+| D0-D7        | LD rd, -(rs)      | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xD0+rs b'00000ddd'`. Decrements rs by 2, then loads word from (rs) into rd.  |
+| D8-DF        | ST -(rd), rs      | 3     | 16/20 (12 : 4/8) | `(3 bytes) => 0xFF 0xD8+rs b'00000ddd'`. Decrements rd by 2, then stores word from rs into (rd). |
+| E0-E7        | LD.b rd, (rs)+    | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xE0+rs b'00000ddd'`. Load byte from (rs) into rd, then increments rs by 1.   |
+| E8-EF        | ST.b (rd)+, rs    | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xE8+rs b'00000ddd'`. Store byte from rs into (rd), then increments rd by 1.  |
+| F0-F7        | LD.b rd, -(rs)    | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xF0+rs b'00000ddd'`. Decrements rs by 1, then loads byte from (rs) into rd.  |
+| F8-FF        | ST.b -(rd), rs    | 3     | 14/16 (12 : 2/4) | `(3 bytes) => 0xFF 0xF8+rs b'00000ddd'`. Decrements rd by 1, then stores byte from rs into (rd). |
 
 ---
 

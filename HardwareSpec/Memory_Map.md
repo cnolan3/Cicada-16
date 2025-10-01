@@ -89,7 +89,7 @@ Not all RAM is equal in speed.
 | F010    | **DMA_CTL**    | **DMA control: bit0=START, bit1=DIR, bit2=VRAM_ONLY, etc.**       |
 | F011    | **MPR_BANK**   | **ROM bank select for 4000-7FFF window**                          |
 | F012    | **RAM_BANK**   | **Bank select for banked Cart RAM (if enabled)**                  |
-| F013    | **WE_LATCH**   | **Write-enable latch for battery RAM (write key)**                |
+| F013    | **WE_LATCH**   | Write-enable latch for save RAM (write key)                   |
 | F014    | **VRAM_BANK**  | **VRAM Bank Select (0-3 for 9000-AFFF window)**                   |
 | F015    | **WRAM_BANK**  | **WRAM Bank Select (0-5 for D000-DFFF window -> maps banks 1-6)** |
 | F018    | **RTC_SEC**    | **Seconds (0-59)**                                                |
@@ -224,7 +224,7 @@ The 5-bit value in CLK_SEL selects the clock source for the timer by directly ma
 
 ## **Real-Time Clock (RTC)**
 
-The console includes a battery-backed Real-Time Clock (RTC) that keeps track of time even when the console is powered off. This feature is available on cartridges that include the necessary RTC hardware and a battery. The RTC is controlled by a set of I/O registers from F018 to F01F.
+The console includes a Real-Time Clock (RTC) that keeps track of time even when the console is powered off. This feature is available on cartridges that include the necessary RTC hardware to maintain time. The RTC is controlled by a set of I/O registers from F018 to F01F.
 
 The RTC's internal logic is responsible for handling all the rules of the calendar, including months of different lengths and leap years. When RTC_SEC rolls past 59, RTC_MIN is incremented. When RTC_MIN rolls past 59, RTC_HOUR is incremented. When RTC_HOUR rolls past 23, RTC_DAY is incremented. When RTC_DAY is incremented, the hardware checks the current RTC_MONTH and RTC_YEAR. If it's January 31st, the day resets to 1 and the month increments to February. If it's February 28th on a non-leap year, the day resets to 1 and the month increments to March. If it's February 28th on a leap year, the day simply increments to 29. This logic continues for all months. When December 31st rolls over, the day and month reset to 1, and the year is incremented.
 
