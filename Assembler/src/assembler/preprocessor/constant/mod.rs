@@ -97,3 +97,32 @@ pub fn process_instruction_constants(
     }
     Ok(())
 }
+
+pub fn process_directive_constants(
+    directive: &mut Directive,
+    constant_table: &ConstantTable,
+    line_number: &usize,
+) -> Result<(), AssemblyError> {
+    match directive {
+        Directive::Org(op) => {
+            replace_constant_with_word(op, constant_table, line_number)?;
+        }
+        Directive::Byte(ops) => {
+            for op in ops {
+                replace_constant_with_unsigned_byte(op, constant_table, line_number)?;
+            }
+        }
+        Directive::Word(ops) => {
+            for op in ops {
+                replace_constant_with_word(op, constant_table, line_number)?;
+            }
+        }
+        Directive::Interrupt(ops) => {
+            for op in ops {
+                replace_constant_with_word(op, constant_table, line_number)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}

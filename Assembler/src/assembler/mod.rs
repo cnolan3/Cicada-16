@@ -76,6 +76,14 @@ pub fn process_constants(
                 &line.line_number,
             )?;
         }
+
+        if let Some(directive) = &mut line.directive {
+            preprocessor::constant::process_directive_constants(
+                directive,
+                constant_table,
+                &line.line_number,
+            )?;
+        }
     }
     Ok(())
 }
