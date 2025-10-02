@@ -23,7 +23,7 @@ print_loop:
     SYSCALL 0x01
 
     DEC R2              ; Decrement the length counter
-    JRcc NZ, print_loop ; If not zero, loop to print the next character
+    JRNZ, print_loop ; If not zero, loop to print the next character
 
 end_loop:
     HALT                ; Halt the CPU
@@ -56,7 +56,7 @@ sum_loop:
 
     ADD R1, 2           ; Increment index by 2 (since each element is a 16-bit word)
     DEC R3              ; Decrement loop counter
-    JRcc NZ, sum_loop   ; Loop if there are still elements left
+    JRNZ, sum_loop   ; Loop if there are still elements left
 
 end_loop:
     ; The sum is now in R2
@@ -125,6 +125,7 @@ Imagine your project is laid out like this:
 Here's what each file might look like.
 
 **`constants.asm`**
+
 ```asm
 ; This file contains all global constants.
 
@@ -134,6 +135,7 @@ Here's what each file might look like.
 ```
 
 **`memory.asm`**
+
 ```asm
 ; This file defines the layout of variables in RAM.
 .org 0x8000 ; Start of RAM
@@ -144,6 +146,7 @@ score:    .word 0
 ```
 
 **`logic/graphics.asm`**
+
 ```asm
 ; Graphics-related subroutines.
 
@@ -154,6 +157,7 @@ draw_player:
 ```
 
 **`logic/player.asm`**
+
 ```asm
 ; Player-related logic.
 
@@ -164,6 +168,7 @@ update_player_position:
 ```
 
 **`main.asm` (The Master Include File)**
+
 ```asm
 ; Master entry point for the entire project.
 ; This file defines the overall structure and memory layout by including
@@ -185,7 +190,7 @@ update_player_position:
 start:
     ; Initialization code...
     CALL init_graphics
-    
+
 main_loop:
     CALL update_player_position
     CALL draw_player
