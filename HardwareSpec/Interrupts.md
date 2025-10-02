@@ -102,8 +102,8 @@ The Cicada-16 supports two modes for the location of the interrupt vector table,
 
 This is the default and simplest mode.
 
-- **Cartridge Header Flag**: The "Interrupt Mode" bit (Bit 7 of byte `0x002C`) is set to `0`.
-- **CPU Behavior**: The CPU is hardwired to look for the interrupt vector table at a fixed location within the cartridge ROM: **`0x00E0 - 0x00FF`**.
+- **Cartridge Header Flag**: The "Interrupt Mode" bit (Bit 7 of byte `0x0028`) is set to `0`.
+the CPU is hardwired to look for the interrupt vector table at a fixed location within the cartridge ROM: **`0x0060 - 0x007F`**.
 - **Implementation**: The game developers place a static list of 16-bit addresses at this location in their ROM file. The interrupt handlers are fixed for the lifetime of the game.
 
 ### **Enhanced Mode (RAM-Based)**
@@ -113,7 +113,7 @@ This mode enables advanced programming techniques by allowing the game to modify
 - **Cartridge Header Flag**: The "Interrupt Mode" bit is set to `1`.
 - **Console Boot Behavior**: The boot ROM reads this flag and performs two actions:
   1.  It sets a hardware latch that re-routes the CPU's interrupt vector lookups to a fixed location in Work RAM Bank 0 (WRAM0): **`0xC000 - 0xC01F`**.
-  2.  It uses the DMA controller to automatically copy the 32-byte vector table from the cartridge ROM (`0x00E0`) to WRAM (`0xC000`) as a default starting point.
+  2.  It uses the DMA controller to automatically copy the 32-byte vector table from the cartridge ROM (`0x0060`) to WRAM (`0xC000`) as a default starting point.
 - **Flexibility**: Because the interrupt table is in RAM, the game can overwrite any of these vector addresses at any time to point to different handler routines, allowing for dynamic, state-based interrupt handling.
 
 ---

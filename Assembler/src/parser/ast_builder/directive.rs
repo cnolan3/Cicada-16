@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+use crate::ast::HeaderInfo;
 use crate::parser::AstBuilder;
+use crate::parser::Rule;
 use crate::parser::ast_builder::AssemblyError;
 use crate::parser::ast_builder::constants::*;
 use crate::parser::ast_builder::utility_functions::*;
@@ -139,5 +141,116 @@ impl<'a> AstBuilder<'a> {
                 .into());
             }
         }
+    }
+
+    pub fn build_header_directive(self) -> Result<Directive> {
+        let mut info = HeaderInfo::default();
+
+        for info_line in self.pairs {
+            if info_line.as_rule() != Rule::header_info {
+                continue; // Skip comments, newlines, etc.
+            }
+
+            let line_number = info_line.as_span().start_pos().line_col().0;
+            let Some(sub_directive) = info_line.into_inner().next() else {
+                continue;
+            };
+
+            let mut field_builder = AstBuilder::new(sub_directive.clone());
+
+            match sub_directive.as_rule() {
+                Rule::boot_anim => {
+                    let val = field_builder.expect_string_literal()?;
+                    if val.len() != 4 {
+                        return Err(AssemblyError::StructuralError {
+                            line: line_number,
+                            reason: ".boot_anim must be exactly 4 characters.".to_string(),
+                        }
+                        .into());
+                    }
+                    info.boot_anim = val;
+                }
+                Rule::title => {
+                    let val = field_builder.expect_string_literal()?;
+                    if val.len() > 16 {
+                        return Err(AssemblyError::StructuralError {
+                            line: line_number,
+                            reason: ".title must be 16 characters or less.".to_string(),
+                        }
+                        .into());
+                    }
+                    info.title = val;
+                }
+                Rule::developer => {
+                    let val = field_builder.expect_string_literal()?;
+                    if val.len() > 16 {
+                        return Err(AssemblyError::StructuralError {
+                            line: line_number,
+                            reason: ".developer must be 16 characters or less.".to_string(),
+                        }
+                        .into());
+                    }
+                    info.developer = val;
+                }
+                Rule::version => {
+                    info.version = field_builder.expect_unsigned_byte()?;
+                }
+                Rule::mapper => {
+                    info.mapper = field_builder.expect_unsigned_byte()?;
+                }
+                Rule::rom_size => {
+                    info.rom_size = field_builder.expect_unsigned_byte()?;
+                }
+                Rule::ram_size => {
+                    info.ram_size = field_builder.expect_unsigned_byte()?;
+                }
+                Rule::interrupt_mode => {
+                    let val = field_builder.expect_immediate()? as u8;
+                    if val > 1 {
+                        return Err(AssemblyError::StructuralError {
+                            line: line_number,
+                            reason: ".interrupt_mode must be 0 or 1.".to_string(),
+                        }
+                        .into());
+                    }
+                    info.interrupt_mode = val;
+                }
+                Rule::hardware_rev => {
+                    let val = field_builder.expect_immediate()? as u8;
+                    if val > 3 {
+                        return Err(AssemblyError::StructuralError {
+                            line: line_number,
+                            reason:
+                                ".interrupt_mode must be an unsigned 2 bit value (max: 3, min: 0)."
+                                    .to_string(),
+                        }
+                        .into());
+                    }
+                    info.hardware_rev = val;
+                }
+                Rule::region => {
+                    let val = field_builder.expect_immediate()? as u8;
+                    if val > 7 {
+                        return Err(AssemblyError::StructuralError {
+                            line: line_number,
+                            reason:
+                                ".interrupt_mode must be an unsigned 3 bit value (max: 7, min: 0)."
+                                    .to_string(),
+                        }
+                        .into());
+                    }
+                    info.region = val;
+                }
+                _ => {
+                    return Err(AssemblyError::StructuralError {
+                        line: line_number,
+                        reason: "Unknown header field directive.".to_string(),
+                    }
+                    .into());
+                }
+            }
+        }
+
+        Ok(Directive::Header(info))
     }
 }

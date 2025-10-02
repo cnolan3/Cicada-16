@@ -1,6 +1,5 @@
-use casm::assemble;
-use casm::file_reader::MockFileReader;
-use std::fs;
+use cicasm::assemble;
+use cicasm::file_reader::MockFileReader;
 use std::path::Path;
 
 const BANK_SIZE: usize = 16384;
@@ -12,7 +11,7 @@ fn test_nop() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x0000, 0x3FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x3FFF, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 2);
     assert_eq!(result[0], 0x00);
@@ -26,7 +25,7 @@ fn test_ldi() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x0000, 0x3FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x3FFF, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 2);
     assert_eq!(result[0], 0x02); // LDI R1
@@ -42,7 +41,7 @@ fn test_jump() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x0000, 0x3FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x3FFF, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 2);
     assert_eq!(result[0], 0x00); // NOP
@@ -62,7 +61,7 @@ fn test_define() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x0000, 0x3FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x3FFF, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 2);
     assert_eq!(result[0], 0x01); // LDI r0
@@ -84,7 +83,7 @@ fn test_org() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x0000, 0x7FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x7FFF, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 3);
     assert_eq!(result[0x0000], 0x00); // Padding
@@ -143,7 +142,7 @@ fn test_include() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x0000, 0x3FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x3FFF, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 2);
     assert_eq!(result[0x0000], 0x01); // LDI r0

@@ -29,4 +29,7 @@ pub enum AssemblyError {
 
     #[error("Circular Include Error on line {line}: {reason}")]
     CircularIncludeError { line: usize, reason: String },
+
+    #[error("Header Info Error: {reason}")]
+    HeaderInfoError { reason: String },
 }

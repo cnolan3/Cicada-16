@@ -41,7 +41,6 @@ struct Opts {
 
 fn main() -> Result<()> {
     let opts: Opts = Opts::parse();
-    let mut start_addr: u16 = 0x0100;
     let mut final_logical_addr: u16 = 0x7FFF;
     let mut output_path: PathBuf = env::current_dir()?;
     output_path.push("assembled.bin");
@@ -51,14 +50,13 @@ fn main() -> Result<()> {
     }
 
     if opts.boot {
-        start_addr = 0x0000;
         final_logical_addr = 0x3FFF;
     }
 
     let reader = AsmFileReader;
     let input_path: &Path = Path::new(&opts.input);
 
-    let final_rom = assemble(input_path, start_addr, final_logical_addr, &reader)?;
+    let final_rom = assemble(input_path, final_logical_addr, &reader)?;
 
     fs::write(&output_path, final_rom)?;
 

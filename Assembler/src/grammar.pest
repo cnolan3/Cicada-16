@@ -115,97 +115,6 @@ callcc_far = ${ ^"call" ~ cc ~ ^".far" }
 
 // --- Instructions ---
 
-// The @ makes the rule "atomic", so it appears as a single token in the tree.
-instruction = {
-nop
-| halt
-| djnz
-| bit
-| set
-| res
-| st_b
-| st_2_op
-| ldi_b
-| ldi_2_op
-| ld_b
-| ld_2_op
-| add_b
-| add_sp
-| addi_2_op
-| addi_1_op
-| add_2_op
-| add_1_op
-| sub_b
-| subi_2_op
-| subi_1_op
-| sub_2_op
-| sub_1_op
-| and_b
-| andi_2_op
-| andi_1_op
-| and_2_op
-| and_1_op
-| or_b
-| ori_2_op
-| ori_1_op
-| or_2_op
-| or_1_op
-| xor_b
-| xori_2_op
-| xori_1_op
-| xor_2_op
-| xor_1_op
-| cmp_b
-| cmpi_2_op
-| cmpi_1_op
-| cmp_2_op
-| cmp_1_op
-| adci_1_op
-| adc_2_op
-| sbci_1_op
-| sbc_2_op
-| push_f
-| pop_f
-| push_op
-| pop_op
-| neg
-| not
-| swap
-| jr_con
-| jr
-| jmp_con_far_via
-| jmp_con_far
-| jmp_con
-| jmp_far_via
-| jmp_far
-| jmp
-| call_con_far_via
-| call_con_far
-| call_con
-| call_far_via
-| call_far
-| call
-| syscall
-| ccf
-| scf
-| rcf
-| enter
-| leave
-| reti
-| ret
-| ei
-| di
-| inc
-| dec
-| sra
-| shl
-| shr
-| rol
-| ror
-| lea
-// ... add all other instruction mnemonics here
-}
-
 nop = @{ ^"nop" }
 halt = @{ ^"halt" }
 djnz = { ^"djnz" ~ operand }
@@ -293,6 +202,95 @@ ld_b = { ^"ld.b" ~ operand ~ "," ~ operand }
 st_b = { ^"st.b" ~ operand ~ "," ~ operand }
 lea = { ^"lea" ~ operand ~ "," ~ operand }
 
+instruction = {
+nop
+| halt
+| djnz
+| bit
+| set
+| res
+| st_b
+| st_2_op
+| ldi_b
+| ldi_2_op
+| ld_b
+| ld_2_op
+| add_b
+| add_sp
+| addi_2_op
+| addi_1_op
+| add_2_op
+| add_1_op
+| sub_b
+| subi_2_op
+| subi_1_op
+| sub_2_op
+| sub_1_op
+| and_b
+| andi_2_op
+| andi_1_op
+| and_2_op
+| and_1_op
+| or_b
+| ori_2_op
+| ori_1_op
+| or_2_op
+| or_1_op
+| xor_b
+| xori_2_op
+| xori_1_op
+| xor_2_op
+| xor_1_op
+| cmp_b
+| cmpi_2_op
+| cmpi_1_op
+| cmp_2_op
+| cmp_1_op
+| adci_1_op
+| adc_2_op
+| sbci_1_op
+| sbc_2_op
+| push_f
+| pop_f
+| push_op
+| pop_op
+| neg
+| not
+| swap
+| jr_con
+| jr
+| jmp_con_far_via
+| jmp_con_far
+| jmp_con
+| jmp_far_via
+| jmp_far
+| jmp
+| call_con_far_via
+| call_con_far
+| call_con
+| call_far_via
+| call_far
+| call
+| syscall
+| ccf
+| scf
+| rcf
+| enter
+| leave
+| reti
+| ret
+| ei
+| di
+| inc
+| dec
+| sra
+| shl
+| shr
+| rol
+| ror
+| lea
+}
+
 // --- Directive Rules ---
 
 data_operand_list = { data_operand ~ ("," ~ data_operand)* }
@@ -309,6 +307,8 @@ define_directive = { ^".define" ~ operand ~ operand }
 
 include_directive = { ^".include" ~ operand }
 
+header_directive_block = { ^".header_start" ~ ( header_info? ~ LINE_END )* ~ ^".header_end" }
+
 directive = {
 org_directive
 | bank_directive
@@ -316,6 +316,42 @@ org_directive
 | word_directive
 | define_directive
 | include_directive
+| header_directive_block
+}
+
+// --- Header Info Rules ---
+
+boot_anim = { ^".boot_anim" ~ operand }
+
+title = { ^".title" ~ operand }
+
+developer = { ^".developer" ~ operand }
+
+version = { ^".version" ~ operand }
+
+mapper = { ^".mapper" ~ operand }
+
+rom_size = { ^".rom_size" ~ operand }
+
+ram_size = { ^".ram_size" ~ operand }
+
+interrupt_mode = { ^".interrupt_mode" ~ operand }
+
+hardware_rev = { ^".hardware_rev" ~ operand }
+
+region = { ^".region" ~ operand }
+
+header_info = {
+boot_anim
+| title
+| developer
+| version
+| rom_size
+| ram_size
+| hardware_rev
+| region
+| interrupt_mode
+| mapper
 }
 
 // --- Core Rules ---

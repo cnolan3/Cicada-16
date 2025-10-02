@@ -1,3 +1,19 @@
+/*
+Copyright 2025 Connor Nolan
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 use crate::parser::AstBuilder;
 use crate::parser::ast_builder::AssemblyError;
 use crate::parser::ast_builder::operand_builders::*;
@@ -212,5 +228,31 @@ impl<'a> AstBuilder<'a> {
             .into_inner();
 
         ops.map(build_operand).collect()
+    }
+
+    pub fn expect_string_literal(&mut self) -> Result<String> {
+        let op = self.pop_operand()?;
+        if let Operand::String(s) = op {
+            Ok(s)
+        } else {
+            Err(AssemblyError::StructuralError {
+                line: self.line_number,
+                reason: "Expected a string literal.".to_string(),
+            }
+            .into())
+        }
+    }
+
+    pub fn expect_immediate(&mut self) -> Result<i32> {
+        let op = self.pop_operand()?;
+        if let Operand::Immediate(val) = op {
+            Ok(val)
+        } else {
+            Err(AssemblyError::StructuralError {
+                line: self.line_number,
+                reason: "Expected an immediate value.".to_string(),
+            }
+            .into())
+        }
     }
 }

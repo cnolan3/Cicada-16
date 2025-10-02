@@ -32,6 +32,7 @@ use crate::parser::{Directive, Instruction};
 use anyhow::Result;
 use pest::iterators::{Pair, Pairs};
 
+#[derive(Clone)]
 pub struct AstBuilder<'a> {
     line_number: usize,
     rule: Rule,
@@ -144,6 +145,7 @@ impl<'a> AstBuilder<'a> {
             Rule::word_directive => self.build_word_directive(),
             Rule::define_directive => self.build_define_directive(),
             Rule::include_directive => self.build_include_directive(),
+            Rule::header_directive_block => self.build_header_directive(),
             _ => unreachable!("Unknown directive rule: {:?}", self.rule),
         }
     }

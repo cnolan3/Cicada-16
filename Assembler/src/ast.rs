@@ -14,7 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// --- Operands ---
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct HeaderInfo {
+    pub boot_anim: String,
+    pub title: String,
+    pub developer: String,
+    pub version: u8,
+    pub mapper: u8,
+    pub rom_size: u8,
+    pub ram_size: u8,
+    pub interrupt_mode: u8,
+    pub hardware_rev: u8,
+    pub region: u8,
+}
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Register {
@@ -198,6 +210,7 @@ pub enum Directive {
     Word(Vec<Operand>),      // .word 0x0001, 0x0002, 0x0003 AND .word label, label, label
     Define(String, Operand), // .define label 0x01
     Include(String),         // .include path
+    Header(HeaderInfo),      // .header_start ... .header_end
 }
 
 // --- Assembly Line Structure ---

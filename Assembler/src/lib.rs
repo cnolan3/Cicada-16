@@ -14,24 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::path::{Path, PathBuf};
-
-use anyhow::{Context, Result};
-use file_reader::FileReader;
-use std::collections::HashSet;
-
 pub mod assembler;
 pub mod ast;
 pub mod errors;
 pub mod file_reader;
 pub mod parser;
 
+use std::path::{Path, PathBuf};
+
+use anyhow::{Context, Result};
+use file_reader::FileReader;
+use std::collections::HashSet;
+
 extern crate pest;
 extern crate pest_derive;
 
 pub fn assemble<F: FileReader>(
     source_path: &Path,
-    start_addr: u16,
     final_logical_addr: u16,
     reader: &F,
 ) -> Result<Vec<u8>> {
@@ -45,21 +44,14 @@ pub fn assemble<F: FileReader>(
     assembler::process_constants(&mut parsed_lines, &constant_table)
         .context("Failed during assembler phase 0.5")?;
 
-    let symbol_table = assembler::build_symbol_table(
-        &parsed_lines,
-        &start_addr,
-        &final_logical_addr,
-        &constant_table,
-    )
-    .context("Failed during assembler phase 1")?;
+    let symbol_table =
+        assembler::build_symbol_table(&parsed_lines, &final_logical_addr, &constant_table)
+            .context("Failed during assembler phase 1")?;
 
-    let machine_code = assembler::generate_bytecode(&parsed_lines, &symbol_table, &start_addr)
+    let machine_code = assembler::generate_bytecode(&parsed_lines, &symbol_table)
         .context("Failed during assembler phase 2")?;
 
     let mut final_rom = Vec::new();
-    if start_addr > 0 {
-        final_rom.resize(start_addr as usize, 0x00);
-    }
     final_rom.extend(machine_code);
 
     Ok(final_rom)

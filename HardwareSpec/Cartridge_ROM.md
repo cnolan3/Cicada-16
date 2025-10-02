@@ -6,51 +6,58 @@ This document specifies the internal memory layout of a Cicada-16 game cartridge
 
 | Address Range   | Size      | Description                             |
 | :-------------- | :-------- | :-------------------------------------- |
-| 0x0000 - 0x00DF | 224 Bytes | Cartridge Header (metadata, mode flags) |
-| 0x00E0 - 0x00FF | 32 Bytes  | Interrupt Vector Table Template         |
-| 0x0100          | -         | Game Code Entry Point                   |
-| 0x0101 - 0x3FFF | ~16 KiB   | Remainder of Fixed ROM Bank 0           |
+| 0x0000 - 0x005F | 96 Bytes  | Cartridge Header (metadata, mode flags) |
+| 0x0060 - 0x007F | 32 Bytes  | Interrupt Vector Table Template         |
+| 0x0080          | -         | Game Code Entry Point                   |
+| 0x0081 - 0x3FFF | ~16 KiB   | Remainder of Fixed ROM Bank 0           |
 
-### **1. Cartridge Header (0x0000 - 0x00DF)**
+### **1. Cartridge Header (0x0000 - 0x005F)**
 
 Every Cicada-16 cartridge must begin with a header. The console's internal boot ROM reads this header on startup to verify the cartridge's integrity and configure the hardware.
 
 | Address Range | Size | Field Name              | Description                                                                                                                       |
 | :------------ | :--- | :---------------------- | :-------------------------------------------------------------------------------------------------------------------------------- |
 | 0x0000-0x0003 | 4B   | **Boot Animation ID**   | A 4-byte ASCII identifier (e.g., "WAVE") that the boot ROM can use to apply a custom visual effect to the console's startup logo. |
-| 0x0004-0x0023 | 32B  | **Game Title**          | A null-terminated ASCII string for the game's title.                                                                              |
-| 0x0024-0x0043 | 32B  | **Developer**           | A null-terminated ASCII string for the developer or publisher.                                                                    |
-| 0x0044        | 1B   | **Game Version**        | A single byte representing the game's version number (e.g., 0x00 for v1.0).                                                       |
-| 0x0045        | 1B   | **Mapper Type**         | An enum specifying the memory bank controller (mapper) hardware on the cartridge. 0x00 = ROM only, 0x01 = Standard Mapper, etc.   |
-| 0x0046        | 1B   | **ROM Size**            | An enum indicating the total size of the physical ROM chip (e.g., 0x00=32KiB, 0x01=64KiB).                                        |
-| 0x0047        | 1B   | **RAM Size**            | An enum indicating the size of save RAM on the cartridge. 0x00 = No RAM.                                                          |
-| 0x0048        | 1B   | **Feature Flags**       | A bitfield for hardware features. See the table below for the bit mapping.                                                        |
-| 0x0049        | 1B   | **Header Checksum**     | An 8-bit checksum of bytes 0x0000 to 0x0048. Used by the boot ROM to verify header integrity.                                     |
-| 0x004A-0x004B | 2B   | **Global ROM Checksum** | A 16-bit checksum of the entire cartridge ROM. Can be used for a full integrity check.                                            |
-| 0x004C-0x00DF | 148B | **Reserved**            | Reserved for future expansion. Must be filled with 0x00.                                                                          |
+| 0x0004-0x0013 | 16B  | **Game Title**          | A null-terminated ASCII string for the game's title.                                                                              |
+| 0x0014-0x0023 | 16B  | **Developer**           | A null-terminated ASCII string for the developer or publisher.                                                                    |
+| 0x0024        | 1B   | **Game Version**        | A single byte representing the game's version number (e.g., 0x00 for v1.0).                                                       |
+| 0x0025        | 1B   | **ROM Size**            | An enum indicating the total size of the physical ROM chip (e.g., 0x00=32KiB, 0x01=64KiB).                                        |
+| 0x0026        | 1B   | **RAM Size**            | An enum indicating the size of save RAM on the cartridge. 0x00 = No RAM.                                                          |
+| 0x0027        | 1B   | **Cartridge Info**      | A bitfield for hardware revision and region. See table below.                                                                     |
+| 0x0028        | 1B   | **Feature Flags**       | A bitfield for hardware features. See the table below for the bit mapping.                                                        |
+| 0x0029        | 1B   | **Header Checksum**     | An 8-bit checksum of bytes 0x0000 to 0x0028. Used by the boot ROM to verify header integrity.                                     |
+| 0x002A-0x002B | 2B   | **Global ROM Checksum** | A 16-bit checksum of the entire cartridge ROM. Can be used for a full integrity check.                                            |
+| 0x002C-0x005F | 52B  | **Reserved**            | Reserved for future expansion. Must be filled with 0x00.                                                                          |
 
-#### **Feature Flags Byte (0x0048)**
+#### **Cartridge Info Byte (0x0027)**
 
 | Bit(s) | Size | Name                  | Description                                                                                             |
 | :----- | :--- | :-------------------- | :------------------------------------------------------------------------------------------------------ |
-| 7      | 1b   | **Interrupt Mode**    | `0` = Standard (vectors in ROM), `1` = Enhanced (vectors in RAM).                                       |
-| 6-5    | 2b   | **Hardware Revision** | `00` = Base hardware, `01` = Revision 1. Higher values are reserved.                                    |
-| 4-2    | 3b   | **Region / Language** | `000` = All Regions, `001` = Japan, `010` = USA, `011` = Europe. Higher values are reserved.             |
-| 1-0    | 2b   | **(Reserved)**        | Reserved for future use. Must be `0`.                                                                   |
+| 7-6    | 2b   | **Hardware Revision** | `00` = Base hardware, `01` = Revision 1. Higher values are reserved.                                    |
+| 5-3    | 3b   | **Region / Language** | `000` = All Regions, `001` = Japan, `010` = USA, `011` = Europe. Higher values are reserved.             |
+| 2-0    | 3b   | **(Reserved)**        | Reserved for future use. Must be `0`.                                                                   |
 
-### **2. Game Code and Data (0x0100 onwards)**
+#### **Feature Flags Byte (0x0028)**
+
+| Bit(s) | Size | Name            | Description                                                                                                                            |
+| :----- | :--- | :-------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
+| 7      | 1b   | **Interrupt Mode** | `0` = Standard (vectors in ROM), `1` = Enhanced (vectors in RAM).                                                                      |
+| 6-5    | 2b   | **Mapper Type** | An enum specifying the memory bank controller (mapper) hardware on the cartridge. 0x00 = ROM only, 0x01 = Standard Mapper, etc.          |
+| 4-0    | 5b   | **(Reserved)**  | Reserved for future use. Must be `0`.                                                                                                  |
+
+### **2. Game Code and Data (0x0080 onwards)**
 
 The rest of the cartridge ROM is dedicated to the game's program code, graphics data, sound data, and other assets.
 
-- **Entry Point (0x0100)**: After the boot sequence, the CPU begins executing game code starting at address 0x0100.
-- **ROM Bank 0 (0x0100 - 0x3FFF)**: This area contains the rest of the fixed, non-switchable portion of the game's code. It typically holds the main game loop and critical subroutines that need to be accessible at all times.
+- **Entry Point (0x0080)**: After the boot sequence, the CPU begins executing game code starting at address 0x0080.
+- **ROM Bank 0 (0x0081 - 0x3FFF)**: This area contains the rest of the fixed, non-switchable portion of the game's code. It typically holds the main game loop and critical subroutines that need to be accessible at all times.
 - **Switchable ROM Banks (Mapped to 0x4000 - 0x7FFF)**: The remainder of the physical ROM chip contains the switchable banks. The game can map these banks into the CPU's address space to access additional code and data, such as level maps, enemy sprites, and music.
 
 ### **3. Interrupt Vector Table**
 
-The 32-byte block from `0x00E0` to `0x00FF` is reserved for the Interrupt Vector Table. This table contains the starting addresses for the game's interrupt service routines.
+The 32-byte block from `0x0060` to `0x007F` is reserved for the Interrupt Vector Table. This table contains the starting addresses for the game's interrupt service routines.
 
-The Cicada-16 supports two different modes for handling interrupts ("Standard" and "Enhanced"), which control whether this table is used directly from ROM or copied to RAM for dynamic modification. The desired mode is selected via a flag in the cartridge header (Bit 7 of byte `0x002C`).
+The Cicada-16 supports two different modes for handling interrupts ("Standard" and "Enhanced"), which control whether this table is used directly from ROM or copied to RAM for dynamic modification. The desired mode is selected via a flag in the cartridge header (Bit 7 of byte `0x0028`).
 
 For a complete explanation of the interrupt system, vector table layout, and handling modes, see the **`Interrupts.md`** document.
 

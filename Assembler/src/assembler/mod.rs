@@ -82,12 +82,11 @@ pub fn process_constants(
 /// Pass 1: Build the symbol table.
 pub fn build_symbol_table(
     lines: &[AssemblyLine],
-    start_addr: &u16,
     final_logical_addr: &u16,
     constant_table: &ConstantTable,
 ) -> Result<SymbolTable, AssemblyError> {
     let mut symbol_table = SymbolTable::new();
-    let mut current_address: u32 = start_addr.clone() as u32; // Start address after cartridge header
+    let mut current_address: u32 = 0; // Start address after cartridge header
     let mut current_bank: u32 = 0;
 
     for line in lines {
@@ -198,6 +197,9 @@ pub fn build_symbol_table(
                 Directive::Word(words) => {
                     current_address += (words.len() as u32) * 2;
                 }
+                Directive::Header(_) => {
+                    current_address += 96;
+                }
                 _ => {}
             }
         }
@@ -218,10 +220,9 @@ pub fn build_symbol_table(
 pub fn generate_bytecode(
     lines: &[AssemblyLine],
     symbol_table: &SymbolTable,
-    start_addr: &u16,
 ) -> Result<Vec<u8>, AssemblyError> {
     let mut bytecode = Vec::new();
-    let mut current_address: u32 = start_addr.clone() as u32; // Start address after cartridge header
+    let mut current_address: u32 = 0; // Start address after cartridge header
     let mut current_bank: u32 = 0;
 
     for line in lines {
@@ -282,6 +283,43 @@ pub fn generate_bytecode(
                         .collect();
                     current_address += word_bytes.len() as u32;
                     bytecode.extend(word_bytes);
+                }
+                Directive::Header(info) => {
+                    let mut header: Vec<u8> = Vec::new();
+
+                    header.extend(info.boot_anim.as_bytes());
+
+                    header.extend(info.title.as_bytes());
+                    if header.len() < 0x14 {
+                        header.resize(0x14, 0x00);
+                    }
+
+                    header.extend(info.developer.as_bytes());
+                    if header.len() < 0x24 {
+                        header.resize(0x24, 0x00);
+                    }
+
+                    header.push(info.version);
+
+                    header.push(info.rom_size);
+
+                    header.push(info.ram_size);
+
+                    let mut cart_info: u8 = info.hardware_rev & 0x3;
+                    cart_info = (cart_info << 3) | (info.region & 0x7);
+                    cart_info = cart_info << 3;
+                    header.push(cart_info);
+
+                    let mut features: u8 = info.interrupt_mode & 0x1;
+                    features = (features << 2) | (info.mapper & 0x3);
+                    features = features << 5;
+                    header.push(features);
+
+                    header.resize(0x60, 0x00);
+                    // checksums will be caclculated and added later
+
+                    current_address += header.len() as u32;
+                    bytecode.extend(header);
                 }
                 _ => {}
             }

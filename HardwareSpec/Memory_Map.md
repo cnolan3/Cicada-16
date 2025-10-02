@@ -44,7 +44,7 @@ At power-on, the MMU starts in a special state to execute the internal Boot ROM.
   - The Boot ROM at `0x0000-0x3FFF` is unmapped.
   - The temporary mapping of Cartridge ROM Bank 0 at `0x4000-0x7FFF` is removed.
   - The game cartridge is mapped into its final configuration: ROM Bank 0 is mapped to `0x0000-0x3FFF` and the switchable ROM bank window is enabled at `0x4000-0x7FFF`.
-- The CPU then jumps to the game's entry point at `0x0100`.
+- The CPU then jumps to the game's entry point at `0x0080`.
 
 ### **Memory Protection**
 
