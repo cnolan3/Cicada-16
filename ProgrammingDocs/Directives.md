@@ -104,6 +104,82 @@ data_table: .word 0x1000, 0x2000, 0x3000
 pointer_table: .word start, message, data_table
 ```
 
+## Cartridge Metadata Directives
+
+These directives are used to define the cartridge header and interrupt vector table, which are required for a valid cartridge file.
+
+### .header_start / .header_end
+
+These directives define a block that contains the cartridge header information.
+
+- **Syntax**:
+  ```asm
+  .header_start
+      ; header fields go here
+  .header_end
+  ```
+- **Description**: All cartridge-related metadata must be placed between these two directives. The assembler will use the fields within this block to construct the 96-byte cartridge header at the beginning of the ROM.
+
+The following directives are valid inside a `.header_start` / `.header_end` block:
+
+*   **.boot_anim**: A 4-character string for the boot animation ID.
+*   **.title**: The game's title (up to 16 characters).
+*   **.developer**: The developer's name (up to 16 characters).
+*   **.version**: The game's version number (e.g., `1`).
+*   **.mapper**: The cartridge's memory mapper type.
+*   **.rom_size**: An enum indicating the ROM size.
+*   **.ram_size**: An enum indicating the size of save RAM.
+*   **.interrupt_mode**: `0` for ROM-based vectors, `1` for RAM-based.
+*   **.hardware_rev**: The hardware revision this cartridge targets.
+*   **.region**: The intended region for the game.
+
+**Example:**
+```asm
+.header_start
+    .boot_anim "CICA"
+    .title "My Awesome Game"
+    .developer "Awesome Dev"
+    .version 1
+    .mapper 0
+    .rom_size 2 ; 64KB
+    .ram_size 0 ; No RAM
+    .interrupt_mode 1
+    .hardware_rev 0
+    .region 0 ; All regions
+.header_end
+```
+
+### .interrupt_table / .table_end
+
+These directives define the interrupt vector table.
+
+- **Syntax**:
+  ```asm
+  .interrupt_table
+      .word vblank_handler
+      .word hblank_handler
+      ; ... and so on
+  .table_end
+  ```
+- **Description**: This block is used to define the addresses of your interrupt service routines (ISRs). The assembler will create a 32-byte table of these addresses. The order of the `.word` directives inside the block matters and must correspond to the interrupt vector order defined in `HardwareSpec/Interrupts.md`. You must provide at least 11 vectors, and at most 16.
+
+**Example:**
+```asm
+.interrupt_table
+    .word reset_handler         ; RESET
+    .word bus_error_handler     ; Bus Error
+    .word illegal_inst_handler  ; Illegal Instruction
+    .word protected_mem_handler ; Protected Memory
+    .word stack_overflow_handler; Stack Overflow
+    .word vblank_handler        ; V-Blank
+    .word hblank_handler        ; H-Blank
+    .word timer_handler         ; Timer
+    .word serial_handler        ; Serial
+    .word link_status_handler   ; Link Status
+    .word joypad_handler        ; Joypad
+.table_end
+```
+
 ---
 
 © 2025 Connor Nolan. This work is licensed under a

@@ -11,7 +11,7 @@ fn test_nop() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x3FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x3FFF, None, None, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 2);
     assert_eq!(result[0], 0x00);
@@ -25,7 +25,7 @@ fn test_ldi() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x3FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x3FFF, None, None, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 2);
     assert_eq!(result[0], 0x02); // LDI R1
@@ -41,7 +41,7 @@ fn test_jump() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x3FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x3FFF, None, None, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 2);
     assert_eq!(result[0], 0x00); // NOP
@@ -61,7 +61,7 @@ fn test_define() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x3FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x3FFF, None, None, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 2);
     assert_eq!(result[0], 0x01); // LDI r0
@@ -83,7 +83,7 @@ fn test_org() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x7FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x7FFF, None, None, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 3);
     assert_eq!(result[0x0000], 0x00); // Padding
@@ -142,7 +142,7 @@ fn test_include() {
 
     let entry_path = Path::new("test.asm");
 
-    let result = assemble(&entry_path, 0x3FFF, &reader).unwrap();
+    let result = assemble(&entry_path, 0x3FFF, None, None, &reader).unwrap();
 
     assert_eq!(result.len(), BANK_SIZE * 2);
     assert_eq!(result[0x0000], 0x01); // LDI r0
@@ -158,4 +158,135 @@ fn test_include() {
     assert_eq!(result[0x000A], 0xBC); // low byte
     assert_eq!(result[0x000B], 0x9A); // high byte
     assert_eq!(result[0x000C], 0xFF); // Padding
+}
+
+#[test]
+fn test_header() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        .header_start
+            .boot_anim "CICA"
+            .title "Test-Game"
+            .developer "Test-Dev"
+            .version 1
+            .mapper 1
+            .rom_size 2
+            .ram_size 1
+            .interrupt_mode 1
+            .hardware_rev 0
+            .region 3
+        .header_end
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+
+    let result = assemble(entry_path, 0x7FFF, None, Some(0x0000), &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+
+    // Boot Animation
+    assert_eq!(&result[0..4], b"CICA");
+
+    // Title
+    let mut title_bytes = b"Test-Game".to_vec();
+    title_bytes.resize(16, 0);
+    assert_eq!(&result[0x04..0x14], &title_bytes[..]);
+
+    // Developer
+    let mut dev_bytes = b"Test-Dev".to_vec();
+    dev_bytes.resize(16, 0);
+    assert_eq!(&result[0x14..0x24], &dev_bytes[..]);
+
+    // Version
+    assert_eq!(result[0x24], 1);
+
+    // ROM Size
+    assert_eq!(result[0x25], 2);
+
+    // RAM Size
+    assert_eq!(result[0x26], 1);
+
+    // Cartridge Info
+    // hardware_rev = 0 (00), region = 3 (011)
+    assert_eq!(result[0x27], 0b00011000);
+
+    // Feature Flags
+    // interrupt_mode = 1, mapper = 1 (01)
+    assert_eq!(result[0x28], 0b10100000);
+
+    // The rest of the header should be 0 up to the checksums, which are not yet implemented in this test
+    for i in 0x29..0x60 {
+        assert_eq!(result[i], 0x00);
+    }
+}
+
+#[test]
+fn test_interrupt_table() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        .org 0x0060
+        .interrupt_table
+            .word RESET_HANDLER
+            .word BUS_ERROR_HANDLER
+            .word ILLEGAL_INSTRUCTION_HANDLER
+            .word PROTECTED_MEMORY_HANDLER
+            .word STACK_OVERFLOW_HANDLER
+            .word VBLANK_HANDLER
+            .word HBLANK_HANDLER
+            .word TIMER_HANDLER
+            .word SERIAL_HANDLER
+            .word LINK_STATUS_HANDLER
+            .word JOYPAD_HANDLER
+        .table_end
+
+        .org 0x0100
+        RESET_HANDLER:
+        NOP
+        BUS_ERROR_HANDLER:
+        NOP
+        ILLEGAL_INSTRUCTION_HANDLER:
+        NOP
+        PROTECTED_MEMORY_HANDLER:
+        NOP
+        STACK_OVERFLOW_HANDLER:
+        NOP
+        VBLANK_HANDLER:
+        NOP
+        HBLANK_HANDLER:
+        NOP
+        TIMER_HANDLER:
+        NOP
+        SERIAL_HANDLER:
+        NOP
+        LINK_STATUS_HANDLER:
+        NOP
+        JOYPAD_HANDLER:
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+
+    let result = assemble(entry_path, 0x7FFF, Some(0x0060), None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+
+    // Interrupt table starts at 0x0060
+    // Handlers start at 0x0100 and are one byte each (NOP)
+    let expected_addresses = (0..11).map(|i| 0x0100 + i).collect::<Vec<u16>>();
+
+    for i in 0..11 {
+        let addr_offset = 0x60 + (i * 2);
+        let expected_addr = expected_addresses[i];
+        let actual_addr = u16::from_le_bytes([result[addr_offset], result[addr_offset + 1]]);
+        assert_eq!(actual_addr, expected_addr);
+    }
+
+    // Check padding after table
+    assert_eq!(result[0x60 + 22], 0x00);
 }

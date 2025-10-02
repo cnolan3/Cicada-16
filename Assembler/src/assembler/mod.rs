@@ -22,6 +22,7 @@ mod symbol_table;
 use crate::ast::{AssemblyLine, Directive, Operand};
 use crate::errors::AssemblyError;
 use constant_table::*;
+use encoder::utility_functions::resolve_label_or_immediate;
 use symbol_table::*;
 
 const BANK_SIZE: u32 = 16384;
@@ -83,11 +84,15 @@ pub fn process_constants(
 pub fn build_symbol_table(
     lines: &[AssemblyLine],
     final_logical_addr: &u16,
+    expected_interrupt_table_addr: Option<u16>,
+    expected_header_addr: Option<u16>,
     constant_table: &ConstantTable,
 ) -> Result<SymbolTable, AssemblyError> {
     let mut symbol_table = SymbolTable::new();
     let mut current_address: u32 = 0; // Start address after cartridge header
     let mut current_bank: u32 = 0;
+    let mut found_interrupt_table_addr: Option<u32> = None;
+    let mut found_header_addr: Option<u32> = None;
 
     for line in lines {
         // If a label exists on this line, record its current address.
@@ -198,7 +203,24 @@ pub fn build_symbol_table(
                     current_address += (words.len() as u32) * 2;
                 }
                 Directive::Header(_) => {
+                    if let None = expected_header_addr {
+                        return Err(AssemblyError::StructuralError {
+                            line: line.line_number,
+                            reason: "Cartridge rom header not allowed in boot roms.".to_string(),
+                        });
+                    }
+                    found_header_addr = Some(current_address);
                     current_address += 96;
+                }
+                Directive::Interrupt(_) => {
+                    if let None = expected_interrupt_table_addr {
+                        return Err(AssemblyError::StructuralError {
+                            line: line.line_number,
+                            reason: "Interrupt vector table not expected.".to_string(),
+                        });
+                    }
+                    found_interrupt_table_addr = Some(current_address);
+                    current_address += 32;
                 }
                 _ => {}
             }
@@ -213,6 +235,47 @@ pub fn build_symbol_table(
             });
         }
     }
+
+    // check for correct header placement
+    match (expected_header_addr, found_header_addr) {
+        (Some(ex_addr), Some(found_addr)) => {
+            if ex_addr as u32 != found_addr {
+                return Err(AssemblyError::StructuralErrorNoLine {
+                    reason: format!(
+                        "Expected cartridge rom header at 0x{:04x}, found at 0x{:04x}",
+                        ex_addr, found_addr
+                    ),
+                });
+            }
+        }
+        (Some(ex_addr), None) => {
+            return Err(AssemblyError::StructuralErrorNoLine {
+                reason: format!("Expected cartridge rom header at 0x{:04x}", ex_addr),
+            });
+        }
+        _ => {}
+    }
+
+    // check for correct interrupt vector table placement
+    match (expected_interrupt_table_addr, found_interrupt_table_addr) {
+        (Some(ex_addr), Some(found_addr)) => {
+            if ex_addr as u32 != found_addr {
+                return Err(AssemblyError::StructuralErrorNoLine {
+                    reason: format!(
+                        "Expected interrupt vector table at 0x{:04x}, found at 0x{:04x}",
+                        ex_addr, found_addr
+                    ),
+                });
+            }
+        }
+        (Some(ex_addr), None) => {
+            return Err(AssemblyError::StructuralErrorNoLine {
+                reason: format!("Expected interrupt vector table at 0x{:04x}", ex_addr),
+            });
+        }
+        _ => {}
+    }
+
     Ok(symbol_table)
 }
 
@@ -320,6 +383,23 @@ pub fn generate_bytecode(
 
                     current_address += header.len() as u32;
                     bytecode.extend(header);
+                }
+                Directive::Interrupt(words) => {
+                    let mut word_bytes: Vec<u8> = words
+                        .iter()
+                        .flat_map(|word| -> Vec<u8> {
+                            let addr =
+                                resolve_label_or_immediate(word, symbol_table, &line.line_number)
+                                    .unwrap();
+                            addr.to_le_bytes().to_vec()
+                        })
+                        .collect();
+
+                    if word_bytes.len() < 32 {
+                        word_bytes.resize(32, 0x00);
+                    }
+                    current_address += word_bytes.len() as u32;
+                    bytecode.extend(word_bytes);
                 }
                 _ => {}
             }

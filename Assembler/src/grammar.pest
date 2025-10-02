@@ -309,6 +309,8 @@ include_directive = { ^".include" ~ operand }
 
 header_directive_block = { ^".header_start" ~ ( header_info? ~ LINE_END )* ~ ^".header_end" }
 
+interrupt_directive_block = { ^".interrupt_table" ~ ( word_directive? ~ LINE_END )* ~ ^".table_end" }
+
 directive = {
 org_directive
 | bank_directive
@@ -317,6 +319,7 @@ org_directive
 | define_directive
 | include_directive
 | header_directive_block
+| interrupt_directive_block
 }
 
 // --- Header Info Rules ---

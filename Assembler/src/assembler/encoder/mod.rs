@@ -17,7 +17,7 @@ limitations under the License.
 mod constants;
 mod instruction_encoders;
 mod operand_validators;
-mod utility_functions;
+pub mod utility_functions;
 
 use crate::assembler::symbol_table::*;
 use crate::ast::Instruction;

@@ -211,6 +211,7 @@ pub enum Directive {
     Define(String, Operand), // .define label 0x01
     Include(String),         // .include path
     Header(HeaderInfo),      // .header_start ... .header_end
+    Interrupt(Vec<Operand>), // .interrupt_table ... .table_end
 }
 
 // --- Assembly Line Structure ---

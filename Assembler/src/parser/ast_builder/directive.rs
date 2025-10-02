@@ -143,6 +143,7 @@ impl<'a> AstBuilder<'a> {
         }
     }
 
+    // build a header info block directive
     pub fn build_header_directive(self) -> Result<Directive> {
         let mut info = HeaderInfo::default();
 
@@ -252,5 +253,47 @@ impl<'a> AstBuilder<'a> {
         }
 
         Ok(Directive::Header(info))
+    }
+
+    // build an interrupt vector table block directive
+    pub fn build_interrupt_directive(self) -> Result<Directive> {
+        let mut op_table: Vec<Operand> = Vec::new();
+
+        for table_line in self.pairs {
+            let line_number = table_line.as_span().start_pos().line_col().0;
+
+            if let Rule::word_directive = table_line.as_rule() {
+                let field_builder = AstBuilder::new(table_line.clone());
+                let word = field_builder.build_word_directive()?;
+
+                if let Directive::Word(data) = word {
+                    op_table.extend(data);
+                } else {
+                    return Err(AssemblyError::StructuralError {
+                        line: line_number,
+                        reason: "Invalid word data.".to_string(),
+                    }
+                    .into());
+                }
+            } else {
+                return Err(AssemblyError::StructuralError {
+                    line: line_number,
+                    reason: "Fields of a .interrupt_table directive must be .word directives."
+                        .to_string(),
+                }
+                .into());
+            }
+        }
+
+        if op_table.len() < 11 || op_table.len() > 16 {
+            Err(AssemblyError::StructuralError {
+                line: self.line_number,
+                reason: "Vector interrupt table must contain at least 11 entries and at most 16 entries."
+                    .to_string(),
+            }
+            .into())
+        } else {
+            Ok(Directive::Interrupt(op_table))
+        }
     }
 }

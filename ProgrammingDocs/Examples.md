@@ -209,5 +209,70 @@ This structure makes the code much easier to navigate and maintain. The `main.as
 
 ---
 
+### Example 5: Complete Cartridge Structure
+
+This example demonstrates how to structure a complete, valid cartridge file using the new header and interrupt table directives.
+
+```asm
+; This is the main file for a cartridge.
+; It defines the header, interrupt table, and includes other code.
+
+.org 0x0000
+
+.header_start
+    .boot_anim "GAME"
+    .title "My Game"
+    .developer "My Company"
+    .version 1
+    .mapper 0
+    .rom_size 2 ; 64KB
+    .ram_size 0 ; No RAM
+    .interrupt_mode 1 ; Use RAM-based interrupt vectors
+    .hardware_rev 0
+    .region 0 ; All Regions
+.header_end
+
+.org 0x0060
+
+.interrupt_table
+    .word reset_handler
+    .word default_handler
+    .word default_handler
+    .word default_handler
+    .word default_handler
+    .word vblank_handler
+    .word default_handler
+    .word default_handler
+    .word default_handler
+    .word default_handler
+    .word default_handler
+.table_end
+
+.org 0x0080
+
+reset_handler:
+    ; Game entry point
+    LDI R7, 0xCFFF ; Initialize stack pointer
+
+main_loop:
+    CALL wait_for_vblank
+    ; Game logic here
+    JMP main_loop
+
+vblank_handler:
+    ; V-Blank interrupt logic
+    RETI
+
+default_handler:
+    ; Default handler for unused interrupts
+    RETI
+
+wait_for_vblank:
+    SYSCALL 0x0F ; System Library function to wait for V-Blank
+    RET
+```
+
+---
+
 © 2025 Connor Nolan. This work is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

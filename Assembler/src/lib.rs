@@ -32,6 +32,8 @@ extern crate pest_derive;
 pub fn assemble<F: FileReader>(
     source_path: &Path,
     final_logical_addr: u16,
+    expected_interrupt_table_addr: Option<u16>,
+    expected_header_addr: Option<u16>,
     reader: &F,
 ) -> Result<Vec<u8>> {
     let mut include_stack: HashSet<PathBuf> = HashSet::new();
@@ -44,9 +46,14 @@ pub fn assemble<F: FileReader>(
     assembler::process_constants(&mut parsed_lines, &constant_table)
         .context("Failed during assembler phase 0.5")?;
 
-    let symbol_table =
-        assembler::build_symbol_table(&parsed_lines, &final_logical_addr, &constant_table)
-            .context("Failed during assembler phase 1")?;
+    let symbol_table = assembler::build_symbol_table(
+        &parsed_lines,
+        &final_logical_addr,
+        expected_interrupt_table_addr,
+        expected_header_addr,
+        &constant_table,
+    )
+    .context("Failed during assembler phase 1")?;
 
     let machine_code = assembler::generate_bytecode(&parsed_lines, &symbol_table)
         .context("Failed during assembler phase 2")?;

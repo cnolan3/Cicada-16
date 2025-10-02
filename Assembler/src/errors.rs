@@ -24,6 +24,9 @@ pub enum AssemblyError {
     #[error("Structural Error on line {line}: {reason}")]
     StructuralError { line: usize, reason: String },
 
+    #[error("Structural Error: {reason}")]
+    StructuralErrorNoLine { reason: String },
+
     #[error("Semantic Error on line {line}: {reason}")]
     SemanticError { line: usize, reason: String },
 
