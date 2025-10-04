@@ -189,7 +189,7 @@ This 8-bit register provides information about the PPU's current state and allow
 | :------ | :---------- | :---------------------------------------------------------------------------------------------------------------------------- |
 | **7**   | UNUSED      | Unused, always reads 0.                                                                                                       |
 | **6**   | LYC_INT_EN  | 1: Enable interrupt when LY == LYC. 0: Disable.                                                                               |
-| **5**   | OAM_INT_EN  | 1: Enable interrupt when PPU enters OAM Scan mode. 0: Disable.                                                                |
+| **5**   | (Reserved)  | Unused.                                                                                                                       |
 | **4**   | VBLK_INT_EN | 1: Enable interrupt when PPU enters V-Blank. 0: Disable.                                                                      |
 | **3**   | HBLK_INT_EN | 1: Enable interrupt when PPU enters H-Blank. 0: Disable.                                                                      |
 | **2**   | LYC_FLAG    | **(Read-only)** 1 if LY == LYC. 0 otherwise.                                                                                  |
@@ -212,7 +212,7 @@ At the beginning of a scanline, the PPU determines which sprites need to be draw
 - **Action:** The PPU iterates through all 64 sprite entries in OAM (Object Attribute Memory, `F400-F5FF`).
 - **Condition:** It checks if the current scanline (`LY` register) falls within the vertical range of each sprite (i.e., `sprite.y <= LY < sprite.y + sprite.height`).
 - **Result:** The PPU builds a temporary internal list of up to 16 sprites that are visible on this line. If more than 16 sprites are on the line, the additional ones are ignored for this frame. This list contains the sprite's X-position, tile index, attributes, and OAM index (for priority).
-- **Status:** The `STAT` register's mode flag (bits 1-0) is set to `10`. An OAM Scan interrupt can be triggered if enabled.
+- **Status:** The `STAT` register's mode flag (bits 1-0) is set to `10`.
 
 #### **Mode 3: Drawing Pixels (480 Cycles)**
 

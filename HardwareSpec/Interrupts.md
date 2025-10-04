@@ -27,14 +27,15 @@ The process for triggering and handling an interrupt or CPU fault is as follows:
 
 ## **3. Interrupt Sources and Registers**
 
-The Cicada-16 has six hardware interrupt sources, controlled via the `IE` (`F020`) and `IF` (`F021`) registers.
+The Cicada-16 has seven hardware interrupt sources, controlled via the `IE` (`F020`) and `IF` (`F021`) registers.
 
 | Bit | Name            | Description                                                                 |
 | :-- | :-------------- | :-------------------------------------------------------------------------- |
-| 5   | **Link Status** | Occurs when the serial port `CONNECTED` bit changes state.                  |
-| 4   | **Joypad**      | Occurs when a joypad button is pressed **(on the 1-to-0 transition only)**. |
-| 3   | **Serial**      | Occurs when a serial data transfer is complete.                             |
-| 2   | **Timer**       | Occurs when the TIMA timer overflows.                                       |
+| 6   | **Link Status** | Occurs when the serial port `CONNECTED` bit changes state.                  |
+| 5   | **Joypad**      | Occurs when a joypad button is pressed **(on the 1-to-0 transition only)**. |
+| 4   | **Serial**      | Occurs when a serial data transfer is complete.                             |
+| 3   | **Timer**       | Occurs when the TIMA timer overflows.                                       |
+| 2   | **LYC == LY**   | Occurs when the PPU's `LY` register equals the `LYC` register.              |
 | 1   | **H-Blank**     | Occurs when the PPU enters the H-Blank period.                              |
 | 0   | **V-Blank**     | Occurs when the PPU enters the V-Blank period.                              |
 
@@ -44,11 +45,12 @@ This register controls whether a specific hardware interrupt is allowed to trigg
 
 | Bit | Name            | Type | Function                                  |
 | :-- | :-------------- | :--- | :---------------------------------------- |
-| 7-6 | -               | R    | Unused                                    |
-| 5   | **Link Status** | R/W  | Enable Link Status Interrupt              |
-| 4   | **Joypad**      | R/W  | Enable Joypad Interrupt                   |
-| 3   | **Serial**      | R/W  | Enable Serial Transfer Complete Interrupt |
-| 2   | **Timer**       | R/W  | Enable Timer Overflow Interrupt           |
+| 7   | -               | R    | Unused                                    |
+| 6   | **Link Status** | R/W  | Enable Link Status Interrupt              |
+| 5   | **Joypad**      | R/W  | Enable Joypad Interrupt                   |
+| 4   | **Serial**      | R/W  | Enable Serial Transfer Complete Interrupt |
+| 3   | **Timer**       | R/W  | Enable Timer Overflow Interrupt           |
+| 2   | **LYC == LY**   | R/W  | Enable PPU LYC Interrupt                |
 | 1   | **H-Blank**     | R/W  | Enable PPU H-Blank Interrupt              |
 | 0   | **V-Blank**     | R/W  | Enable PPU V-Blank Interrupt              |
 
@@ -58,11 +60,12 @@ This register holds the flags for pending hardware interrupts. When a hardware e
 
 | Bit | Name            | Type | Function                                                                                     |
 | :-- | :-------------- | :--- | :------------------------------------------------------------------------------------------- |
-| 7-6 | -               | R    | Unused                                                                                       |
-| 5   | **Link Status** | R/W  | Link Status Interrupt Flag. Set when the `CONNECTED` bit in the `SC` register changes state. |
-| 4   | **Joypad**      | R/W  | Joypad Interrupt Flag. Set when a joypad button is pressed.                                  |
-| 3   | **Serial**      | R/W  | Serial Transfer Complete Flag. Set when a serial data transfer finishes.                     |
-| 2   | **Timer**       | R/W  | Timer Overflow Flag. Set when the `TIMA` register overflows.                                 |
+| 7   | -               | R    | Unused                                                                                       |
+| 6   | **Link Status** | R/W  | Link Status Interrupt Flag. Set when the `CONNECTED` bit in the `SC` register changes state. |
+| 5   | **Joypad**      | R/W  | Joypad Interrupt Flag. Set when a joypad button is pressed.                                  |
+| 4   | **Serial**      | R/W  | Serial Transfer Complete Flag. Set when a serial data transfer finishes.                     |
+| 3   | **Timer**       | R/W  | Timer Overflow Flag. Set when the `TIMA` register overflows.                                 |
+| 2   | **LYC == LY**   | R/W  | PPU LYC Flag. Set when `LY` == `LYC`.                                                        |
 | 1   | **H-Blank**     | R/W  | PPU H-Blank Flag. Set when the PPU enters the H-Blank period.                                |
 | 0   | **V-Blank**     | R/W  | PPU V-Blank Flag. Set when the PPU enters the V-Blank period.                                |
 
@@ -88,11 +91,11 @@ The Interrupt Vector Table is a 32-byte block of memory containing the 16-bit ad
 | `+0x8`                | **Stack Overflow**      | **Fault** |
 | `+0xA`                | `V-Blank`               | 1         |
 | `+0xC`                | `H-Blank`               | 2         |
-| `+0xE`                | `Timer`                 | 3         |
-| `+0x10`               | `Serial`                | 4         |
-| `+0x12`               | `Link Status`           | 5         |
-| `+0x14`               | `Joypad`                | 6         |
-| `+0x16`               | `(Reserved)`            | -         |
+| `+0xE`                | `LYC == LY`             | 3         |
+| `+0x10`               | `Timer`                 | 4         |
+| `+0x12`               | `Serial`                | 5         |
+| `+0x14`               | `Link Status`           | 6         |
+| `+0x16`               | `Joypad`                | 7         |
 
 ## **6. Vector Table Location Modes**
 
