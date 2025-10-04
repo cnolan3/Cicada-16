@@ -451,7 +451,7 @@ Provides a standardized Pseudo-Random Number Generator (PRNG). The first time it
 
 ### `setInterruptHandler` : Index 0x1E
 
-For games running in "Enhanced Mode" (RAM-based vectors), this provides a safe, standardized way to change an interrupt service routine. It takes an interrupt vector number and a function pointer and writes the address into the correct slot in the WRAM vector table (0xC000). This is safer than having the developer hardcode memory addresses.
+For games running in "Enhanced Mode" (RAM-based vectors), this provides a safe, standardized way to change an interrupt service routine. It takes an interrupt vector number and a function pointer and writes the address into the correct slot in the WRAM vector table (0xBFE0). This is safer than having the developer hardcode memory addresses.
 
 - **Inputs:**
   - R0.b: Interrupt vector number

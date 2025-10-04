@@ -60,6 +60,9 @@ The following ideas are things that I think may be appropriate to add to a possi
   - increase wave sample size from 4 bits to 8, increase wave ram
 - Advanced DSP effects
 - Hardware multiplication/division
+- **Configurable Stack Pointer Bank:**
+  - Add a new I/O register (e.g., `STK_BANK`) to allow the stack to be moved to any of the available WRAM banks.
+  - This would enable more advanced programming models, such as cooperative multitasking (where each task has its own stack) and better memory isolation for different game states or interrupt handlers.
 
 ---
 
