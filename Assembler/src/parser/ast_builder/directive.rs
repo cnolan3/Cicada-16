@@ -285,10 +285,10 @@ impl<'a> AstBuilder<'a> {
             }
         }
 
-        if op_table.len() < 11 || op_table.len() > 16 {
+        if op_table.len() < 12 || op_table.len() > 16 {
             Err(AssemblyError::StructuralError {
                 line: self.line_number,
-                reason: "Vector interrupt table must contain at least 11 entries and at most 16 entries."
+                reason: "Vector interrupt table must contain at least 12 entries and at most 16 entries."
                     .to_string(),
             }
             .into())
