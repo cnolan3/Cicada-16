@@ -105,6 +105,27 @@ The PPU can render up to **64** sprites on screen at once.
   - **Byte 4:** Attribute Flags, defined below.
   - **Bytes 5-7:** Reserved for future use (e.g., rotation/scaling data).
 
+  **OAM Byte 2 (Size & Shape Attribute):**
+
+  This byte controls the dimensions of the sprite. The lower four bits are divided into two 2-bit fields that work together to define the final size. The upper four bits are reserved for future use.
+
+| Bit(s) | Name       | Description                                                                      |
+| :----- | :--------- | :------------------------------------------------------------------------------- |
+| 7-4    | (Reserved) | Unused.                                                                          |
+| 3-2    | **SHAPE**  | `00`: Square, `01`: Horizontal Rectangle, `10`: Vertical Rectangle, `11`: Reserved |
+| 1-0    | **SIZE**   | Selects the size from a shape-dependent table.                                   |
+
+  **Sprite Dimensions based on SHAPE and SIZE:**
+
+| SHAPE             | SIZE=`00` | SIZE=`01` | SIZE=`10` | SIZE=`11` |
+| :---------------- | :-------- | :-------- | :-------- | :-------- |
+| **00 (Square)**   | 8x8       | 16x16     | 32x32     | 64x64     |
+| **01 (H-Rect)**   | 16x8      | 32x8      | 32x16     | 64x32     |
+| **10 (V-Rect)**   | 8x16      | 8x32      | 16x32     | 32x64     |
+| **11 (Reserved)** | Invalid   | Invalid   | Invalid   | Invalid   |
+
+  For sprites larger than 8x8, the tile index in Byte 3 points to the top-left 8x8 tile of the sprite. The PPU then automatically fetches the required adjacent tiles from VRAM to construct the full sprite. For example, a 16x16 sprite will be composed of a 2x2 block of four tiles starting at the specified tile index.
+
   **OAM Byte 4 (Sprite Attribute Flags):**
 
 | Bit(s) | Name         | Description                                                                          |
