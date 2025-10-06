@@ -46,16 +46,18 @@ pub fn assemble<F: FileReader>(
     assembler::process_constants(&mut parsed_lines, &constant_table)
         .context("Failed during assembler phase 0.5")?;
 
+    let source_dir = source_path.parent().unwrap_or(Path::new("."));
     let symbol_table = assembler::build_symbol_table(
         &parsed_lines,
         &final_logical_addr,
         expected_interrupt_table_addr,
         expected_header_addr,
         &constant_table,
+        source_dir,
     )
     .context("Failed during assembler phase 1")?;
 
-    let machine_code = assembler::generate_bytecode(&parsed_lines, &symbol_table)
+    let machine_code = assembler::generate_bytecode(&parsed_lines, &symbol_table, source_dir)
         .context("Failed during assembler phase 2")?;
 
     let mut final_rom = Vec::new();

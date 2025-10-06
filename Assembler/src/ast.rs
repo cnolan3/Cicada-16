@@ -28,6 +28,15 @@ pub struct HeaderInfo {
     pub region: u8,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TileDataInfo {
+    pub filepath: String,
+    pub x_pixels: Option<u16>,
+    pub y_pixels: Option<u16>,
+    pub width_pixels: Option<u16>,
+    pub height_pixels: Option<u16>,
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Register {
     R0,
@@ -212,6 +221,7 @@ pub enum Directive {
     Include(String),         // .include path
     Header(HeaderInfo),      // .header_start ... .header_end
     Interrupt(Vec<Operand>), // .interrupt_table ... .table_end
+    IncTileData(TileDataInfo), // .inc_tiledata "path" [x, y, w, h]
 }
 
 // --- Assembly Line Structure ---

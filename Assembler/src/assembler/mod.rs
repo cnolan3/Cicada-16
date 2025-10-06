@@ -18,12 +18,14 @@ mod constant_table;
 mod encoder;
 mod preprocessor;
 mod symbol_table;
+mod tile_converter;
 
 use crate::ast::{AssemblyLine, Directive, Operand};
 use crate::errors::AssemblyError;
 use constant_table::*;
 use encoder::utility_functions::resolve_label_or_immediate;
 use symbol_table::*;
+use tile_converter::TileConverter;
 
 const BANK_SIZE: u32 = 16384;
 
@@ -95,6 +97,7 @@ pub fn build_symbol_table(
     expected_interrupt_table_addr: Option<u16>,
     expected_header_addr: Option<u16>,
     constant_table: &ConstantTable,
+    source_dir: &std::path::Path,
 ) -> Result<SymbolTable, AssemblyError> {
     let mut symbol_table = SymbolTable::new();
     let mut current_address: u32 = 0; // Start address after cartridge header
@@ -230,6 +233,22 @@ pub fn build_symbol_table(
                     found_interrupt_table_addr = Some(current_address);
                     current_address += 32;
                 }
+                Directive::IncTileData(info) => {
+                    // Resolve the image path relative to the source directory
+                    let image_path = source_dir.join(&info.filepath);
+
+                    // Calculate the size using TileConverter
+                    let size = TileConverter::calculate_size(
+                        &image_path,
+                        info.x_pixels,
+                        info.y_pixels,
+                        info.width_pixels,
+                        info.height_pixels,
+                        line.line_number,
+                    )?;
+
+                    current_address += size;
+                }
                 _ => {}
             }
         }
@@ -291,6 +310,7 @@ pub fn build_symbol_table(
 pub fn generate_bytecode(
     lines: &[AssemblyLine],
     symbol_table: &SymbolTable,
+    source_dir: &std::path::Path,
 ) -> Result<Vec<u8>, AssemblyError> {
     let mut bytecode = Vec::new();
     let mut current_address: u32 = 0; // Start address after cartridge header
@@ -408,6 +428,23 @@ pub fn generate_bytecode(
                     }
                     current_address += word_bytes.len() as u32;
                     bytecode.extend(word_bytes);
+                }
+                Directive::IncTileData(info) => {
+                    // Resolve the image path relative to the source directory
+                    let image_path = source_dir.join(&info.filepath);
+
+                    // Convert the image to tile data
+                    let tile_bytes = TileConverter::convert_image_to_tiles(
+                        &image_path,
+                        info.x_pixels,
+                        info.y_pixels,
+                        info.width_pixels,
+                        info.height_pixels,
+                        line.line_number,
+                    )?;
+
+                    current_address += tile_bytes.len() as u32;
+                    bytecode.extend(tile_bytes);
                 }
                 _ => {}
             }

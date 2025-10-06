@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use crate::ast::HeaderInfo;
+use crate::ast::{HeaderInfo, TileDataInfo};
 use crate::parser::AstBuilder;
 use crate::parser::Rule;
 use crate::parser::ast_builder::AssemblyError;
@@ -295,5 +295,122 @@ impl<'a> AstBuilder<'a> {
         } else {
             Ok(Directive::Interrupt(op_table))
         }
+    }
+
+    // build an inc_tiledata directive
+    pub fn build_inc_tiledata_directive(mut self) -> Result<Directive> {
+        let filepath_op = self.pop_operand().context("Invalid filepath.")?;
+
+        let filepath = match filepath_op {
+            Operand::String(s) => s,
+            _ => {
+                return Err(AssemblyError::StructuralError {
+                    line: self.line_number,
+                    reason: ".inc_tiledata filepath must be a string.".to_string(),
+                }
+                .into());
+            }
+        };
+
+        // Check for optional tile region parameters by trying to pop the next operand
+        let tile_info = if let Ok(x_op) = self.pop_operand() {
+            let x = match x_op {
+                Operand::Immediate(val) => {
+                    if val < 0 {
+                        return Err(AssemblyError::StructuralError {
+                            line: self.line_number,
+                            reason: "X coordinate must be non-negative.".to_string(),
+                        }
+                        .into());
+                    }
+                    val as u16
+                }
+                _ => {
+                    return Err(AssemblyError::StructuralError {
+                        line: self.line_number,
+                        reason: "Region coordinates must be immediate values.".to_string(),
+                    }
+                    .into());
+                }
+            };
+
+            let y = match self.pop_operand()? {
+                Operand::Immediate(val) => {
+                    if val < 0 {
+                        return Err(AssemblyError::StructuralError {
+                            line: self.line_number,
+                            reason: "Y coordinate must be non-negative.".to_string(),
+                        }
+                        .into());
+                    }
+                    val as u16
+                }
+                _ => {
+                    return Err(AssemblyError::StructuralError {
+                        line: self.line_number,
+                        reason: "Region coordinates must be immediate values.".to_string(),
+                    }
+                    .into());
+                }
+            };
+
+            let w = match self.pop_operand()? {
+                Operand::Immediate(val) => {
+                    if val <= 0 {
+                        return Err(AssemblyError::StructuralError {
+                            line: self.line_number,
+                            reason: "Width must be positive.".to_string(),
+                        }
+                        .into());
+                    }
+                    val as u16
+                }
+                _ => {
+                    return Err(AssemblyError::StructuralError {
+                        line: self.line_number,
+                        reason: "Region dimensions must be immediate values.".to_string(),
+                    }
+                    .into());
+                }
+            };
+
+            let h = match self.pop_operand()? {
+                Operand::Immediate(val) => {
+                    if val <= 0 {
+                        return Err(AssemblyError::StructuralError {
+                            line: self.line_number,
+                            reason: "Height must be positive.".to_string(),
+                        }
+                        .into());
+                    }
+                    val as u16
+                }
+                _ => {
+                    return Err(AssemblyError::StructuralError {
+                        line: self.line_number,
+                        reason: "Region dimensions must be immediate values.".to_string(),
+                    }
+                    .into());
+                }
+            };
+
+            TileDataInfo {
+                filepath,
+                x_pixels: Some(x),
+                y_pixels: Some(y),
+                width_pixels: Some(w),
+                height_pixels: Some(h),
+            }
+        } else {
+            TileDataInfo {
+                filepath,
+                x_pixels: None,
+                y_pixels: None,
+                width_pixels: None,
+                height_pixels: None,
+            }
+        };
+
+        Ok(Directive::IncTileData(tile_info))
     }
 }

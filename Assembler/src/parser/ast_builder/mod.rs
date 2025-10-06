@@ -145,6 +145,7 @@ impl<'a> AstBuilder<'a> {
             Rule::word_directive => self.build_word_directive(),
             Rule::define_directive => self.build_define_directive(),
             Rule::include_directive => self.build_include_directive(),
+            Rule::inc_tiledata_directive => self.build_inc_tiledata_directive(),
             Rule::header_directive_block => self.build_header_directive(),
             Rule::interrupt_directive_block => self.build_interrupt_directive(),
             _ => unreachable!("Unknown directive rule: {:?}", self.rule),

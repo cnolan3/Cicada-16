@@ -307,6 +307,8 @@ define_directive = { ^".define" ~ operand ~ operand }
 
 include_directive = { ^".include" ~ operand }
 
+inc_tiledata_directive = { ^".inc_tiledata" ~ operand ~ ("," ~ operand ~ "," ~ operand ~ "," ~ operand ~ "," ~ operand)? }
+
 header_directive_block = { ^".header_start" ~ ( header_info? ~ LINE_END )* ~ ^".header_end" }
 
 interrupt_directive_block = { ^".interrupt_table" ~ ( word_directive? ~ LINE_END )* ~ ^".table_end" }
@@ -318,6 +320,7 @@ org_directive
 | word_directive
 | define_directive
 | include_directive
+| inc_tiledata_directive
 | header_directive_block
 | interrupt_directive_block
 }

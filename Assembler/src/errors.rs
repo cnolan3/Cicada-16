@@ -35,4 +35,10 @@ pub enum AssemblyError {
 
     #[error("Header Info Error: {reason}")]
     HeaderInfoError { reason: String },
+
+    #[error("Image Error on line {line}: {reason}")]
+    ImageError { line: usize, reason: String },
+
+    #[error("Image Dimension Error on line {line}: {reason}")]
+    ImageDimensionError { line: usize, reason: String },
 }
