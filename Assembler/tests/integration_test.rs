@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 use cicasm::assemble;
-use cicasm::file_reader::MockFileReader;
+use cicasm::file_reader::{AsmFileReader, MockFileReader};
 use std::path::Path;
 
 const BANK_SIZE: usize = 16384;
@@ -254,6 +254,7 @@ fn test_interrupt_table() {
             .word STACK_OVERFLOW_HANDLER
             .word VBLANK_HANDLER
             .word HBLANK_HANDLER
+            .word LYC_HANDLER
             .word TIMER_HANDLER
             .word SERIAL_HANDLER
             .word LINK_STATUS_HANDLER
@@ -275,6 +276,8 @@ fn test_interrupt_table() {
         NOP
         HBLANK_HANDLER:
         NOP
+        LYC_HANDLER:
+        NOP
         TIMER_HANDLER:
         NOP
         SERIAL_HANDLER:
@@ -294,9 +297,9 @@ fn test_interrupt_table() {
 
     // Interrupt table starts at 0x0060
     // Handlers start at 0x0100 and are one byte each (NOP)
-    let expected_addresses = (0..11).map(|i| 0x0100 + i).collect::<Vec<u16>>();
+    let expected_addresses = (0..12).map(|i| 0x0100 + i).collect::<Vec<u16>>();
 
-    for i in 0..11 {
+    for i in 0..12 {
         let addr_offset = 0x60 + (i * 2);
         let expected_addr = expected_addresses[i];
         let actual_addr = u16::from_le_bytes([result[addr_offset], result[addr_offset + 1]]);
@@ -304,5 +307,265 @@ fn test_interrupt_table() {
     }
 
     // Check padding after table
-    assert_eq!(result[0x60 + 22], 0x00);
+    assert_eq!(result[0x60 + 24], 0x00);
+}
+
+#[test]
+fn test_ret_reti() {
+    let mut reader = MockFileReader::default();
+    reader.add_file("test.asm", "RET\nRETI\n");
+
+    let entry_path = Path::new("test.asm");
+
+    let result = assemble(&entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0xF9); // RET
+    assert_eq!(result[0x0001], 0xFA); // RETI
+}
+
+#[test]
+fn test_inc_tiledata_directive() {
+    use image::{ImageBuffer, Rgba, RgbaImage};
+    use std::fs;
+    use tempfile::tempdir;
+
+    // Create a temporary directory for test files
+    let temp_dir = tempdir().unwrap();
+    let test_image_path = temp_dir.path().join("test_tile.png");
+    let test_asm_path = temp_dir.path().join("test.asm");
+
+    // Create a simple 8x8 test image with a known pattern
+    // Pattern: gradient from 0-15 (4-bit values)
+    let mut img: RgbaImage = ImageBuffer::new(8, 8);
+    for y in 0..8 {
+        for x in 0..8 {
+            // Create a simple pattern: value = (y * 2) mod 16
+            let val = ((y * 2) % 16) as u8;
+            let gray = val * 17; // Map 0-15 to 0-255
+            img.put_pixel(x, y, Rgba([gray, gray, gray, 255]));
+        }
+    }
+    img.save(&test_image_path).unwrap();
+
+    // Create assembly file that uses .inc_tiledata
+    let asm_content = format!(
+        ".org 0x0000\ntile_data:\n.inc_tiledata \"{}\"\n",
+        test_image_path.file_name().unwrap().to_str().unwrap()
+    );
+    fs::write(&test_asm_path, asm_content).unwrap();
+
+    // Assemble using the real file reader (since we have actual files)
+    let reader = AsmFileReader;
+    let result = assemble(&test_asm_path, 0x3FFF, None, None, &reader).unwrap();
+
+    // Verify the result
+    assert_eq!(result.len(), BANK_SIZE * 2);
+
+    // The tile data should be 32 bytes (4 planes * 8 bytes per plane)
+    // Verify we got 32 bytes of tile data
+    let tile_data = &result[0..32];
+
+    // The grayscale conversion creates a pattern, so it shouldn't be all zeros
+    let all_zeros = tile_data.iter().all(|&b| b == 0);
+    assert!(
+        !all_zeros,
+        "Tile data should not be all zeros for a gradient pattern"
+    );
+
+    // Verify we have exactly 32 bytes of tile data followed by padding
+    assert_eq!(
+        result[32], 0xFF,
+        "Byte after tile data should be padding (0xFF)"
+    );
+}
+
+#[test]
+fn test_inc_tiledata_directive_correct_address() {
+    use image::{ImageBuffer, Rgba, RgbaImage};
+    use std::fs;
+    use tempfile::tempdir;
+
+    // Create a temporary directory for test files
+    let temp_dir = tempdir().unwrap();
+    let test_image_path = temp_dir.path().join("test_tile.png");
+    let test_asm_path = temp_dir.path().join("test.asm");
+
+    // Create a simple 8x8 test image with a known pattern
+    // Pattern: gradient from 0-15 (4-bit values)
+    let mut img: RgbaImage = ImageBuffer::new(8, 8);
+    for y in 0..8 {
+        for x in 0..8 {
+            // Create a simple pattern: value = (y * 2) mod 16
+            let val = ((y * 2) % 16) as u8;
+            let gray = val * 17; // Map 0-15 to 0-255
+            img.put_pixel(x, y, Rgba([gray, gray, gray, 255]));
+        }
+    }
+    img.save(&test_image_path).unwrap();
+
+    // Create assembly file that uses .inc_tiledata
+    let asm_content = format!(
+        ".org 0x0010\nNOP\nNOP\ntile_data:\n.inc_tiledata \"{}\"\n",
+        test_image_path.file_name().unwrap().to_str().unwrap()
+    );
+    fs::write(&test_asm_path, asm_content).unwrap();
+
+    // Assemble using the real file reader (since we have actual files)
+    let reader = AsmFileReader;
+    let result = assemble(&test_asm_path, 0x3FFF, None, None, &reader).unwrap();
+
+    // Verify the result
+    assert_eq!(result.len(), BANK_SIZE * 2);
+
+    // The tile data should be 32 bytes (4 planes * 8 bytes per plane)
+    // Verify we got 32 bytes of tile data
+    let tile_data = &result[0x0012..0x0032];
+
+    // The grayscale conversion creates a pattern, so it shouldn't be all zeros
+    let all_zeros = tile_data.iter().all(|&b| b == 0);
+    assert!(
+        !all_zeros,
+        "Tile data should not be all zeros for a gradient pattern"
+    );
+
+    // Verify we have exactly 32 bytes of tile data followed by padding
+    assert_eq!(
+        result[0x0033], 0xFF,
+        "Byte after tile data should be padding (0xFF)"
+    );
+}
+
+#[test]
+fn test_inc_tiledata_with_region() {
+    use image::{ImageBuffer, Rgba, RgbaImage};
+    use std::fs;
+    use tempfile::tempdir;
+
+    let temp_dir = tempdir().unwrap();
+    let test_image_path = temp_dir.path().join("test_region.png");
+    let test_asm_path = temp_dir.path().join("test.asm");
+
+    // Create a 16x16 test image
+    let mut img: RgbaImage = ImageBuffer::new(16, 16);
+    for y in 0..16 {
+        for x in 0..16 {
+            // Different pattern for each quadrant
+            let val = if x < 8 && y < 8 {
+                0 // Top-left: black
+            } else if x >= 8 && y < 8 {
+                5 // Top-right: gray
+            } else if x < 8 && y >= 8 {
+                10 // Bottom-left: lighter gray
+            } else {
+                15 // Bottom-right: white
+            };
+            let gray = (val * 17) as u8;
+            img.put_pixel(x, y, Rgba([gray, gray, gray, 255]));
+        }
+    }
+    img.save(&test_image_path).unwrap();
+
+    // Extract only the top-left 8x8 region (should be all black/value 0)
+    let asm_content = format!(
+        ".org 0x0000\nregion_data:\n.inc_tiledata \"{}\", 0, 0, 8, 8\n",
+        test_image_path.file_name().unwrap().to_str().unwrap()
+    );
+    fs::write(&test_asm_path, asm_content).unwrap();
+
+    let reader = AsmFileReader;
+    let result = assemble(&test_asm_path, 0x3FFF, None, None, &reader).unwrap();
+
+    // First 32 bytes should be the tile data (all zeros for black)
+    let tile_data = &result[0..32];
+    let all_zeros = tile_data.iter().all(|&b| b == 0);
+    assert!(all_zeros, "Top-left quadrant should be all black (zeros)");
+
+    assert_eq!(
+        result[32], 0xFF,
+        "Should be padding after 32 bytes of tile data"
+    );
+}
+
+#[test]
+fn test_inc_tiledata_invalid_dimensions() {
+    use image::{ImageBuffer, RgbaImage};
+    use std::fs;
+    use tempfile::tempdir;
+
+    let temp_dir = tempdir().unwrap();
+    let test_image_path = temp_dir.path().join("invalid.png");
+    let test_asm_path = temp_dir.path().join("test.asm");
+
+    // Create a 13x8 image (width not multiple of 8)
+    let img: RgbaImage = ImageBuffer::new(13, 8);
+    img.save(&test_image_path).unwrap();
+
+    let asm_content = format!(
+        ".inc_tiledata \"{}\"\n",
+        test_image_path.file_name().unwrap().to_str().unwrap()
+    );
+    fs::write(&test_asm_path, asm_content).unwrap();
+
+    let reader = AsmFileReader;
+    let result = assemble(&test_asm_path, 0x3FFF, None, None, &reader);
+
+    // Should fail due to invalid dimensions
+    assert!(result.is_err(), "Should fail with non-8-aligned dimensions");
+    let err_msg = format!("{:?}", result.unwrap_err());
+    assert!(
+        err_msg.contains("must be a multiple of 8") || err_msg.contains("8-pixel"),
+        "Error should mention 8-pixel alignment requirement"
+    );
+}
+
+#[test]
+fn test_inc_tiledata_multiple_tiles() {
+    use image::{ImageBuffer, Rgba, RgbaImage};
+    use std::fs;
+    use tempfile::tempdir;
+
+    let temp_dir = tempdir().unwrap();
+    let test_image_path = temp_dir.path().join("multi_tile.png");
+    let test_asm_path = temp_dir.path().join("test.asm");
+
+    // Create a 16x8 image (2 tiles horizontally)
+    let mut img: RgbaImage = ImageBuffer::new(16, 8);
+    for y in 0..8 {
+        for x in 0..16 {
+            let val = if x < 8 { 0 } else { 15 };
+            let gray = (val * 17) as u8;
+            img.put_pixel(x, y, Rgba([gray, gray, gray, 255]));
+        }
+    }
+    img.save(&test_image_path).unwrap();
+
+    let asm_content = format!(
+        ".org 0x0000\n.inc_tiledata \"{}\"\n",
+        test_image_path.file_name().unwrap().to_str().unwrap()
+    );
+    fs::write(&test_asm_path, asm_content).unwrap();
+
+    let reader = AsmFileReader;
+    let result = assemble(&test_asm_path, 0x3FFF, None, None, &reader).unwrap();
+
+    // Should have 2 tiles * 32 bytes = 64 bytes
+    assert_eq!(
+        result[64], 0xFF,
+        "Should be padding after 64 bytes (2 tiles)"
+    );
+
+    // First tile should be all black (zeros)
+    let first_tile = &result[0..32];
+    assert!(
+        first_tile.iter().all(|&b| b == 0),
+        "First tile should be black"
+    );
+
+    // Second tile should be all white (all bits set in all planes)
+    let second_tile = &result[32..64];
+    assert!(
+        second_tile.iter().all(|&b| b == 0xFF),
+        "Second tile should be white"
+    );
 }
