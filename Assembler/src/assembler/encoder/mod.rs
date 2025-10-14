@@ -56,9 +56,11 @@ pub fn calculate_instruction_size(instruction: &Instruction) -> u32 {
         Instruction::LdBIndirect(_, _) => 2,
         Instruction::LdBPreDec(_, _) => 3,
         Instruction::LdBPostInc(_, _) => 3,
+        Instruction::LdBAbs(_, _) => 4,
         Instruction::StBIndirect(_, _) => 2,
         Instruction::StBPreDec(_, _) => 3,
         Instruction::StBPostInc(_, _) => 3,
+        Instruction::StBAbs(_, _) => 4,
         // LEA
         Instruction::Lea(_, _, _) => 3,
         // Stack Operations
@@ -221,9 +223,11 @@ impl<'a> Encoder<'a> {
             Instruction::LdBIndirect(rd, rs) => self.encode_ldb_indirect(rd, rs),
             Instruction::LdBPreDec(rd, rs) => self.encode_ldb_pre_dec(rd, rs),
             Instruction::LdBPostInc(rd, rs) => self.encode_ldb_post_inc(rd, rs),
+            Instruction::LdBAbs(rd, op) => self.encode_ldb_abs(rd, op),
             Instruction::StBIndirect(rd, rs) => self.encode_stb_indirect(rd, rs),
             Instruction::StBPreDec(rd, rs) => self.encode_stb_pre_dec(rd, rs),
             Instruction::StBPostInc(rd, rs) => self.encode_stb_post_inc(rd, rs),
+            Instruction::StBAbs(op, rs) => self.encode_stb_abs(op, rs),
             Instruction::Lea(rd, rs, offset) => self.encode_lea(rd, rs, offset),
 
             // Stack
@@ -1117,6 +1121,61 @@ mod tests {
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
             vec![0xFF, 0xFD, 4]
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_ld_b_abs_immediate() {
+        let instruction = Instruction::LdBAbs(Register::R0, Operand::Immediate(0xC000));
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
+            vec![0xFD, 0xA8, 0x00, 0xC0] // 0xFD prefix, 0xA8+0 (R0), addr_lo, addr_hi
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_ld_b_abs_label() {
+        let instruction =
+            Instruction::LdBAbs(Register::R2, Operand::Label("test_label".to_string()));
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert(
+            "test_label".to_string(),
+            Symbol {
+                logical_address: 0xF021,
+                bank: 0,
+            },
+        );
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
+            vec![0xFD, 0xAA, 0x21, 0xF0] // 0xFD prefix, 0xA8+2 (R2), addr_lo, addr_hi
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_st_b_abs_immediate() {
+        let instruction = Instruction::StBAbs(Operand::Immediate(0xF021), Register::R3);
+        let symbol_table = SymbolTable::new();
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
+            vec![0xFD, 0xB3, 0x21, 0xF0] // 0xFD prefix, 0xB0+3 (R3), addr_lo, addr_hi
+        );
+    }
+
+    #[test]
+    fn test_encode_instruction_st_b_abs_label() {
+        let instruction = Instruction::StBAbs(Operand::Label("io_reg".to_string()), Register::R7);
+        let mut symbol_table = SymbolTable::new();
+        symbol_table.insert(
+            "io_reg".to_string(),
+            Symbol {
+                logical_address: 0xF020,
+                bank: 0,
+            },
+        );
+        assert_eq!(
+            encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
+            vec![0xFD, 0xB7, 0x20, 0xF0] // 0xFD prefix, 0xB0+7 (R7), addr_lo, addr_hi
         );
     }
 

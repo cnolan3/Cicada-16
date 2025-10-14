@@ -16,6 +16,7 @@ These instructions are used to move data between registers and memory.
 | `LD`     | `LD Rd, -(Rs)`         | Decrements `Rs` by 2, then loads a 16-bit word from the new address in `Rs` into `Rd`.   | 3            |
 | `LDI`    | `LDI Rd, imm16`        | Loads an immediate 16-bit value into `Rd`.                                               | 3            |
 | `LD.b`   | `LD.b Rd, (Rs)`        | Loads an 8-bit byte from the address in `Rs` into the lower byte of `Rd`.                | 2            |
+| `LD.b`   | `LD.b Rd, (addr)`      | Loads an 8-bit byte from the absolute `addr` into the lower byte of `Rd`.                | 4            |
 | `LD.b`   | `LD.b Rd, (Rs)+`       | Loads a byte from the address in `Rs` into `Rd`, then increments `Rs` by 1.              | 3            |
 | `LD.b`   | `LD.b Rd, -(Rs)`       | Decrements `Rs` by 1, then loads a byte from the new address in `Rs` into `Rd`.          | 3            |
 | `LDI.b`  | `LDI.b Rd, imm8`       | Loads an immediate 8-bit value into the lower byte of `Rd`.                              | 3            |
@@ -25,9 +26,12 @@ These instructions are used to move data between registers and memory.
 | `ST`     | `ST (Rd)+, Rs`         | Stores the 16-bit value from `Rs` at the address in `Rd`, then increments `Rd` by 2.     | 3            |
 | `ST`     | `ST -(Rd), Rs`         | Decrements `Rd` by 2, then stores the 16-bit value from `Rs` at the new address in `Rd`. | 3            |
 | `ST.b`   | `ST.b (Rd), Rs`        | Stores the lower 8-bits from `Rs` at the address in `Rd`.                                | 2            |
+| `ST.b`   | `ST.b (addr), Rs`      | Stores the lower 8-bits from `Rs` at the absolute `addr`.                                | 4            |
 | `ST.b`   | `ST.b (Rd)+, Rs`       | Stores the lower byte from `Rs` at the address in `Rd`, then increments `Rd` by 1.       | 3            |
 | `ST.b`   | `ST.b -(Rd), Rs`       | Decrements `Rd` by 1, then stores the lower byte from `Rs` at the new address in `Rd`.   | 3            |
 | `LEA`    | `LEA Rd, (Rs, offset)` | Loads the effective address `Rs + offset` into `Rd`. Does not access memory.             | 3            |
+
+- **Note:** All byte-width load instructions (LD.b, LDI.b) store data into the lower byte of the register and zero-extend the upper byte.
 
 ---
 

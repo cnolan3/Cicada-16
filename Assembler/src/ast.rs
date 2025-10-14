@@ -93,9 +93,11 @@ pub enum Instruction {
     LdBIndirect(Register, Register), // LD.b r1, (r2)
     LdBPreDec(Register, Register),   // LD.b r1, -(r2)
     LdBPostInc(Register, Register),  // LD.b r1, (r2)+
+    LdBAbs(Register, Operand),       // LD.b r1, (0x1234) AND LD.b r1, (label)
     StBIndirect(Register, Register), // St.b (r1), r2
     StBPreDec(Register, Register),   // St.b -(r1), r2
     StBPostInc(Register, Register),  // St.b (r1)+, r2
+    StBAbs(Operand, Register),       // ST.b (0x1234), r1 AND ST.b (label), r1
 
     // LEA
     Lea(Register, Register, Operand), // LEA r1, (r2, 0x12)

@@ -279,5 +279,77 @@ wait_for_vblank:
 
 ---
 
+### Example 6: I/O Register Access
+
+This example demonstrates how to use the byte-absolute load and store instructions (`LD.b` and `ST.b` with absolute addresses) to interact with memory-mapped I/O registers. This is a common pattern for reading controller input and writing to hardware registers.
+
+```asm
+.org 0x100
+
+; I/O Register addresses
+.define JOYP     0xF000  ; Joypad input register
+.define IE       0xF020  ; Interrupt Enable register
+.define IF       0xF021  ; Interrupt Flag register
+.define LCD_CTRL 0xF040  ; LCD Control register
+
+start:
+    ; Initialize hardware - Enable V-Blank interrupt
+    SET (IE), 0          ; Set bit 0 to enable V-Blank interrupt
+
+    ; Set up LCD control register
+    LDI.b R0, 0x83       ; Enable LCD, enable BG layer, enable sprite layer
+    ST.b (LCD_CTRL), R0  ; Write to LCD Control register
+
+    ; Enable interrupts
+    EI
+
+game_loop:
+    ; Read the joypad input register
+    LD.b R1, (JOYP)      ; Load current joypad state into R1
+
+    ; Test if the A button is pressed (bit 0)
+    BIT R1, 0            ; Test bit 0 of R1
+    JRZ handle_a_press   ; If bit is 0 (pressed), handle it
+
+    ; Test if the Start button is pressed (bit 4)
+    BIT R1, 4
+    JRZ handle_start
+
+    ; Continue game loop
+    JMP game_loop
+
+handle_a_press:
+    ; A button was pressed
+    ; ... game logic here ...
+    JMP game_loop
+
+handle_start:
+    ; Start button was pressed
+    ; ... pause menu logic here ...
+    JMP game_loop
+
+; V-Blank interrupt handler
+vblank_handler:
+    ; Clear the V-Blank interrupt flag
+    SET (IF), 0          ; Write 1 to bit 0 to clear the V-Blank flag
+
+    ; Update graphics during V-Blank
+    ; ... graphics update code here ...
+
+    RETI
+```
+
+**Key Points:**
+
+- **Byte-absolute instructions** (`LD.b (addr)` and `ST.b (addr)`) are ideal for accessing 8-bit I/O registers at fixed memory addresses.
+- The `.define` directive makes I/O register addresses readable and maintainable.
+- Reading hardware registers with `LD.b (JOYP)` is more efficient than using indirect addressing when the address is known at compile time.
+- **Bit manipulation instructions** (`SET (addr), b`, `RES (addr), b`, `BIT (addr), b`) are ideal for setting or clearing individual bits in hardware registers.
+- When setting **one or two bits**, use `SET` instructions directly (e.g., `SET (IE), 0`).
+- When setting **three or more bits**, use `LDI.b` + `ST.b` for better efficiency (e.g., `LDI.b R0, 0x83` + `ST.b (LCD_CTRL), R0`).
+- Choose the most efficient instruction pattern based on the number of bits being modified.
+
+---
+
 © 2025 Connor Nolan. This work is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).

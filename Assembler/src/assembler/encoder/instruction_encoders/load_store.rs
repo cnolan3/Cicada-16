@@ -153,6 +153,13 @@ impl<'a> Encoder<'a> {
         Ok(vec![FF_PREFIX, sub_opcode, dest])
     }
 
+    pub fn encode_ldb_abs(self, rd: &Register, op: &Operand) -> Result<Vec<u8>, AssemblyError> {
+        let sub_opcode = encode_reg_opcode(LDB_ABS_BASE_SUB_OPCODE, rd);
+        let addr = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
+        let [low, high] = addr.to_le_bytes();
+        Ok(vec![FD_PREFIX, sub_opcode, low, high])
+    }
+
     pub fn encode_stb_indirect(
         self,
         rd: &Register,
@@ -180,6 +187,13 @@ impl<'a> Encoder<'a> {
         let sub_opcode = encode_reg_opcode(STB_POST_INC_BASE_SUB_OPCODE, rs);
         let dest = encode_register_operand(rd);
         Ok(vec![FF_PREFIX, sub_opcode, dest])
+    }
+
+    pub fn encode_stb_abs(self, op: &Operand, rs: &Register) -> Result<Vec<u8>, AssemblyError> {
+        let sub_opcode = encode_reg_opcode(STB_ABS_BASE_SUB_OPCODE, rs);
+        let addr = resolve_label_or_immediate(op, self.symbol_table, self.line_num)?;
+        let [low, high] = addr.to_le_bytes();
+        Ok(vec![FD_PREFIX, sub_opcode, low, high])
     }
 
     pub fn encode_lea(

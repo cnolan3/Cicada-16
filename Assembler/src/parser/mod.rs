@@ -723,6 +723,32 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_parse_ld_b_abs_immediate() {
+        let source = "ld.b r0, (0xC000)\n";
+        let result = parse_test_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::LdBAbs(Register::R0, Operand::Immediate(0xC000)))
+        );
+    }
+
+    #[test]
+    fn test_parse_st_b_abs_immediate() {
+        let source = "st.b (0xF021), r3\n";
+        let result = parse_test_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].instruction,
+            Some(Instruction::StBAbs(Operand::Immediate(0xF021), Register::R3))
+        );
+    }
+
     // #[test]
     // fn test_parse_call_far_via_invalid_operand() {
     //     let source = "CALL.far 300 via TRAMP\n";

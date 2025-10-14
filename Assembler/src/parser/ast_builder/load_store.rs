@@ -90,6 +90,8 @@ impl<'a> AstBuilder<'a> {
         let src = self.pop_operand().context(INVALID_SRC_OP_MSG)?;
 
         match src {
+            Operand::AbsAddr(addr) => Ok(Instruction::LdBAbs(rd, Operand::Immediate(addr as i32))),
+            Operand::AbsLabel(label) => Ok(Instruction::LdBAbs(rd, Operand::Label(label))),
             Operand::Indirect(rs) => Ok(Instruction::LdBIndirect(rd, rs)),
             Operand::PreDecrement(rs) => Ok(Instruction::LdBPreDec(rd, rs)),
             Operand::PostIncrement(rs) => Ok(Instruction::LdBPostInc(rd, rs)),
@@ -109,6 +111,8 @@ impl<'a> AstBuilder<'a> {
         let rs = self.expect_register().context(INVALID_SRC_OP_MSG)?;
 
         match dest {
+            Operand::AbsAddr(addr) => Ok(Instruction::StBAbs(Operand::Immediate(addr as i32), rs)),
+            Operand::AbsLabel(label) => Ok(Instruction::StBAbs(Operand::Label(label), rs)),
             Operand::Indirect(rd) => Ok(Instruction::StBIndirect(rd, rs)),
             Operand::PreDecrement(rd) => Ok(Instruction::StBPreDec(rd, rs)),
             Operand::PostIncrement(rd) => Ok(Instruction::StBPostInc(rd, rs)),

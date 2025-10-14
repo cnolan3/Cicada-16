@@ -254,6 +254,7 @@ fn test_interrupt_table() {
             .word STACK_OVERFLOW_HANDLER
             .word VBLANK_HANDLER
             .word HBLANK_HANDLER
+            .word LYC_HANDLER
             .word TIMER_HANDLER
             .word SERIAL_HANDLER
             .word LINK_STATUS_HANDLER
@@ -275,6 +276,8 @@ fn test_interrupt_table() {
         NOP
         HBLANK_HANDLER:
         NOP
+        LYC_HANDLER:
+        NOP
         TIMER_HANDLER:
         NOP
         SERIAL_HANDLER:
@@ -294,9 +297,9 @@ fn test_interrupt_table() {
 
     // Interrupt table starts at 0x0060
     // Handlers start at 0x0100 and are one byte each (NOP)
-    let expected_addresses = (0..11).map(|i| 0x0100 + i).collect::<Vec<u16>>();
+    let expected_addresses = (0..12).map(|i| 0x0100 + i).collect::<Vec<u16>>();
 
-    for i in 0..11 {
+    for i in 0..12 {
         let addr_offset = 0x60 + (i * 2);
         let expected_addr = expected_addresses[i];
         let actual_addr = u16::from_le_bytes([result[addr_offset], result[addr_offset + 1]]);
@@ -304,5 +307,5 @@ fn test_interrupt_table() {
     }
 
     // Check padding after table
-    assert_eq!(result[0x60 + 22], 0x00);
+    assert_eq!(result[0x60 + 24], 0x00);
 }

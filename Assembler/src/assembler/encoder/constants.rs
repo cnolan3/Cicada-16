@@ -104,6 +104,8 @@ pub const BIT_INDIR_BASE_SUB_OPCODE: u8 = 0x88;
 pub const SET_INDIR_BASE_SUB_OPCODE: u8 = 0x90;
 pub const RES_INDIR_BASE_SUB_OPCODE: u8 = 0x98;
 pub const LDIB_BASE_SUB_OPCODE: u8 = 0xA0;
+pub const LDB_ABS_BASE_SUB_OPCODE: u8 = 0xA8;
+pub const STB_ABS_BASE_SUB_OPCODE: u8 = 0xB0;
 
 pub const LD_INDIR_BASE_SUB_OPCODE: u8 = 0x00;
 pub const ST_INDIR_BASE_SUB_OPCODE: u8 = 0x40;

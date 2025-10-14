@@ -76,6 +76,8 @@ All instruction cycle counts in this document are given in **T-cycles**.
 | LD r, (n16)       | R0, (0xC000)   | 3     | 16/20  | Loads a 16-bit word from the absolute address 0xC000 into R0.                                             |
 | ST (n16), r       | (0xC000), R0   | 3     | 16/20  | Stores the 16-bit word in R0 to the absolute address 0xC000.                                              |
 | LDI.b rd, n8      | R0, 0xAB       | 3     | 12     | Loads the immediate 8-bit value into the low byte of rd, and zero-extends it. (Prefixed)                  |
+| LD.b rd, (n16)    | R0, (0xC000)   | 4     | 14/16  | Loads an 8-bit byte from the absolute address 0xC000 into the low byte of rd, and zero-extends it. (Prefixed) |
+| ST.b (n16), rs    | (0xC000), R0   | 4     | 14/16  | Stores the low 8-bit byte from rs to the absolute address 0xC000. (Prefixed)                              |
 | LD rd, (rs)+      | R0, (R1)+      | 3     | 16/20  | Loads a word from the address in rs into rd, then increments rs by 2. (Prefixed)                          |
 | ST (rd)+, rs      | (R1)+, R0      | 3     | 16/20  | Stores the word from rs to the address in rd, then increments rd by 2. (Prefixed)                         |
 | LD.b rd, (rs)+    | R0, (R1)+      | 3     | 14/16  | Loads a byte from the address in rs into rd, zero-extends it, then increments rs by 1. (Prefixed)         |

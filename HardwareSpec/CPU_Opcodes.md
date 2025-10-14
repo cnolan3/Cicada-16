@@ -164,8 +164,10 @@ For instructions with memory access, cycle counts may be presented as `HRAM/WRAM
 | 80-87        | RES (n16), b | 4     | 20/24 (16 : 4/8)  | `(4 bytes) => 0xFD 0x80+b n16_lo n16_hi`. Reset bit b of byte at address n16.   |
 | 88-8F        | BIT (rs), b  | 3     | 16/20 (12 : 4/8)  | `(3 bytes) => 0xFD 0x88+b rs`. Test bit b of byte at address in rs.             |
 | 90-97        | SET (rs), b  | 3     | 20/28 (12 : 8/16) | `(3 bytes) => 0xFD 0x90+b rs`. Set bit b of byte at address in rs.              |
-| 98-9F        | RES (rs), b  | 3     | 20/28 (12 : 8/16) | `(3 bytes) => 0xFD 0x98+b rs`. Reset bit b of byte at address in rs.            |
-| A0-A7        | LDI.b rd, n8 | 3     | 12 (12 : 0)       | `(3 bytes) => 0xFD 0xA0+rd n8`. Load low byte of rd with immediate 8-bit value. |
+| 98-9F        | RES (rs), b     | 3     | 20/28 (12 : 8/16) | `(3 bytes) => 0xFD 0x98+b rs`. Reset bit b of byte at address in rs.                    |
+| A0-A7        | LDI.b rd, n8    | 3     | 12 (12 : 0)       | `(3 bytes) => 0xFD 0xA0+rd n8`. Load low byte of rd with immediate 8-bit value.         |
+| A8-AF        | LD.b rd, (n16)  | 4     | 14/16 (16 : 2/4)  | `(4 bytes) => 0xFD 0xA8+rd n16_lo n16_hi`. Load byte from absolute address into rd.     |
+| B0-B7        | ST.b (n16), rs  | 4     | 14/16 (16 : 2/4)  | `(4 bytes) => 0xFD 0xB0+rs n16_lo n16_hi`. Store byte from rs to absolute address.      |
 
 ---
 
