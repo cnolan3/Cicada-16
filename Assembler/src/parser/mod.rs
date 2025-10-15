@@ -769,7 +769,7 @@ mod tests {
                 size: None,
                 vaddr: None,
                 paddr: None,
-                align: None,
+                // align: None,
             }))
         );
         assert_eq!(lines[1].instruction, Some(Instruction::Nop));
@@ -790,7 +790,7 @@ mod tests {
                 size: Some(256),
                 vaddr: None,
                 paddr: None,
-                align: None,
+                // align: None,
             }))
         );
     }
@@ -809,7 +809,7 @@ mod tests {
                 size: None,
                 vaddr: Some(0x4000),
                 paddr: None,
-                align: None,
+                // align: None,
             }))
         );
     }
@@ -828,15 +828,14 @@ mod tests {
                 size: None,
                 vaddr: None,
                 paddr: Some(0x8000),
-                align: None,
+                // align: None,
             }))
         );
     }
 
     #[test]
     fn test_parse_section_with_all_attributes() {
-        let source =
-            ".section name=\"full_section\" size=512 vaddr=0x4000 paddr=0x8000\nNOP\n.section_end\n";
+        let source = ".section name=\"full_section\" size=512 vaddr=0x4000 paddr=0x8000\nNOP\n.section_end\n";
         let result = parse_test_source(source);
         assert!(result.is_ok());
         let lines = result.unwrap();
@@ -848,7 +847,7 @@ mod tests {
                 size: Some(512),
                 vaddr: Some(0x4000),
                 paddr: Some(0x8000),
-                align: None,
+                // align: None,
             }))
         );
     }
@@ -867,7 +866,7 @@ mod tests {
                 size: None,
                 vaddr: None,
                 paddr: None,
-                align: None,
+                // align: None,
             }))
         );
         assert_eq!(lines[1].directive, Some(Directive::SectionEnd));
