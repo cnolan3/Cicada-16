@@ -732,7 +732,10 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert_eq!(
             lines[0].instruction,
-            Some(Instruction::LdBAbs(Register::R0, Operand::Immediate(0xC000)))
+            Some(Instruction::LdBAbs(
+                Register::R0,
+                Operand::Immediate(0xC000)
+            ))
         );
     }
 
@@ -745,8 +748,129 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert_eq!(
             lines[0].instruction,
-            Some(Instruction::StBAbs(Operand::Immediate(0xF021), Register::R3))
+            Some(Instruction::StBAbs(
+                Operand::Immediate(0xF021),
+                Register::R3
+            ))
         );
+    }
+
+    #[test]
+    fn test_parse_section_with_name() {
+        let source = ".section name=\"test_section\"\nNOP\n.section_end\n";
+        let result = parse_test_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 3);
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::SectionStart(SectionOptions {
+                name: Some("test_section".to_string()),
+                size: None,
+                vaddr: None,
+                paddr: None,
+                align: None,
+            }))
+        );
+        assert_eq!(lines[1].instruction, Some(Instruction::Nop));
+        assert_eq!(lines[2].directive, Some(Directive::SectionEnd));
+    }
+
+    #[test]
+    fn test_parse_section_with_size() {
+        let source = ".section size=256\nNOP\n.section_end\n";
+        let result = parse_test_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 3);
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::SectionStart(SectionOptions {
+                name: None,
+                size: Some(256),
+                vaddr: None,
+                paddr: None,
+                align: None,
+            }))
+        );
+    }
+
+    #[test]
+    fn test_parse_section_with_vaddr() {
+        let source = ".section vaddr=0x4000\nNOP\n.section_end\n";
+        let result = parse_test_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 3);
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::SectionStart(SectionOptions {
+                name: None,
+                size: None,
+                vaddr: Some(0x4000),
+                paddr: None,
+                align: None,
+            }))
+        );
+    }
+
+    #[test]
+    fn test_parse_section_with_paddr() {
+        let source = ".section paddr=0x8000\nNOP\n.section_end\n";
+        let result = parse_test_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 3);
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::SectionStart(SectionOptions {
+                name: None,
+                size: None,
+                vaddr: None,
+                paddr: Some(0x8000),
+                align: None,
+            }))
+        );
+    }
+
+    #[test]
+    fn test_parse_section_with_all_attributes() {
+        let source =
+            ".section name=\"full_section\" size=512 vaddr=0x4000 paddr=0x8000\nNOP\n.section_end\n";
+        let result = parse_test_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 3);
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::SectionStart(SectionOptions {
+                name: Some("full_section".to_string()),
+                size: Some(512),
+                vaddr: Some(0x4000),
+                paddr: Some(0x8000),
+                align: None,
+            }))
+        );
+    }
+
+    #[test]
+    fn test_parse_section_empty() {
+        let source = ".section\n.section_end\n";
+        let result = parse_test_source(source);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(
+            lines[0].directive,
+            Some(Directive::SectionStart(SectionOptions {
+                name: None,
+                size: None,
+                vaddr: None,
+                paddr: None,
+                align: None,
+            }))
+        );
+        assert_eq!(lines[1].directive, Some(Directive::SectionEnd));
     }
 
     // #[test]

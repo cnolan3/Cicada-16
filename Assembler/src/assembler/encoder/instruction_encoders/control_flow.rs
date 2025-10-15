@@ -43,7 +43,7 @@ impl<'a> Encoder<'a> {
                     self.line_num,
                     self.current_bank,
                 )?;
-                let rel: i32 = target_symbol.logical_address as i32 - *self.current_address as i32;
+                let rel: i32 = target_symbol.logical_address as i32 - *self.logical_address as i32;
                 if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
                     return Err(AssemblyError::SemanticError {
                         line: *self.line_num,
@@ -78,7 +78,7 @@ impl<'a> Encoder<'a> {
                     self.line_num,
                     self.current_bank,
                 )?;
-                let rel: i32 = target_symbol.logical_address as i32 - *self.current_address as i32;
+                let rel: i32 = target_symbol.logical_address as i32 - *self.logical_address as i32;
                 if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
                     return Err(AssemblyError::SemanticError {
                         line: *self.line_num,
@@ -107,7 +107,7 @@ impl<'a> Encoder<'a> {
                     self.line_num,
                     self.current_bank,
                 )?;
-                let rel: i32 = target_symbol.logical_address as i32 - *self.current_address as i32;
+                let rel: i32 = target_symbol.logical_address as i32 - *self.logical_address as i32;
                 if rel > i8::MAX as i32 || rel < i8::MIN as i32 {
                     return Err(AssemblyError::SemanticError {
                         line: *self.line_num,

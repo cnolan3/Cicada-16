@@ -178,6 +178,24 @@ impl<'a> AstBuilder<'a> {
         }
     }
 
+    // validate an address
+    pub fn expect_addr(&mut self) -> Result<u16> {
+        let op = self.pop_operand()?;
+
+        match op {
+            Operand::Immediate(addr) => {
+                check_unsigned_word(addr, self.line_number)
+                    .context("Expected an address value.")?;
+                Ok(addr as u16)
+            }
+            _ => Err(AssemblyError::StructuralError {
+                line: self.line_number,
+                reason: "Expected an address.".to_string(),
+            }
+            .into()),
+        }
+    }
+
     // validate an address or label
     pub fn expect_addr_or_label(&mut self) -> Result<Operand> {
         let op = self.pop_operand()?;

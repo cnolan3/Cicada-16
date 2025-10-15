@@ -151,14 +151,14 @@ pub fn calculate_instruction_size(instruction: &Instruction) -> u32 {
 pub fn encode_instruction(
     instruction: &Instruction,
     symbol_table: &SymbolTable,
-    current_address: &u32,
+    logical_address: &u32,
     current_bank: &u32,
     line_num: &usize,
 ) -> Result<Vec<u8>, AssemblyError> {
     let encoder = Encoder::new(
         instruction,
         symbol_table,
-        current_address,
+        logical_address,
         current_bank,
         line_num,
     );
@@ -169,7 +169,7 @@ pub fn encode_instruction(
 pub struct Encoder<'a> {
     pub instruction: &'a Instruction,
     pub symbol_table: &'a SymbolTable,
-    pub current_address: &'a u32,
+    pub logical_address: &'a u32,
     pub current_bank: &'a u32,
     pub line_num: &'a usize,
 }
@@ -178,14 +178,14 @@ impl<'a> Encoder<'a> {
     pub fn new(
         instruction: &'a Instruction,
         symbol_table: &'a SymbolTable,
-        current_address: &'a u32,
+        logical_address: &'a u32,
         current_bank: &'a u32,
         line_num: &'a usize,
     ) -> Self {
         Self {
             instruction,
             symbol_table,
-            current_address,
+            logical_address,
             current_bank,
             line_num,
         }

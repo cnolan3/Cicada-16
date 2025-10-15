@@ -24,7 +24,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 #[derive(clap_parser)]
-#[clap(version = "0.3.7", author = "Connor Nolan")]
+#[clap(version = "0.3.8", author = "Connor Nolan")]
 struct Opts {
     /// Input file to assemble
     input: PathBuf,

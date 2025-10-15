@@ -17,12 +17,14 @@ limitations under the License.
 mod constant_table;
 mod encoder;
 mod preprocessor;
+mod section_stack;
 mod symbol_table;
 
 use crate::ast::{AssemblyLine, Directive, Operand};
 use crate::errors::AssemblyError;
 use constant_table::*;
 use encoder::utility_functions::resolve_label_or_immediate;
+use section_stack::*;
 use symbol_table::*;
 
 const BANK_SIZE: u32 = 16384;
@@ -97,10 +99,10 @@ pub fn build_symbol_table(
     constant_table: &ConstantTable,
 ) -> Result<SymbolTable, AssemblyError> {
     let mut symbol_table = SymbolTable::new();
-    let mut current_address: u32 = 0; // Start address after cartridge header
-    let mut current_bank: u32 = 0;
+    let mut addr_counter: AddrCounter = AddrCounter::new();
     let mut found_interrupt_table_addr: Option<u32> = None;
     let mut found_header_addr: Option<u32> = None;
+    let mut context_stack: ContextStack = vec![];
 
     for line in lines {
         // If a label exists on this line, record its current address.
@@ -120,32 +122,33 @@ pub fn build_symbol_table(
                 });
             }
 
-            let logical_address = match current_bank {
-                0 => current_address,
-                _ => BANK_SIZE + (current_address % BANK_SIZE),
-            };
+            // let logical_address = match current_bank {
+            //     0 => physical_address,
+            //     _ => BANK_SIZE + (physical_address % BANK_SIZE),
+            // };
 
             symbol_table.insert(
                 label.clone(),
                 Symbol {
-                    logical_address,
-                    bank: current_bank,
+                    logical_address: addr_counter.logical_addr,
+                    bank: addr_counter.bank,
                 },
             );
         }
 
-        // Increment current_address by the size of the instruction.
+        // Increment physical_address by the size of the instruction.
         if let Some(instruction) = &line.instruction {
-            current_address += encoder::calculate_instruction_size(instruction);
+            let instruction_size = encoder::calculate_instruction_size(instruction);
+            addr_counter.increment_by(instruction_size);
         }
 
         // handle directives
         if let Some(directive) = &line.directive {
             match directive {
                 Directive::Org(Operand::Immediate(addr)) => {
-                    let new_logical_addr = *addr as u32;
+                    addr_counter.logical_addr = *addr as u32;
 
-                    if new_logical_addr > *final_logical_addr as u32 {
+                    if addr_counter.logical_addr > *final_logical_addr as u32 {
                         return Err(AssemblyError::SemanticError {
                             line: line.line_number,
                             reason: format!(
@@ -155,43 +158,46 @@ pub fn build_symbol_table(
                         });
                     }
 
-                    if current_bank == 0 && new_logical_addr > 0x3FFF {
+                    if addr_counter.bank == 0 && addr_counter.logical_addr > 0x3FFF {
                         return Err(AssemblyError::SemanticError {
                             line: line.line_number,
                             reason: format!(
                                 "Currently selected bank is bank 0, the given .org address (0x{:04x}) is outside of the bank 0 fixed address space 0x0000-0x3FFF.",
-                                new_logical_addr
+                                addr_counter.logical_addr
                             ),
                         });
                     }
 
-                    if current_bank != 0 && new_logical_addr < 0x4000 {
+                    if addr_counter.bank != 0 && addr_counter.logical_addr < 0x4000 {
                         return Err(AssemblyError::SemanticError {
                             line: line.line_number,
                             reason: format!(
                                 "Currently selected bank is bank {} (a switchable bank), the given .org address (0x{:04x}) is outside of the switchable bank address space 0x4000-0x7FFF.",
-                                current_bank, new_logical_addr
+                                addr_counter.bank, addr_counter.logical_addr
                             ),
                         });
                     }
 
                     // calculate the new physical address
-                    let new_physical_addr =
-                        calculate_physical_addr(&(new_logical_addr as u16), &current_bank);
+                    let new_physical_addr = calculate_physical_addr(
+                        &(addr_counter.logical_addr as u16),
+                        &addr_counter.bank,
+                    );
 
                     // It's good practice to ensure .org doesn't move backwards,
                     // as it can overwrite previous label definitions.
-                    if new_physical_addr < current_address {
+                    if new_physical_addr < addr_counter.physical_addr {
                         return Err(AssemblyError::SemanticError {
                             line: line.line_number,
                             reason: ".org directive cannot move the address backwards.".to_string(),
                         });
                     }
 
-                    current_address = new_physical_addr;
+                    addr_counter.num_bytes += new_physical_addr - addr_counter.physical_addr;
+                    addr_counter.physical_addr = new_physical_addr;
                 }
                 Directive::Bank(Operand::Immediate(num)) => {
-                    if (*num as u32) < current_bank {
+                    if (*num as u32) < addr_counter.bank {
                         return Err(AssemblyError::SemanticError {
                             line: line.line_number,
                             reason: ".bank directive cannot move to a previous bank.".to_string(),
@@ -199,16 +205,21 @@ pub fn build_symbol_table(
                     }
 
                     // if trying to select the already currently selected bank, do nothing
-                    if *num as u32 != current_bank {
-                        current_bank = *num as u32;
-                        current_address = current_bank * BANK_SIZE;
+                    if *num as u32 != addr_counter.bank {
+                        addr_counter.bank = *num as u32;
+                        let new_physical_addr = addr_counter.bank * BANK_SIZE;
+                        addr_counter.num_bytes += new_physical_addr - addr_counter.physical_addr;
+                        addr_counter.physical_addr = new_physical_addr;
+                        addr_counter.logical_addr = 0;
                     }
                 }
                 Directive::Byte(bytes) => {
-                    current_address += bytes.len() as u32;
+                    let num_bytes = bytes.len() as u32;
+                    addr_counter.increment_by(num_bytes);
                 }
                 Directive::Word(words) => {
-                    current_address += (words.len() as u32) * 2;
+                    let num_bytes = (words.len() as u32) * 2;
+                    addr_counter.increment_by(num_bytes);
                 }
                 Directive::Header(_) => {
                     if let None = expected_header_addr {
@@ -217,8 +228,8 @@ pub fn build_symbol_table(
                             reason: "Cartridge rom header not allowed in boot roms.".to_string(),
                         });
                     }
-                    found_header_addr = Some(current_address);
-                    current_address += 96;
+                    found_header_addr = Some(addr_counter.physical_addr);
+                    addr_counter.increment_by(96);
                 }
                 Directive::Interrupt(_) => {
                     if let None = expected_interrupt_table_addr {
@@ -227,21 +238,125 @@ pub fn build_symbol_table(
                             reason: "Interrupt vector table not expected.".to_string(),
                         });
                     }
-                    found_interrupt_table_addr = Some(current_address);
-                    current_address += 32;
+                    found_interrupt_table_addr = Some(addr_counter.physical_addr);
+                    addr_counter.increment_by(32);
+                }
+                Directive::SectionStart(section_options) => {
+                    // disallow nested sections for now
+                    if !context_stack.is_empty() {
+                        let mut name: String = "UNNAMED".to_string();
+
+                        let old_context: Context = context_stack.pop().unwrap();
+
+                        if let Some(n) = old_context.name {
+                            name = n;
+                        }
+
+                        return Err(AssemblyError::StructuralError {
+                            line: line.line_number,
+                            reason: format!(
+                                "Cannot nest a section within a section, already within the \"{}\" section.",
+                                name
+                            ),
+                        });
+                    }
+
+                    let new_context: Context = Context {
+                        name: section_options.name.clone(),
+                        size: section_options.size,
+                        vaddr: section_options.vaddr,
+                        paddr: section_options.paddr,
+                        align: section_options.align,
+                        address: addr_counter.clone(),
+                    };
+
+                    // reset section size counter
+                    addr_counter.num_bytes = 0;
+
+                    // set logical address
+                    if let Some(vaddr) = new_context.vaddr {
+                        addr_counter.logical_addr = vaddr;
+                    }
+
+                    // set physical address
+                    if let Some(paddr) = new_context.paddr {
+                        addr_counter.physical_addr = paddr;
+                    }
+
+                    // TODO: set alignment
+                    // if let Some(align) = new_context.align {
+                    //  ...
+                    // }
+
+                    context_stack.push(new_context);
+                }
+                Directive::SectionEnd => {
+                    if context_stack.is_empty() {
+                        return Err(AssemblyError::StructuralError {
+                            line: line.line_number,
+                            reason: ".section_end found without a preceding .section statement."
+                                .to_string(),
+                        });
+                    }
+
+                    let old_context: Context = context_stack.pop().unwrap();
+                    let mut name: String = "UNNAMED".to_string();
+
+                    if let Some(n) = old_context.name {
+                        name = n;
+                    }
+
+                    if old_context.vaddr.is_some() {
+                        addr_counter.logical_addr =
+                            calculate_logical_addr(&addr_counter.physical_addr);
+                    }
+
+                    if let Some(size) = old_context.size {
+                        if addr_counter.num_bytes > size {
+                            return Err(AssemblyError::StructuralError {
+                                line: line.line_number,
+                                reason: format!(
+                                    "Section \"{}\" larger than the allotted section size of {} bytes, ({} bytes)",
+                                    name, size, addr_counter.num_bytes
+                                ),
+                            });
+                        }
+
+                        let pad_size = size - addr_counter.num_bytes;
+
+                        addr_counter.increment_by(pad_size);
+                    }
                 }
                 _ => {}
             }
         }
 
         // check for overflow of current bank
-        let cur_bank_end = (current_bank as u32 + 1) * BANK_SIZE;
-        if current_address > cur_bank_end {
+        let cur_bank_end = (addr_counter.bank as u32 + 1) * BANK_SIZE;
+        if addr_counter.physical_addr > cur_bank_end {
             return Err(AssemblyError::StructuralError {
                 line: line.line_number,
-                reason: format!("ROM bank {} overflow.", current_bank),
+                reason: format!("ROM bank {} overflow.", addr_counter.bank),
             });
         }
+    }
+
+    // check for unclosed sections
+    if !context_stack.is_empty() {
+        let left_over = context_stack.pop().unwrap();
+
+        let mut name: String = "UNNAMED".to_string();
+
+        if let Some(n) = left_over.name {
+            name = n;
+        }
+
+        return Err(AssemblyError::StructuralErrorNoLine {
+            reason: format!(
+                "section \"{}\" has no matching .section_end statement.",
+                name
+            ),
+        });
     }
 
     // check for correct header placement
@@ -293,30 +408,35 @@ pub fn generate_bytecode(
     symbol_table: &SymbolTable,
 ) -> Result<Vec<u8>, AssemblyError> {
     let mut bytecode = Vec::new();
-    let mut current_address: u32 = 0; // Start address after cartridge header
-    let mut current_bank: u32 = 0;
+    let mut addr_counter = AddrCounter::new();
+    let mut context_stack: ContextStack = vec![];
 
     for line in lines {
         if let Some(directive) = &line.directive {
             match directive {
                 Directive::Org(Operand::Immediate(addr)) => {
                     let new_addr = *addr as u16;
-                    let new_physical_addr = calculate_physical_addr(&new_addr, &current_bank);
-                    if new_physical_addr > current_address {
-                        let padding_size = (new_physical_addr - current_address) as usize;
+                    let new_physical_addr = calculate_physical_addr(&new_addr, &addr_counter.bank);
+                    if new_physical_addr > addr_counter.physical_addr {
+                        let padding_size =
+                            (new_physical_addr - addr_counter.physical_addr) as usize;
                         bytecode.resize(bytecode.len() + padding_size, 0x00);
+                        addr_counter.logical_addr += padding_size as u32;
+                        addr_counter.num_bytes += padding_size as u32;
+                        addr_counter.physical_addr = new_physical_addr;
                     }
-                    current_address = new_physical_addr;
                 }
                 Directive::Bank(Operand::Immediate(num)) => {
                     let new_addr = *num as u32 * BANK_SIZE;
-                    if new_addr > current_address {
-                        let padding_size = (new_addr - current_address) as usize;
+                    if new_addr > addr_counter.physical_addr {
+                        let padding_size = (new_addr - addr_counter.physical_addr) as usize;
                         bytecode.resize(bytecode.len() + padding_size, 0x00);
+                        addr_counter.num_bytes += padding_size as u32;
                     }
 
-                    current_bank = *num as u32;
-                    current_address = new_addr;
+                    addr_counter.bank = *num as u32;
+                    addr_counter.physical_addr = new_addr;
+                    addr_counter.logical_addr = 0;
                 }
                 Directive::Byte(bytes) => {
                     let byte_vec: Vec<u8> = bytes
@@ -330,7 +450,7 @@ pub fn generate_bytecode(
                             }
                         })
                         .collect();
-                    current_address += byte_vec.len() as u32;
+                    addr_counter.increment_by(byte_vec.len() as u32);
                     bytecode.extend(byte_vec);
                 }
                 Directive::Word(words) => {
@@ -352,7 +472,7 @@ pub fn generate_bytecode(
                             }
                         })
                         .collect();
-                    current_address += word_bytes.len() as u32;
+                    addr_counter.increment_by(word_bytes.len() as u32);
                     bytecode.extend(word_bytes);
                 }
                 Directive::Header(info) => {
@@ -389,7 +509,7 @@ pub fn generate_bytecode(
                     header.resize(0x60, 0x00);
                     // checksums will be caclculated and added later
 
-                    current_address += header.len() as u32;
+                    addr_counter.increment_by(header.len() as u32);
                     bytecode.extend(header);
                 }
                 Directive::Interrupt(words) => {
@@ -406,8 +526,68 @@ pub fn generate_bytecode(
                     if word_bytes.len() < 32 {
                         word_bytes.resize(32, 0x00);
                     }
-                    current_address += word_bytes.len() as u32;
+                    addr_counter.increment_by(word_bytes.len() as u32);
                     bytecode.extend(word_bytes);
+                }
+                Directive::SectionStart(section_options) => {
+                    let new_context: Context = Context {
+                        name: section_options.name.clone(),
+                        size: section_options.size,
+                        vaddr: section_options.vaddr,
+                        paddr: section_options.paddr,
+                        align: section_options.align,
+                        address: addr_counter.clone(),
+                    };
+
+                    // reset section size counter
+                    addr_counter.num_bytes = 0;
+
+                    // set logical address
+                    if let Some(vaddr) = new_context.vaddr {
+                        addr_counter.logical_addr = vaddr;
+                    }
+
+                    // set physical address
+                    if let Some(paddr) = new_context.paddr {
+                        if paddr > addr_counter.physical_addr {
+                            let padding_size = (paddr - addr_counter.physical_addr) as usize;
+
+                            bytecode.resize(bytecode.len() + padding_size, 0x00);
+                        }
+                        addr_counter.physical_addr = paddr;
+                    }
+
+                    // TODO: set alignment
+                    // if let Some(align) = new_context.align {
+                    //  ...
+                    // }
+
+                    context_stack.push(new_context);
+                }
+                Directive::SectionEnd => {
+                    if context_stack.is_empty() {
+                        return Err(AssemblyError::StructuralError {
+                            line: line.line_number,
+                            reason: ".section_end found without a preceding .section statement."
+                                .to_string(),
+                        });
+                    }
+
+                    let old_context: Context = context_stack.pop().unwrap();
+
+                    if old_context.vaddr.is_some() {
+                        addr_counter.logical_addr =
+                            calculate_logical_addr(&addr_counter.physical_addr);
+                    }
+
+                    if let Some(size) = old_context.size {
+                        if size > addr_counter.num_bytes {
+                            let padding_size = size - addr_counter.num_bytes;
+                            bytecode.resize(bytecode.len() + padding_size as usize, 0x00);
+
+                            addr_counter.increment_by(padding_size);
+                        }
+                    }
                 }
                 _ => {}
             }
@@ -417,11 +597,11 @@ pub fn generate_bytecode(
             let instruction_bytes = encoder::encode_instruction(
                 instruction,
                 symbol_table,
-                &current_address,
-                &current_bank,
+                &addr_counter.logical_addr,
+                &addr_counter.bank,
                 &line.line_number,
             )?;
-            current_address += instruction_bytes.len() as u32;
+            addr_counter.increment_by(instruction_bytes.len() as u32);
             bytecode.extend(instruction_bytes);
         }
     }
@@ -448,5 +628,13 @@ fn calculate_physical_addr(logical_addr: &u16, bank: &u32) -> u32 {
         *logical_addr as u32
     } else {
         (*bank as u32 * BANK_SIZE) + (*logical_addr as u32 - 0x4000)
+    }
+}
+
+fn calculate_logical_addr(physical_addr: &u32) -> u32 {
+    if *physical_addr < BANK_SIZE {
+        *physical_addr
+    } else {
+        (*physical_addr % BANK_SIZE) + BANK_SIZE
     }
 }

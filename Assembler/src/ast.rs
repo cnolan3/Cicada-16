@@ -206,14 +206,25 @@ pub enum ConditionCode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Directive {
-    Org(Operand),            // .org 0x1234 AND .org label
-    Bank(Operand),           // .bank 3
-    Byte(Vec<Operand>),      // .byte 0x01, 0x02, 0x03
-    Word(Vec<Operand>),      // .word 0x0001, 0x0002, 0x0003 AND .word label, label, label
-    Define(String, Operand), // .define label 0x01
-    Include(String),         // .include path
-    Header(HeaderInfo),      // .header_start ... .header_end
-    Interrupt(Vec<Operand>), // .interrupt_table ... .table_end
+    Org(Operand),                 // .org 0x1234 AND .org label
+    Bank(Operand),                // .bank 3
+    Byte(Vec<Operand>),           // .byte 0x01, 0x02, 0x03
+    Word(Vec<Operand>),           // .word 0x0001, 0x0002, 0x0003 AND .word label, label, label
+    Define(String, Operand),      // .define label 0x01
+    Include(String),              // .include path
+    Header(HeaderInfo),           // .header_start ... .header_end
+    Interrupt(Vec<Operand>),      // .interrupt_table ... .table_end
+    SectionStart(SectionOptions), // .section
+    SectionEnd,                   // .section_end
+}
+
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct SectionOptions {
+    pub name: Option<String>,
+    pub size: Option<u32>,
+    pub vaddr: Option<u32>,
+    pub paddr: Option<u32>,
+    pub align: Option<u32>,
 }
 
 // --- Assembly Line Structure ---

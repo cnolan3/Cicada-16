@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 use crate::ast::HeaderInfo;
+use crate::ast::SectionOptions;
 use crate::parser::AstBuilder;
 use crate::parser::Rule;
 use crate::parser::ast_builder::AssemblyError;
@@ -295,5 +296,66 @@ impl<'a> AstBuilder<'a> {
         } else {
             Ok(Directive::Interrupt(op_table))
         }
+    }
+
+    pub fn build_section_start_directive(self) -> Result<Directive> {
+        let mut section_options: SectionOptions = SectionOptions::default();
+
+        for pair in self.pairs {
+            let attr = pair
+                .into_inner()
+                .next()
+                .ok_or_else(|| AssemblyError::StructuralError {
+                    line: self.line_number,
+                    reason: "Expected an attribute.".to_string(),
+                })?;
+
+            let mut field_builder = AstBuilder::new(attr.clone());
+
+            match attr.as_rule() {
+                Rule::name_attr => {
+                    if section_options.name.is_some() {
+                        return Err(AssemblyError::StructuralError {
+                            line: self.line_number,
+                            reason: ".section name attribute defined multiple times.".to_string(),
+                        }
+                        .into());
+                    }
+                    section_options.name = Some(field_builder.expect_string_literal()?);
+                }
+                Rule::size_attr => {
+                    if section_options.size.is_some() {
+                        return Err(AssemblyError::StructuralError {
+                            line: self.line_number,
+                            reason: ".section size attribute defined multiple times.".to_string(),
+                        }
+                        .into());
+                    }
+                    section_options.size = Some(field_builder.expect_immediate()? as u32);
+                }
+                Rule::vaddr_attr => {
+                    if section_options.vaddr.is_some() {
+                        return Err(AssemblyError::StructuralError {
+                            line: self.line_number,
+                            reason: ".section vaddr attribute defined multiple times.".to_string(),
+                        }
+                        .into());
+                    }
+                    section_options.vaddr = Some(field_builder.expect_addr()? as u32);
+                }
+                Rule::paddr_attr => {
+                    if section_options.paddr.is_some() {
+                        return Err(AssemblyError::StructuralError {
+                            line: self.line_number,
+                            reason: ".section paddr attribute defined multiple times.".to_string(),
+                        }
+                        .into());
+                    }
+                    section_options.paddr = Some(field_builder.expect_addr()? as u32);
+                }
+                _ => {}
+            }
+        }
+        Ok(Directive::SectionStart(section_options))
     }
 }
