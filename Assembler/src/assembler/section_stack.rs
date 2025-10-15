@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#![allow(dead_code)]
+
 #[derive(Debug, Copy, Clone)]
 pub struct AddrCounter {
     pub physical_addr: u32,
@@ -30,12 +32,6 @@ impl AddrCounter {
             num_bytes: 0,
             bank: 0,
         }
-    }
-
-    pub fn increment(&mut self) {
-        self.physical_addr += 1;
-        self.logical_addr += 1;
-        self.num_bytes += 1;
     }
 
     pub fn increment_by(&mut self, inc: u32) {
