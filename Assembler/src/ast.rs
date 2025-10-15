@@ -224,7 +224,7 @@ pub struct SectionOptions {
     pub size: Option<u32>,
     pub vaddr: Option<u32>,
     pub paddr: Option<u32>,
-    pub align: Option<u32>,
+    // pub align: Option<u32>, TODO: implement the align feature
 }
 
 // --- Assembly Line Structure ---

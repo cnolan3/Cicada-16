@@ -266,7 +266,7 @@ pub fn build_symbol_table(
                         size: section_options.size,
                         vaddr: section_options.vaddr,
                         paddr: section_options.paddr,
-                        align: section_options.align,
+                        // align: section_options.align,
                         address: addr_counter.clone(),
                     };
 
@@ -326,6 +326,9 @@ pub fn build_symbol_table(
 
                         addr_counter.increment_by(pad_size);
                     }
+
+                    // restore the old num_bytes value
+                    addr_counter.num_bytes += old_context.address.num_bytes;
                 }
                 _ => {}
             }
@@ -535,7 +538,7 @@ pub fn generate_bytecode(
                         size: section_options.size,
                         vaddr: section_options.vaddr,
                         paddr: section_options.paddr,
-                        align: section_options.align,
+                        // align: section_options.align,
                         address: addr_counter.clone(),
                     };
 

@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#![allow(dead_code)]
-
 #[derive(Debug, Copy, Clone)]
 pub struct AddrCounter {
     pub physical_addr: u32,
@@ -47,7 +45,7 @@ pub struct Context {
     pub size: Option<u32>,
     pub vaddr: Option<u32>,
     pub paddr: Option<u32>,
-    pub align: Option<u32>,
+    // pub align: Option<u32>, TODO: implement align feature
     pub address: AddrCounter,
 }
 
