@@ -13,7 +13,7 @@ Accessing OAM/VRAM/CRAM (reading or writing) by the CPU is generally safe during
 
 - **CRAM (Color RAM / Palette RAM):** 512 bytes of RAM located at `F200-F3FF` in the main memory map. It holds the 256 16-bit color palette entries.
 - **Screen Resolution:** 240x160 pixels.
-- **Refresh Rate:** ~58 Hz.
+- **Refresh Rate:** ~59.739 Hz.
 
 ## **2. Color System**
 
@@ -168,7 +168,7 @@ These registers, mapped to the CPU's address space, control the PPU's operation.
 | F045      | SCX1    | Background 1 - Horizontal Scroll                                                                                                                                           |
 | F046      | WINY    | **Window Y-Position:** The top edge of the Window layer.                                                                                                                   |
 | F047      | WINX    | **Window X-Position:** The left edge of the Window layer.                                                                                                                  |
-| F048      | LY      | **LCD Y-Coordinate:** Indicates the current vertical scanline being drawn (Read-only). Ranges from 0 to ~180.                                                              |
+| F048      | LY      | **LCD Y-Coordinate:** Indicates the current vertical scanline being drawn (Read-only). Ranges from 0 to 215.                                                              |
 | F049      | LYC     | **LY Compare:** The PPU compares LY with this value. If they match, a flag is set in the STAT register, which can trigger an interrupt. Useful for scanline-based effects. |
 | F04A      | BG_MODE | **Background Mode:** Configures the size (dimensions) of the BG0 and BG1 tilemaps.                                                                                         |
 | F04B      | BG_TMB  | **Background Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for BG0 (bits 3-0) and BG1 (bits 7-4).                                                            |
@@ -218,15 +218,15 @@ This 8-bit register provides information about the PPU's current state and allow
 
 ## **10. PPU Frame Rendering Cycle**
 
-The PPU renders the 240x160 screen one horizontal line (or scanline) at a time. The entire process is driven by a master clock and is meticulously timed. A full frame consists of 222 scanlines (LY 0-221) and takes 144,300 CPU cycles to complete, resulting in a refresh rate of approximately 58.13 Hz.
+The PPU renders the 240x160 screen one horizontal line (or scanline) at a time. The entire process is driven by a master clock and is meticulously timed. A full frame consists of 216 scanlines (LY 0-215) and takes 280,800 CPU cycles to complete, resulting in a refresh rate of approximately 59.739 Hz.
 
 The rendering process is divided into two main phases: the period when pixels are drawn to the screen, and the Vertical Blank (V-Blank) period, which is the idle time between frames.
 
 ### **10.1. Phase 1: Visible Scanline Rendering (LY 0-159)**
 
-For each of the 160 visible scanlines, the PPU performs the exact same sequence of operations, which takes a total of 650 CPU cycles. This sequence is divided into three modes, which correspond to the `MODE_FLAG` in the `STAT` register.
+For each of the 160 visible scanlines, the PPU performs the exact same sequence of operations, which takes a total of 1,300 CPU cycles. This sequence is divided into three modes, which correspond to the `MODE_FLAG` in the `STAT` register.
 
-#### **Mode 2: OAM Scan (80 Cycles)**
+#### **Mode 2: OAM Scan (160 Cycles)**
 
 At the beginning of a scanline, the PPU determines which sprites need to be drawn on this specific line.
 
@@ -235,9 +235,9 @@ At the beginning of a scanline, the PPU determines which sprites need to be draw
 - **Result:** The PPU builds a temporary internal list of up to 16 sprites that are visible on this line. If more than 16 sprites are on the line, the additional ones are ignored for this frame. This list contains the sprite's X-position, tile index, attributes, and OAM index (for priority).
 - **Status:** The `STAT` register's mode flag (bits 1-0) is set to `10`.
 
-#### **Mode 3: Drawing Pixels (480 Cycles)**
+#### **Mode 3: Drawing Pixels (960 Cycles)**
 
-This is the core of the rendering process, where the PPU composes the final color for each of the 240 horizontal pixels on the scanline. It processes one pixel every two CPU cycles.
+This is the core of the rendering process, where the PPU composes the final color for each of the 240 horizontal pixels on the scanline. It processes one pixel every four CPU cycles.
 
 - **Status:** The `STAT` register mode flag is set to `11`. Accessing VRAM, OAM, or CRAM during this mode can cause visual glitches.
 - **The Pixel Pipeline:** For each pixel X from 0 to 239, the PPU performs the following logic:
@@ -252,18 +252,18 @@ This is the core of the rendering process, where the PPU composes the final colo
       - **Step D (Sprites):** If a sprite pixel is present at this location, its priority is checked against the background pixel beneath it. Sprite-on-background priority is determined by the sprite's Priority flag (OAM Byte 4, Bit 7) and the background tile's Priority flag (Tilemap entry, Bit 15). A sprite with its priority flag set to `0` will be drawn behind a background tile with its priority flag set to `1`. Sprite-on-sprite priority is determined by OAM index: a sprite with a lower index (e.g., sprite #0) is always drawn on top of a sprite with a higher index (e.g., sprite #1).
   3.  **Final Color Lookup:** The result of the mixing logic is a 4-bit color index and a palette select value. The PPU uses these to look up the final 16-bit RGB555 color value from CRAM (`F200-F3FF`).
 
-#### **Mode 0: Horizontal Blank (H-Blank) (90 Cycles)**
+#### **Mode 0: Horizontal Blank (H-Blank) (180 Cycles)**
 
 After the last pixel of a scanline is drawn, the PPU enters a short idle period before starting the next line.
 
 - **Action:** The PPU is idle. This is a safe period for the CPU to write to VRAM, CRAM, and OAM without causing visual artifacts.
 - **Status:** The `STAT` register mode flag is set to `00`. An H-Blank interrupt can be triggered if enabled.
 
-### **10.2. Phase 2: Vertical Blank (V-Blank) Period (LY 160-221)**
+### **10.2. Phase 2: Vertical Blank (V-Blank) Period (LY 160-215)**
 
-After all 160 visible scanlines have been drawn, the PPU enters the V-Blank period, which lasts for 62 scanlines' worth of time.
+After all 160 visible scanlines have been drawn, the PPU enters the V-Blank period, which lasts for 56 scanlines' worth of time.
 
-#### **Mode 1: V-Blank (62 \* 650 Cycles)**
+#### **Mode 1: V-Blank (56 \* 1,300 Cycles)**
 
 - **Action:** The PPU is completely idle and does no drawing. This is the main safe period for the CPU to perform lengthy graphics updates, such as updating tilemaps, copying new tile graphics to VRAM, or updating palettes in CRAM.
 - **Status:** As soon as `LY` becomes 160, the `STAT` register mode flag is set to `01`.

@@ -29,7 +29,7 @@
 
 ### **1.1. Execution and Timing**
 
-The master system clock frequency is **8.388608 MHz** (2^23 Hz).
+The master system clock frequency is **16.777216 MHz** (2^24 Hz).
 
 The Cicada-16 CPU features a simple **2-stage instruction pipeline** to improve performance. The two stages are:
 

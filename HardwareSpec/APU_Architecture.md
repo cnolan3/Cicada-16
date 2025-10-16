@@ -58,9 +58,9 @@ The two pulse channels generate simple square waves. They are controlled by a se
 
 ### 3.1. Frequency and Pitch
 
-The pitch of the two pulse channels is determined by the 16-bit value in their respective `CHx_FREQ` registers (F084-F085 for CH0, F089-F08A for CH1). The APU uses a master clock of **4.194304 MHz**. The output frequency is calculated with the following formula:
+The pitch of the two pulse channels is determined by the 16-bit value in their respective `CHx_FREQ` registers (F084-F085 for CH0, F089-F08A for CH1). The APU uses a master clock of **2.097152 MHz**. The output frequency is calculated with the following formula:
 
-**`Output Frequency (Hz) = 4,194,304 / (64 * (65536 - FREQ_REG))`**
+**`Output Frequency (Hz) = 2,097,152 / (64 * (65536 - FREQ_REG))`**
 
 Where `FREQ_REG` is the 16-bit value from the frequency register. This formula allows for fine-grained control over the pitch, covering a wide range of musical notes.
 
@@ -68,14 +68,14 @@ Where `FREQ_REG` is the 16-bit value from the frequency register. This formula a
 
 To produce the note A-4 (440 Hz), a programmer would need to calculate the required `FREQ_REG` value:
 
-1.  `440 = 4,194,304 / (64 * (65536 - FREQ_REG))`
-2.  `64 * (65536 - FREQ_REG) = 4,194,304 / 440`
-3.  `65536 - FREQ_REG = 9532.5 / 64`
-4.  `65536 - FREQ_REG = 148.945...`
-5.  `FREQ_REG = 65536 - 149` (rounding to the nearest integer)
-6.  `FREQ_REG = 65387`
+1.  `440 = 2,097,152 / (64 * (65536 - FREQ_REG))`
+2.  `64 * (65536 - FREQ_REG) = 2,097,152 / 440`
+3.  `65536 - FREQ_REG = 4766.25 / 64`
+4.  `65536 - FREQ_REG = 74.47...`
+5.  `FREQ_REG = 65536 - 74` (rounding to the nearest integer)
+6.  `FREQ_REG = 65462`
 
-A value of **65387** in the frequency register will produce a tone very close to 440 Hz. Game developers would typically use a pre-calculated lookup table for note frequencies. The official System Library provides a standardized lookup table for this purpose. See the `System_Library.md` document for more details.
+A value of **65462** in the frequency register will produce a tone very close to 440 Hz. Game developers would typically use a pre-calculated lookup table for note frequencies. The official System Library provides a standardized lookup table for this purpose. See the `System_Library.md` document for more details.
 
 ### 3.2. Hardware Frequency Sweep (Channel 0)
 
@@ -137,13 +137,13 @@ The wave channel offers the most sonic flexibility by playing back a small, user
 
 The frequency of the `CH2_FREQ` register determines how quickly the APU steps through the 64 samples of the selected waveform. The resulting audible pitch is determined by this playback rate. The formula is intentionally aligned with the pulse channels, allowing them to share the same frequency lookup table.
 
-**`Sample Rate (Hz) = 4,194,304 / (65536 - FREQ_REG)`**
+**`Sample Rate (Hz) = 2,097,152 / (65536 - FREQ_REG)`**
 
 **`Output Pitch (Hz) = Sample Rate / 64`**
 
 This simplifies to the final formula:
 
-**`Output Pitch (Hz) = 4,194,304 / (64 * (65536 - FREQ_REG))`**
+**`Output Pitch (Hz) = 2,097,152 / (64 * (65536 - FREQ_REG))`**
 
 Where `FREQ_REG` is the 16-bit value from the `CH2_FREQ` register (F08E-F08F).
 
@@ -153,7 +153,7 @@ Where `FREQ_REG` is the 16-bit value from the `CH2_FREQ` register (F08E-F08F).
 
 To produce the note A-4 (440 Hz), the `FREQ_REG` value is the same as for the pulse channels:
 
-`FREQ_REG = 65387`
+`FREQ_REG = 65462`
 
 This value will cause the 64 samples of the waveform to be played back at a rate that produces a fundamental pitch of 440 Hz.
 
@@ -194,7 +194,7 @@ The channel's audio output is `1` if the LSB of the LFSR is `0`, and `-1` if the
 
 The "pitch" of the noise is controlled by the rate at which the LFSR is clocked. This clock rate is derived from the master APU clock and the 6-bit `CLK_DIV` value in the `CH3_CTRL` register.
 
-**`LFSR Clock Rate (Hz) = 4,194,304 / (256 * (CLK_DIV + 1))`**
+**`LFSR Clock Rate (Hz) = 2,097,152 / (256 * (CLK_DIV + 1))`**
 
 - A lower `CLK_DIV` value results in a higher-pitched, "brighter" noise.
 - A higher `CLK_DIV` value results in a lower-pitched, "rumbling" noise.
@@ -306,7 +306,7 @@ This section provides a detailed, step-by-step overview of the entire APU signal
 
 The APU uses several different clocks, all derived from the master APU clock, to control different aspects of sound generation.
 
-- **Master APU Clock (4.194304 MHz):** The high-speed master clock that drives all APU operations. Its frequency is exactly half of the main system clock (8.388608 MHz / 2). It is divided down to create the other, slower clocks.
+- **Master APU Clock (2.097152 MHz):** The high-speed master clock that drives all APU operations. Its frequency is exactly one-eighth of the main system clock (16.777216 MHz / 8). It is divided down to create the other, slower clocks.
 - **Generator Clocks (Variable):** This is the clock that drives the core sound generators (the pulse wave, wave table, and LFSR). Its speed is controlled by the `FREQ` or `CLK_DIV` registers for each channel and determines the fundamental pitch or character of the raw sound.
 - **Envelope Clock (256 Hz):** A slow, fixed-rate clock. 256 times per second, it tells the ADSR unit on each channel whether it should increment or decrement its volume according to its current phase (Attack, Decay, or Release).
 - **Sweep Clock (128 Hz):** A slow, fixed-rate clock. 128 times per second, it tells the sweep unit on Channel 0 to perform its frequency recalculation.
