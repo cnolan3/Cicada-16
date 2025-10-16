@@ -42,6 +42,12 @@ pub fn process_instruction_constants(
         Instruction::LdiB(_, op) => {
             replace_constant_with_unsigned_byte(op, constant_table, line_number)?;
         }
+        Instruction::LdBAbs(_, op) => {
+            replace_constant_with_word(op, constant_table, line_number)?;
+        }
+        Instruction::StBAbs(op, _) => {
+            replace_constant_with_word(op, constant_table, line_number)?;
+        }
         Instruction::Lea(_, _, op) => {
             replace_constant_with_signed_byte(op, constant_table, line_number)?;
         }
