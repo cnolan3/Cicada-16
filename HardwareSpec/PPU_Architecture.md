@@ -4,7 +4,7 @@ This document describes the design of the Picture Processing Unit (PPU) for the 
 
 ## **1. Core Components**
 
-- **VRAM (Video RAM):** 32 KiB of dedicated, bank-switched RAM. An 8 KiB window of VRAM is accessible to the CPU at any time at `9000-AFFF` for writing and reading data; the active bank for this window is selected via the `VRAM_BANK` I/O register. For rendering, the PPU has a wider internal address bus and can access the entire 32 KiB of VRAM simultaneously. VRAM holds the tile data (the 8x8 pixel building blocks for graphics) and the tilemaps (the data that arranges tiles into background layers).
+- **VRAM (Video RAM):** 32 KiB of dedicated, bank-switched RAM. An 8 KiB window of VRAM is accessible to the CPU at any time at `9000-AFFF` for writing and reading data; the active bank for this window is selected via the `VRAM_BANK` I/O register. For rendering, the PPU has a wider internal address bus and can access the entire 32 KiB of VRAM simultaneously. VRAM holds the tile data (the 8x8 pixel building blocks for graphics) and the tilemaps (the data that arranges tiles into the three graphical layers: BG0, BG1, and Window).
 - **OAM (Object Attribute Memory):** 512 bytes of dedicated RAM at F400-F5FF used to store the attributes for all 64 hardware sprites (position, tile index, palette, etc.).
 
 ### **1.1. Memory Access Conflicts**
@@ -21,7 +21,7 @@ Accessing OAM/VRAM/CRAM (reading or writing) by the CPU is generally safe during
 - **Color RAM (CRAM):** The 256-color master palette is stored in CRAM. Each color entry is a 16-bit value, defining the color in RGB555 format (5 bits for Red, 5 for Green, 5 for Blue).
   - RRRRRGGGGGBBBBB
 - **Sub-palettes:** The 256 colors in CRAM are divided into 16 sub-palettes of 16 colors each. Background layers and sprites can each be assigned one of these sub-palettes.
-- **Color 0:** In any 16-color sub-palette, color 0 is treated as transparent. This allows sprites and background layers to show content behind them.
+- **Color 0:** In all layers except BG0 color 0 of each 16 color sub-palette is treated as transparent, no matter what color the entry actually corresponds to. This allows sprites and background layers to show content behind them. BG0 treats color 0 the same as all other palette colors and renders it as the color that it specifies.
 
 ## **3. VRAM Layout and Tilemaps**
 
@@ -29,7 +29,7 @@ The PPU's graphics are built from layers of tiles, which are configured by data 
 
 ### **3.1. VRAM Organization**
 
-By hardware rule, the **Tile Graphics Area** is always assumed to begin at address `0x0000` in VRAM. The developer can then place their **Tilemap Area** anywhere else in VRAM. The location and size of the tilemaps for each background layer are defined by a set of PPU registers, giving the developer full control over how VRAM is partitioned.
+By hardware rule, the **Tile Graphics Area** is always assumed to begin at address `0x0000` in VRAM. The developer can then place their **Tilemap Areas** anywhere else in VRAM. The PPU supports three independent tilemaps (BG0, BG1, and Window), each with its location and size defined by PPU registers (`BG_TMB` and `WIN_TMB`), giving the developer full control over how VRAM is partitioned.
 
 ### **3.2. Tilemap Data Format**
 
@@ -78,19 +78,24 @@ These four bits are combined to form the final 4-bit color index (a value from 0
 
 ## **4. Background Layers**
 
-The PPU can render **two** independent background layers, referred to as **BG0** and **BG1**. This allows for effects like parallax scrolling.
+The PPU can render **two** independent scrollable background layers, referred to as **BG0** and **BG1**, plus a third non-scrolling **Window** layer for static UI elements.
 
-- **Tilemaps:** Each background layer is constructed from a tilemap stored in VRAM. A tilemap is a 2D array of entries that specify which tile to draw at each position on the grid.
+### **4.1. BG0 and BG1 (Scrollable Backgrounds)**
+
+- **Tilemaps:** Each background layer is constructed from a tilemap stored in VRAM. A tilemap is a 2D array of 16-bit entries that specify which tile to draw at each position on the grid.
   - Tilemap sizes can be configured (e.g., 32x32 tiles, 64x32 tiles) to create large scrolling worlds.
-- **Tiles:** The building blocks of backgrounds. Each tile is an 8x8 pixel graphic. The color data for tiles is stored in VRAM. We'll assume a 4-bit-per-pixel (4bpp) format, where each pixel's value is an index into one of the 16-color sub-palettes.
-- **Scrolling:** Each background layer has its own horizontal and vertical scroll registers (SCX, SCY), allowing them to be moved independently.
+- **Tiles:** The building blocks of backgrounds. Each tile is an 8x8 pixel graphic. The color data for tiles is stored in VRAM in a 4-bit-per-pixel (4bpp) planar format, where each pixel's value is an index into one of the 16-color sub-palettes.
+- **Scrolling:** Each background layer has its own horizontal and vertical scroll registers (SCX0, SCY0 for BG0; SCX1, SCY1 for BG1), allowing them to be moved independently for effects like parallax scrolling.
 
-### **3.1. Window Layer**
+### **4.2. Window Layer**
 
-For displaying static UI elements like HUDs or dialogue boxes, the PPU supports a **Window Layer**.
+The Window is a third independent tilemap layer used for static UI elements like HUDs, dialogue boxes, and borders. Unlike BG0 and BG1, the Window is not affected by scrolling and remains at a fixed screen position.
 
-- **Function:** The Window is a rectangular area that is not affected by background scrolling. It is rendered on top of the background layers but can be behind or in front of sprites.
-- **Implementation:** The Window is not a true third layer. It re-uses the tile data and tilemap of one of the background layers (typically BG0). The PPU is instructed to draw a portion of this tilemap at a fixed screen position defined by the WINY and WINX registers, ignoring the regular scroll values for that area.
+- **Tilemap Storage:** The Window has its own dedicated tilemap in VRAM. The tilemap location is specified by the `WIN_TMB` register (similar to `BG_TMB`), occupying one 2 KiB VRAM slot. The tilemap has a fixed size of 32×32 tiles (256×256 pixels).
+- **Positioning:** The Window's position on screen is controlled by the `WINX` and `WINY` registers (default: 0, 0 at the top-left corner). These coordinates specify where the top-left pixel of the Window's tilemap appears on screen. Any portion extending beyond the 240×160 screen boundaries is clipped.
+- **Tilemap Format:** Uses the same 16-bit tilemap entry format as BG0/BG1, with Priority, V-Flip, H-Flip flags, palette select (0-7, limited to first 8 sub-palettes), and 10-bit tile index.
+- **Tile Graphics:** Shares the same tile graphics pool as BG0 and BG1. All tiles are stored starting at VRAM address 0x0000, and Window tilemap entries reference these shared tiles via tile index.
+- **Transparency:** Color #0 of any sub-palette is transparent, allowing BG0 and BG1 to show through.
 
 ## **5. Sprites (Objects)**
 
@@ -109,13 +114,13 @@ The PPU can render up to **64** sprites on screen at once.
 
   This byte controls the dimensions of the sprite. The lower four bits are divided into two 2-bit fields that work together to define the final size. The upper four bits are reserved for future use.
 
-| Bit(s) | Name       | Description                                                                      |
-| :----- | :--------- | :------------------------------------------------------------------------------- |
-| 7-4    | (Reserved) | Unused.                                                                          |
+| Bit(s) | Name       | Description                                                                        |
+| :----- | :--------- | :--------------------------------------------------------------------------------- |
+| 7-4    | (Reserved) | Unused.                                                                            |
 | 3-2    | **SHAPE**  | `00`: Square, `01`: Horizontal Rectangle, `10`: Vertical Rectangle, `11`: Reserved |
-| 1-0    | **SIZE**   | Selects the size from a shape-dependent table.                                   |
+| 1-0    | **SIZE**   | Selects the size from a shape-dependent table.                                     |
 
-  **Sprite Dimensions based on SHAPE and SIZE:**
+**Sprite Dimensions based on SHAPE and SIZE:**
 
 | SHAPE             | SIZE=`00` | SIZE=`01` | SIZE=`10` | SIZE=`11` |
 | :---------------- | :-------- | :-------- | :-------- | :-------- |
@@ -124,9 +129,9 @@ The PPU can render up to **64** sprites on screen at once.
 | **10 (V-Rect)**   | 8x16      | 8x32      | 16x32     | 32x64     |
 | **11 (Reserved)** | Invalid   | Invalid   | Invalid   | Invalid   |
 
-  For sprites larger than 8x8, the tile index in Byte 3 points to the top-left 8x8 tile of the sprite. The PPU then automatically fetches the required adjacent tiles from VRAM to construct the full sprite. For example, a 16x16 sprite will be composed of a 2x2 block of four tiles starting at the specified tile index.
+For sprites larger than 8x8, the tile index in Byte 3 points to the top-left 8x8 tile of the sprite. The PPU then automatically fetches the required adjacent tiles from VRAM to construct the full sprite. For example, a 16x16 sprite will be composed of a 2x2 block of four tiles starting at the specified tile index.
 
-  **OAM Byte 4 (Sprite Attribute Flags):**
+**OAM Byte 4 (Sprite Attribute Flags):**
 
 | Bit(s) | Name         | Description                                                                          |
 | :----- | :----------- | :----------------------------------------------------------------------------------- |
@@ -144,13 +149,17 @@ When multiple sprites overlap on the same scanline, their rendering priority is 
 
 ## **6. Layer Priority and Transparency**
 
-The PPU renders the final image by drawing the graphical layers in a specific order with defined transparency rules.
+The PPU renders the final image by drawing the graphical layers in a specific order from back to front with defined transparency rules.
+
+### **6.1. Rendering Order**
+
+Layers are drawn in the following order:
 
 1.  **BG0 (Backdrop Layer):** BG0 is the rearmost background layer. It is always fully opaque. Even if a tile uses color #0 of a sub-palette, the actual color value stored in CRAM for that entry will be drawn to the screen. This ensures the game always has a solid backdrop color.
 
-2.  **BG1 (Overlay Layer):** BG1 is drawn on top of BG0. For any tile on the BG1 layer, color #0 of its assigned sub-palette is treated as **transparent**, allowing the pixels of the BG0 layer to show through.
+2.  **BG1 (Overlay Layer):** BG1 is drawn on top of BG0. Color #0 of its assigned sub-palette is treated as **transparent**, allowing the pixels of the BG0 layer to show through.
 
-3.  **Window Layer:** The Window is drawn on top of BG0 and BG1. Like BG1, color #0 of any tile drawn as part of the Window layer is also treated as **transparent**.
+3.  **Window Layer:** The Window is drawn on top of BG0 and BG1. Color #0 of any tile drawn as part of the Window layer is treated as **transparent**, allowing background layers to show through transparent pixels.
 
 4.  **Sprites (Objects):** Sprites are the topmost layer, rendered over all background and window layers. Color #0 of a sprite's assigned sub-palette is always **transparent**. The sprite's priority flag (in its OAM data) can cause it to be rendered behind high-priority background tiles, but it is always drawn on top of low-priority tiles.
 
@@ -168,11 +177,12 @@ These registers, mapped to the CPU's address space, control the PPU's operation.
 | F045      | SCX1    | Background 1 - Horizontal Scroll                                                                                                                                           |
 | F046      | WINY    | **Window Y-Position:** The top edge of the Window layer.                                                                                                                   |
 | F047      | WINX    | **Window X-Position:** The left edge of the Window layer.                                                                                                                  |
-| F048      | LY      | **LCD Y-Coordinate:** Indicates the current vertical scanline being drawn (Read-only). Ranges from 0 to 215.                                                              |
+| F048      | LY      | **LCD Y-Coordinate:** Indicates the current vertical scanline being drawn (Read-only). Ranges from 0 to 215.                                                               |
 | F049      | LYC     | **LY Compare:** The PPU compares LY with this value. If they match, a flag is set in the STAT register, which can trigger an interrupt. Useful for scanline-based effects. |
 | F04A      | BG_MODE | **Background Mode:** Configures the size (dimensions) of the BG0 and BG1 tilemaps.                                                                                         |
 | F04B      | BG_TMB  | **Background Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for BG0 (bits 3-0) and BG1 (bits 7-4).                                                            |
-| F04C-F07F | ---     | **Reserved**                                                                                                                                                               |
+| F04C      | WIN_TMB | **Window Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for the Window tilemap (bits 3-0). Bits 7-4 are reserved.                                            |
+| F04D-F07F | ---     | **Reserved**                                                                                                                                                               |
 
 ### **7.1. Accessing Color RAM (CRAM)**
 
@@ -180,12 +190,19 @@ Since CRAM is mapped directly to the CPU's address space (`F200-F3FF`), there ar
 
 ### **7.2. Configuring Tilemap Base Addresses**
 
-The `BG_TMB` register at `F04B` provides an efficient way to set the starting address for the BG0 and BG1 tilemaps. The 32 KiB of VRAM is divided into 16 slots of 2 KiB each. The `BG_TMB` register uses a 4-bit value for each background layer to specify which slot its tilemap begins in.
+The `BG_TMB` register at `F04B` and `WIN_TMB` register at `F04C` provide an efficient way to set the starting addresses for all three tilemaps. The 32 KiB of VRAM is divided into 16 slots of 2 KiB each. These registers use a 4-bit value to specify which slot each tilemap begins in.
 
-- **BG0:** The lower 4 bits (bits 3-0) of `BG_TMB` select the starting slot (0-15) for the BG0 tilemap.
-- **BG1:** The upper 4 bits (bits 7-4) of `BG_TMB` select the starting slot (0-15) for the BG1 tilemap.
+**BG_TMB Register (F04B):**
+- **BG0:** The lower 4 bits (bits 3-0) select the starting slot (0-15) for the BG0 tilemap.
+- **BG1:** The upper 4 bits (bits 7-4) select the starting slot (0-15) for the BG1 tilemap.
 
-The PPU calculates the final base address using the formula: `base_address = slot_id * 2048`. For example, if `BG_TMB` holds the value `0x42`, BG0's tilemap will start at slot 2 (`2 * 2048 = 4096`, address `0x1000`), and BG1's tilemap will start at slot 4 (`4 * 2048 = 8192`, address `0x2000`).
+**WIN_TMB Register (F04C):**
+- **Window:** The lower 4 bits (bits 3-0) select the starting slot (0-15) for the Window tilemap.
+- **Bits 7-4:** Reserved, should be set to 0.
+
+The PPU calculates the final base address using the formula: `base_address = slot_id × 2048`. For example:
+- If `BG_TMB` = `0x42`: BG0's tilemap starts at slot 2 (address `0x1000`), and BG1's tilemap starts at slot 4 (address `0x2000`).
+- If `WIN_TMB` = `0x06`: Window's tilemap starts at slot 6 (address `0x3000`).
 
 ## **8. LCDC Register (F040)**
 
