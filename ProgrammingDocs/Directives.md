@@ -106,11 +106,11 @@ pointer_table: .word start, message, data_table
 
 ## .section / .section_end
 
-Defines a section of code or data with specific attributes like size, virtual address, or physical address.
+Defines a section of code or data with specific attributes like size, virtual address, physical address, or alignment.
 
 - **Syntax**:
   ```asm
-  .section name="section_name" size=bytes vaddr=address paddr=address
+  .section name="section_name" size=bytes vaddr=address paddr=address align=bytes
       ; code or data goes here
   .section_end
   ```
@@ -119,10 +119,12 @@ Defines a section of code or data with specific attributes like size, virtual ad
   - `size=bytes`: Reserve a specific number of bytes for the section (will pad with zeros if content is smaller)
   - `vaddr=address`: Set the logical (virtual) address for this section's contents
   - `paddr=address`: Set the physical ROM address where this section will be placed
+  - `align=bytes`: Align the section start to the specified byte boundary (must be greater than zero)
 - **Description**: The `.section` directive allows you to organize code and data with fine-grained control over memory placement and layout. This is particularly useful for:
   - Creating fixed-size memory regions (using `size=`)
   - Mapping code to specific logical addresses (using `vaddr=`)
   - Placing data at specific ROM locations (using `paddr=`)
+  - Aligning data to specific boundaries (using `align=`)
   - Organizing code into named logical blocks
 
 When a section ends, the logical address counter is restored to continue from where it would have been without the section's `vaddr` override. Physical address always advances forward.
@@ -132,6 +134,7 @@ When a section ends, the logical address counter is restored to continue from wh
 - Sections cannot be nested
 - If a `size=` attribute is specified, the section content cannot exceed that size
 - The `.section_end` directive must be present to close each section
+- The `align=` value must be greater than zero
 
 **Example 1: Fixed-size font data section**
 
@@ -193,6 +196,84 @@ game_loop:
     CALL render_frame
     JR game_loop  ; Relative jump works correctly with logical addresses
 .section_end
+```
+
+**Example 5: Aligned tile data for hardware requirements**
+
+```asm
+; Ensure sprite data starts on a 256-byte boundary for DMA
+.section name="sprite_tiles" align=256 size=1024
+sprite_tile_data:
+    .byte 0xFF, 0xFF, 0xFF, 0xFF  ; Tile 0
+    .byte 0x00, 0xFF, 0xFF, 0x00  ; Tile 1
+    ; ... more tiles
+.section_end
+; Section will be padded to align to 256-byte boundary before content,
+; and padded to exactly 1024 bytes after content
+```
+
+## .align
+
+Aligns the current position to a specified byte boundary by inserting padding bytes.
+
+- **Syntax**: `.align boundary`
+- **Operand**: A positive integer representing the alignment boundary in bytes.
+- **Description**: The `.align` directive pads the current physical address with zero bytes until it is aligned to the specified boundary. This is useful for:
+  - Ensuring data structures meet hardware alignment requirements
+  - Aligning lookup tables for efficient access
+  - Padding data to meet specific memory layout constraints
+
+The alignment works by calculating how many bytes past the last boundary the current address is, then adding enough padding to reach the next boundary. If the current address is already aligned, no padding is added.
+
+**Restrictions**:
+
+- The alignment value must be greater than zero
+- The alignment value cannot be equal to or larger than the ROM bank size (16384 bytes)
+
+**Example 1: Aligning sprite data**
+
+```asm
+.org 0x100
+
+some_code:
+    NOP
+    NOP
+    NOP  ; Current address is 0x103
+
+; Align to 256-byte boundary for sprite data
+.align 256
+    ; Current address is now 0x200 (next 256-byte boundary)
+sprite_data:
+    .byte 0xFF, 0xFF, 0xFF, 0xFF
+```
+
+**Example 2: Aligning multiple data sections**
+
+```asm
+font_data:
+    .byte 0x00, 0x3C, 0x42  ; 3 bytes
+
+.align 16  ; Pad to next 16-byte boundary
+
+sound_table:
+    .word 0x1000, 0x2000, 0x3000  ; Now aligned to 16 bytes
+
+.align 4  ; Ensure 4-byte alignment
+
+status_flags:
+    .byte 0x00
+```
+
+**Example 3: Page-aligned jump table**
+
+```asm
+; Align jump table to 256-byte page for faster indexing
+.align 256
+jump_table:
+    .word handler_0
+    .word handler_1
+    .word handler_2
+    .word handler_3
 ```
 
 ## Cartridge Metadata Directives
