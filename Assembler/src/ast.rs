@@ -216,6 +216,7 @@ pub enum Directive {
     Interrupt(Vec<Operand>),      // .interrupt_table ... .table_end
     SectionStart(SectionOptions), // .section
     SectionEnd,                   // .section_end
+    Align(u32),                   // .align 3
 }
 
 #[derive(Default, Debug, Clone, PartialEq)]
@@ -224,7 +225,7 @@ pub struct SectionOptions {
     pub size: Option<u32>,
     pub vaddr: Option<u32>,
     pub paddr: Option<u32>,
-    // pub align: Option<u32>, TODO: implement the align feature
+    pub align: Option<u32>,
 }
 
 // --- Assembly Line Structure ---

@@ -551,3 +551,622 @@ fn test_section_relative_jump() {
     // The test verifies that sections work correctly with relative jumps
     // The actual offset calculation is tested by the fact that logical_address is now used
 }
+
+#[test]
+fn test_align_2_already_aligned() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        NOP
+        .align 2
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    assert_eq!(result[0x0001], 0x00); // NOP
+    // Already aligned at 0x0002, no padding needed
+    assert_eq!(result[0x0002], 0x00); // NOP after align
+}
+
+#[test]
+fn test_align_2_needs_padding() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .align 2
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    assert_eq!(result[0x0001], 0x00); // Padding byte
+    assert_eq!(result[0x0002], 0x00); // NOP after align at even address
+}
+
+#[test]
+fn test_align_4() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        NOP
+        .align 4
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    assert_eq!(result[0x0001], 0x00); // NOP
+    assert_eq!(result[0x0002], 0x00); // Padding
+    assert_eq!(result[0x0003], 0x00); // Padding
+    assert_eq!(result[0x0004], 0x00); // NOP after align at 4-byte boundary
+}
+
+#[test]
+fn test_align_8() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        NOP
+        NOP
+        .align 8
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    assert_eq!(result[0x0001], 0x00); // NOP
+    assert_eq!(result[0x0002], 0x00); // NOP
+    for i in 0x0003..0x0008 {
+        assert_eq!(result[i], 0x00, "Expected padding at offset 0x{:04X}", i);
+    }
+    assert_eq!(result[0x0008], 0x00); // NOP after align at 8-byte boundary
+}
+
+#[test]
+fn test_align_with_labels() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .align 4
+        ALIGNED_LABEL:
+        NOP
+        JMP ALIGNED_LABEL
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    assert_eq!(result[0x0001], 0x00); // Padding
+    assert_eq!(result[0x0002], 0x00); // Padding
+    assert_eq!(result[0x0003], 0x00); // Padding
+    assert_eq!(result[0x0004], 0x00); // NOP at ALIGNED_LABEL (address 0x0004)
+    assert_eq!(result[0x0005], 0x51); // JMP opcode
+    assert_eq!(result[0x0006], 0x04); // Low byte of ALIGNED_LABEL
+    assert_eq!(result[0x0007], 0x00); // High byte of ALIGNED_LABEL
+}
+
+#[test]
+fn test_align_1_no_op() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .align 1
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    assert_eq!(result[0x0001], 0x00); // NOP immediately after (no padding for align 1)
+}
+
+#[test]
+fn test_align_with_data() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        .byte 0x01, 0x02, 0x03
+        .align 4
+        DATA_TABLE:
+        .word 0x1111, 0x2222, 0x3333
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x01); // .byte 0x01
+    assert_eq!(result[0x0001], 0x02); // .byte 0x02
+    assert_eq!(result[0x0002], 0x03); // .byte 0x03
+    assert_eq!(result[0x0003], 0x00); // Padding to align to 4
+    // DATA_TABLE starts at 0x0004
+    assert_eq!(result[0x0004], 0x11); // Low byte of 0x1111
+    assert_eq!(result[0x0005], 0x11); // High byte of 0x1111
+    assert_eq!(result[0x0006], 0x22); // Low byte of 0x2222
+    assert_eq!(result[0x0007], 0x22); // High byte of 0x2222
+    assert_eq!(result[0x0008], 0x33); // Low byte of 0x3333
+    assert_eq!(result[0x0009], 0x33); // High byte of 0x3333
+}
+
+#[test]
+fn test_multiple_aligns() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .align 4
+        NOP
+        NOP
+        .align 8
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    // Padding to align to 4
+    for i in 0x0001..0x0004 {
+        assert_eq!(result[i], 0x00, "Expected padding at 0x{:04X}", i);
+    }
+    assert_eq!(result[0x0004], 0x00); // NOP at 4-byte boundary
+    assert_eq!(result[0x0005], 0x00); // NOP
+    // Padding to align to 8
+    for i in 0x0006..0x0008 {
+        assert_eq!(result[i], 0x00, "Expected padding at 0x{:04X}", i);
+    }
+    assert_eq!(result[0x0008], 0x00); // NOP at 8-byte boundary
+}
+
+#[test]
+fn test_align_with_org() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        .org 0x0101
+        NOP
+        .align 4
+        ALIGNED_CODE:
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0101], 0x00); // NOP at 0x0101
+    // Should pad from 0x0102 to 0x0104 (3 bytes)
+    assert_eq!(result[0x0102], 0x00); // Padding
+    assert_eq!(result[0x0103], 0x00); // Padding
+    assert_eq!(result[0x0104], 0x00); // NOP at ALIGNED_CODE (0x0104, 4-byte aligned)
+}
+
+#[test]
+fn test_align_non_power_of_2() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        NOP
+        .align 3
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    assert_eq!(result[0x0001], 0x00); // NOP
+    assert_eq!(result[0x0002], 0x00); // Padding
+    assert_eq!(result[0x0003], 0x00); // NOP at 3-byte boundary
+}
+
+#[test]
+fn test_align_in_bank_1() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        .bank 1
+        NOP
+        NOP
+        NOP
+        .align 8
+        BANK1_ALIGNED:
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x7FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    // Bank 1 starts at physical address 0x4000
+    assert_eq!(result[0x4000], 0x00); // NOP
+    assert_eq!(result[0x4001], 0x00); // NOP
+    assert_eq!(result[0x4002], 0x00); // NOP
+    // Padding to next 8-byte boundary
+    for i in 0x4003..0x4008 {
+        assert_eq!(result[i], 0x00, "Expected padding at 0x{:04X}", i);
+    }
+    assert_eq!(result[0x4008], 0x00); // NOP at BANK1_ALIGNED (8-byte aligned)
+}
+
+#[test]
+fn test_section_with_align_4() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .section align=4
+        NOP
+        NOP
+        .section_end
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP before section
+    // Section should start at 0x0004 (next 4-byte boundary after 0x0001)
+    for i in 0x0001..0x0004 {
+        assert_eq!(result[i], 0x00, "Expected padding at 0x{:04X}", i);
+    }
+    assert_eq!(result[0x0004], 0x00); // First NOP in section
+    assert_eq!(result[0x0005], 0x00); // Second NOP in section
+    assert_eq!(result[0x0006], 0x00); // NOP after section
+}
+
+#[test]
+fn test_section_with_align_already_aligned() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        NOP
+        NOP
+        NOP
+        .section align=4
+        NOP
+        .section_end
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    assert_eq!(result[0x0001], 0x00); // NOP
+    assert_eq!(result[0x0002], 0x00); // NOP
+    assert_eq!(result[0x0003], 0x00); // NOP
+    // Already at 0x0004, which is 4-byte aligned - no padding needed
+    assert_eq!(result[0x0004], 0x00); // NOP in section
+}
+
+#[test]
+fn test_section_with_size_and_align_padding_counts() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .section size=16 align=4
+        NOP
+        NOP
+        .section_end
+        AFTER:
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP before section
+    // Alignment padding from 0x0001 to 0x0004 (3 bytes)
+    for i in 0x0001..0x0004 {
+        assert_eq!(result[i], 0x00, "Expected alignment padding at 0x{:04X}", i);
+    }
+    // Section content
+    assert_eq!(result[0x0004], 0x00); // First NOP in section
+    assert_eq!(result[0x0005], 0x00); // Second NOP in section
+    // Size padding from 0x0006 to 0x0010 (11 bytes)
+    // Total section: 3 (align pad) + 2 (content) + 11 (size pad) = 16 bytes
+    for i in 0x0006..0x0011 {
+        assert_eq!(result[i], 0x00, "Expected size padding at 0x{:04X}", i);
+    }
+    // AFTER label should be at 0x0011
+    assert_eq!(result[0x0011], 0x00); // NOP at AFTER
+}
+
+#[test]
+fn test_section_with_align_8() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        NOP
+        NOP
+        .section align=8
+        SECTION_START:
+        NOP
+        .section_end
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    assert_eq!(result[0x0001], 0x00); // NOP
+    assert_eq!(result[0x0002], 0x00); // NOP
+    // Padding from 0x0003 to 0x0008 (5 bytes)
+    for i in 0x0003..0x0008 {
+        assert_eq!(result[i], 0x00, "Expected padding at 0x{:04X}", i);
+    }
+    assert_eq!(result[0x0008], 0x00); // NOP at SECTION_START (8-byte aligned)
+}
+
+#[test]
+fn test_section_with_align_2() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .section align=2
+        NOP
+        NOP
+        .section_end
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    assert_eq!(result[0x0001], 0x00); // Padding to align to 2
+    assert_eq!(result[0x0002], 0x00); // First NOP in section
+    assert_eq!(result[0x0003], 0x00); // Second NOP in section
+}
+
+#[test]
+fn test_section_with_vaddr_and_align() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        .bank 1
+        NOP
+        .section vaddr=0x4100 align=8
+        ALIGNED_SECTION:
+        NOP
+        .section_end
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x7FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    // Bank 1 starts at physical 0x4000
+    assert_eq!(result[0x4000], 0x00); // NOP
+    // Padding from 0x4001 to align to 8
+    // vaddr=0x4100, so we need to align to next 8-byte boundary: 0x4108
+    // But physical starts at 0x4000, so we need padding
+    for i in 0x4001..0x4008 {
+        assert_eq!(result[i], 0x00, "Expected padding at 0x{:04X}", i);
+    }
+    assert_eq!(result[0x4008], 0x00); // NOP at ALIGNED_SECTION
+}
+
+#[test]
+fn test_section_align_with_labels() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .section align=4
+        LABEL1:
+        NOP
+        LABEL2:
+        NOP
+        .section_end
+        JMP LABEL1
+        JMP LABEL2
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    // Padding to 0x0004
+    for i in 0x0001..0x0004 {
+        assert_eq!(result[i], 0x00);
+    }
+    assert_eq!(result[0x0004], 0x00); // NOP at LABEL1
+    assert_eq!(result[0x0005], 0x00); // NOP at LABEL2
+    // JMP LABEL1
+    assert_eq!(result[0x0006], 0x51); // JMP opcode
+    assert_eq!(result[0x0007], 0x04); // Low byte of LABEL1
+    assert_eq!(result[0x0008], 0x00); // High byte of LABEL1
+    // JMP LABEL2
+    assert_eq!(result[0x0009], 0x51); // JMP opcode
+    assert_eq!(result[0x000A], 0x05); // Low byte of LABEL2
+    assert_eq!(result[0x000B], 0x00); // High byte of LABEL2
+}
+
+#[test]
+fn test_multiple_sections_with_align() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .section align=4
+        NOP
+        .section_end
+        NOP
+        .section align=8
+        NOP
+        .section_end
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    // Padding to 0x0004
+    for i in 0x0001..0x0004 {
+        assert_eq!(result[i], 0x00);
+    }
+    assert_eq!(result[0x0004], 0x00); // NOP in first section
+    assert_eq!(result[0x0005], 0x00); // NOP between sections
+    // Padding to 0x0008
+    for i in 0x0006..0x0008 {
+        assert_eq!(result[i], 0x00);
+    }
+    assert_eq!(result[0x0008], 0x00); // NOP in second section
+}
+
+#[test]
+fn test_section_align_with_data() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        .byte 0x01, 0x02, 0x03
+        .section align=4
+        DATA_SECTION:
+        .word 0x1111, 0x2222
+        .section_end
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x01); // .byte 0x01
+    assert_eq!(result[0x0001], 0x02); // .byte 0x02
+    assert_eq!(result[0x0002], 0x03); // .byte 0x03
+    assert_eq!(result[0x0003], 0x00); // Padding to align to 4
+    // DATA_SECTION starts at 0x0004
+    assert_eq!(result[0x0004], 0x11); // Low byte of 0x1111
+    assert_eq!(result[0x0005], 0x11); // High byte of 0x1111
+    assert_eq!(result[0x0006], 0x22); // Low byte of 0x2222
+    assert_eq!(result[0x0007], 0x22); // High byte of 0x2222
+}
+
+#[test]
+fn test_section_size_align_overflow() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .section size=8 align=4
+        NOP
+        NOP
+        NOP
+        NOP
+        NOP
+        NOP
+        .section_end
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader);
+
+    // Should fail because:
+    // - 3 bytes of alignment padding (from 0x0001 to 0x0004)
+    // - 6 bytes of content (6 NOPs)
+    // - Total = 9 bytes, but size=8
+    assert!(
+        result.is_err(),
+        "Expected error when section with align padding exceeds size"
+    );
+}
+
+#[test]
+fn test_section_align_1_no_padding() {
+    let mut reader = MockFileReader::default();
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .section align=1
+        NOP
+        .section_end
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+    assert_eq!(result[0x0000], 0x00); // NOP
+    // No padding needed for align=1
+    assert_eq!(result[0x0001], 0x00); // NOP in section
+}

@@ -45,7 +45,7 @@ pub struct Context {
     pub size: Option<u32>,
     pub vaddr: Option<u32>,
     pub paddr: Option<u32>,
-    // pub align: Option<u32>, TODO: implement align feature
+    pub align: Option<u32>,
     pub address: AddrCounter,
 }
 

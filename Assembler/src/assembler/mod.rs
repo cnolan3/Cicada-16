@@ -266,7 +266,7 @@ pub fn build_symbol_table(
                         size: section_options.size,
                         vaddr: section_options.vaddr,
                         paddr: section_options.paddr,
-                        // align: section_options.align,
+                        align: section_options.align,
                         address: addr_counter.clone(),
                     };
 
@@ -283,10 +283,25 @@ pub fn build_symbol_table(
                         addr_counter.physical_addr = paddr;
                     }
 
-                    // TODO: set alignment
-                    // if let Some(align) = new_context.align {
-                    //  ...
-                    // }
+                    // set alignment
+                    if let Some(alignment) = new_context.align {
+                        if alignment == BANK_SIZE {
+                            return Err(AssemblyError::StructuralError {
+                                line: line.line_number,
+                                reason: format!(
+                                    ".section align value cannot be larger than the size of a ROM bank ({})",
+                                    BANK_SIZE
+                                ),
+                            });
+                        }
+
+                        let extra_bytes = addr_counter.physical_addr % alignment;
+                        let pad_size = alignment - extra_bytes;
+
+                        if extra_bytes != 0 {
+                            addr_counter.increment_by(pad_size);
+                        }
+                    }
 
                     context_stack.push(new_context);
                 }
@@ -329,6 +344,24 @@ pub fn build_symbol_table(
 
                     // restore the old num_bytes value
                     addr_counter.num_bytes += old_context.address.num_bytes;
+                }
+                Directive::Align(alignment) => {
+                    if *alignment == BANK_SIZE {
+                        return Err(AssemblyError::StructuralError {
+                            line: line.line_number,
+                            reason: format!(
+                                ".align value cannot be larger than the size of a ROM bank ({})",
+                                BANK_SIZE
+                            ),
+                        });
+                    }
+
+                    let extra_bytes = addr_counter.physical_addr % alignment;
+                    let pad_size = alignment - extra_bytes;
+
+                    if extra_bytes != 0 {
+                        addr_counter.increment_by(pad_size);
+                    }
                 }
                 _ => {}
             }
@@ -538,7 +571,7 @@ pub fn generate_bytecode(
                         size: section_options.size,
                         vaddr: section_options.vaddr,
                         paddr: section_options.paddr,
-                        // align: section_options.align,
+                        align: section_options.align,
                         address: addr_counter.clone(),
                     };
 
@@ -560,10 +593,16 @@ pub fn generate_bytecode(
                         addr_counter.physical_addr = paddr;
                     }
 
-                    // TODO: set alignment
-                    // if let Some(align) = new_context.align {
-                    //  ...
-                    // }
+                    // set alignment
+                    if let Some(alignment) = new_context.align {
+                        let extra_bytes = addr_counter.physical_addr % alignment;
+                        let pad_size = alignment - extra_bytes;
+
+                        if extra_bytes != 0 {
+                            bytecode.resize(bytecode.len() + pad_size as usize, 0x00);
+                            addr_counter.increment_by(pad_size);
+                        }
+                    }
 
                     context_stack.push(new_context);
                 }
@@ -590,6 +629,15 @@ pub fn generate_bytecode(
 
                             addr_counter.increment_by(padding_size);
                         }
+                    }
+                }
+                Directive::Align(alignment) => {
+                    let extra_bytes = addr_counter.physical_addr % alignment;
+                    let pad_size = alignment - extra_bytes;
+
+                    if extra_bytes != 0 {
+                        bytecode.resize(bytecode.len() + pad_size as usize, 0x00);
+                        addr_counter.increment_by(pad_size);
                     }
                 }
                 _ => {}

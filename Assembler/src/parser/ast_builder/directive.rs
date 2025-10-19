@@ -353,9 +353,43 @@ impl<'a> AstBuilder<'a> {
                     }
                     section_options.paddr = Some(field_builder.expect_addr()? as u32);
                 }
+                Rule::align_attr => {
+                    if section_options.align.is_some() {
+                        return Err(AssemblyError::StructuralError {
+                            line: self.line_number,
+                            reason: ".section align attribute defined multiple times.".to_string(),
+                        }
+                        .into());
+                    }
+                    let alignment = field_builder.expect_immediate()?;
+
+                    if alignment <= 0 {
+                        return Err(AssemblyError::StructuralError {
+                            line: self.line_number,
+                            reason: ".section align value must be greater than zero.".to_string(),
+                        }
+                        .into());
+                    }
+
+                    section_options.align = Some(alignment as u32);
+                }
                 _ => {}
             }
         }
         Ok(Directive::SectionStart(section_options))
+    }
+
+    pub fn build_align_directive(mut self) -> Result<Directive> {
+        let alignment = self.expect_immediate().context(INVALID_OP_MSG)?;
+
+        if alignment <= 0 {
+            return Err(AssemblyError::StructuralError {
+                line: self.line_number,
+                reason: ".align value must be greater than zero.".to_string(),
+            }
+            .into());
+        }
+
+        Ok(Directive::Align(alignment as u32))
     }
 }

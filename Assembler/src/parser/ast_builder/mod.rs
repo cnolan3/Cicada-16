@@ -149,6 +149,7 @@ impl<'a> AstBuilder<'a> {
             Rule::interrupt_directive_block => self.build_interrupt_directive(),
             Rule::section_start_directive => self.build_section_start_directive(),
             Rule::section_end_directive => Ok(Directive::SectionEnd),
+            Rule::align_directive => self.build_align_directive(),
             _ => unreachable!("Unknown directive rule: {:?}", self.rule),
         }
     }

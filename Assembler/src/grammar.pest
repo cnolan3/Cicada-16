@@ -315,6 +315,8 @@ header_directive_block = { ^".header_start" ~ ( header_info? ~ LINE_END )* ~ ^".
 
 interrupt_directive_block = { ^".interrupt_table" ~ ( word_directive? ~ LINE_END )* ~ ^".table_end" }
 
+align_directive = { ^".align" ~ operand }
+
 directive = {
 org_directive
 | bank_directive
@@ -326,6 +328,7 @@ org_directive
 | interrupt_directive_block
 | section_end_directive
 | section_start_directive
+| align_directive
 }
 
 // --- Header Info Rules ---
@@ -373,11 +376,14 @@ vaddr_attr = ${ ^"vaddr=" ~ operand }
 
 paddr_attr = ${ ^"paddr=" ~ operand }
 
+align_attr = ${ ^"align=" ~ operand }
+
 section_attribute = {
 name_attr
 | size_attr
 | vaddr_attr
 | paddr_attr
+| align_attr
 }
 
 // --- Core Rules ---
