@@ -69,46 +69,63 @@ Not all RAM is equal in speed.
 
 ## **IO Registers (F000–F03F)**
 
-| Address | Name           | Description                                                       |
-| :------ | :------------- | :---------------------------------------------------------------- |
-| F000    | **JOYP**       | **Joypad: read buttons, write column select**                     |
-| F002    | **SB**         | **Serial Buffer (R/W)**                                           |
-| F003    | **SC**         | **Serial Control (R/W)**                                          |
-| F004    | **DIV0**       | **32-bit free-running divider (byte 0, LSB)**                     |
-| F005    | **DIV1**       | **32-bit free-running divider (byte 1)**                          |
-| F006    | **DIV2**       | **32-bit free-running divider (byte 2)**                          |
-| F007    | **DIV3**       | **32-bit free-running divider (byte 3, MSB)**                     |
-| F008    | **TIMA**       | **8-bit timer counter (IRQ on overflow → IF.TMR)**                |
-| F009    | **TMA**        | **8-bit timer modulo (reload value on overflow)**                 |
-| F00A    | **TAC**        | **Timer control: bit2=EN, bits1..0=clock sel**                    |
-| F00B    | **DMA_SRC_L**  | **DMA source address low**                                        |
-| F00C    | **DMA_SRC_H**  | **DMA source address high**                                       |
-| F00D    | **DMA_DST_L**  | **DMA destination low**                                           |
-| F00E    | **DMA_DST_H**  | **DMA destination high**                                          |
-| F00F    | **DMA_LEN**    | **DMA length in bytes (0 => OAM, 1 => Boot ROM, 2-255 => standard)** |
-| F010    | **DMA_CTL**    | **DMA control: bit0=START, bit1=DIR, bit2=VRAM_ONLY, etc.**       |
-| F011    | **MPR_BANK**   | **ROM bank select for 4000-7FFF window**                          |
-| F012    | **RAM_BANK**   | **Bank select for banked Cart RAM (if enabled)**                  |
-| F013    | **WE_LATCH**   | Write-enable latch for save RAM (write key)                   |
-| F014    | **VRAM_BANK**  | **VRAM Bank Select (0-3 for 9000-AFFF window)**                   |
-| F015    | **WRAM_BANK**  | **WRAM Bank Select (0-5 for D000-DFFF window -> maps banks 1-6)** |
-| F018    | **RTC_SEC**    | **Seconds (0-59)**                                                |
-| F019    | **RTC_MIN**    | **Minutes (0-59)**                                                |
-| F01A    | **RTC_HOUR**   | **Hours (0-23)**                                                  |
-| F01B    | **RTC_DAY**    | **Day of the month (1-31)**                                       |
-| F01C    | **RTC_MONTH**  | **Month of the year (1-12)**                                      |
-| F01D    | **RTC_YEAR_L** | **Lower 8 bits of the year**                                      |
-| F01E    | **RTC_YEAR_H** | **Upper 8 bits of the year**                                      |
-| F01F    | **RTC_CTL**    | **Control register (LATCH, HALT)**                                |
-| F020    | **IE**         | **Interrupt Enable Register**                                     |
-| F021    | **IF**         | **Interrupt Flag Register**                                       |
-| F022    | **BOOT_CTRL**  | **Boot Control: Write 1 to exit boot ROM.**                       |
+| Address | Name           | Description                                                          |
+| :------ | :------------- | :------------------------------------------------------------------- |
+| F000    | **SB**         | **Serial Buffer (R/W)**                                              |
+| F001    | **SC**         | **Serial Control (R/W)**                                             |
+| F002    | **DIV0**       | **32-bit free-running divider (byte 0, LSB)**                        |
+| F003    | **DIV1**       | **32-bit free-running divider (byte 1)**                             |
+| F004    | **DIV2**       | **32-bit free-running divider (byte 2)**                             |
+| F005    | **DIV3**       | **32-bit free-running divider (byte 3, MSB)**                        |
+| F006    | **JOYP**       | **Joypad: read buttons, write column select**                        |
+| F007    | **TIMA**       | **8-bit timer counter (IRQ on overflow → IF.TMR)**                   |
+| F008    | **TMA**        | **8-bit timer modulo (reload value on overflow)**                    |
+| F009    | **TAC**        | **Timer control: bit2=EN, bits1..0=clock sel**                       |
+| F00A    | **DMA_SRC_L**  | **DMA source address low**                                           |
+| F00B    | **DMA_SRC_H**  | **DMA source address high**                                          |
+| F00C    | **DMA_DST_L**  | **DMA destination low**                                              |
+| F00D    | **DMA_DST_H**  | **DMA destination high**                                             |
+| F00E    | **DMA_LEN**    | **DMA length in bytes (0 => OAM, 1 => Boot ROM, 2-255 => standard)** |
+| F00F    | **DMA_CTL**    | **DMA control: bit0=START, bit1=DIR, bit2=VRAM_ONLY, etc.**          |
+| F010    | -              | Reserved                                                             |
+| F011    | **MPR_BANK**   | **ROM bank select for 4000-7FFF window**                             |
+| F012    | **RAM_BANK**   | **Bank select for banked Cart RAM (if enabled)**                     |
+| F013    | **WE_LATCH**   | Write-enable latch for save RAM (write key)                          |
+| F014    | **VRAM_BANK**  | **VRAM Bank Select (0-3 for 9000-AFFF window)**                      |
+| F015    | **WRAM_BANK**  | **WRAM Bank Select (0-5 for D000-DFFF window -> maps banks 1-6)**    |
+| F018    | **RTC_SEC**    | **Seconds (0-59)**                                                   |
+| F019    | **RTC_MIN**    | **Minutes (0-59)**                                                   |
+| F01A    | **RTC_HOUR**   | **Hours (0-23)**                                                     |
+| F01B    | **RTC_DAY**    | **Day of the month (1-31)**                                          |
+| F01C    | **RTC_MONTH**  | **Month of the year (1-12)**                                         |
+| F01D    | **RTC_YEAR_L** | **Lower 8 bits of the year**                                         |
+| F01E    | **RTC_YEAR_H** | **Upper 8 bits of the year**                                         |
+| F01F    | **RTC_CTL**    | **Control register (LATCH, HALT)**                                   |
+| F020    | **IE**         | **Interrupt Enable Register**                                        |
+| F021    | **IF**         | **Interrupt Flag Register**                                          |
+| F022    | **BOOT_CTRL**  | **Boot Control: Write 1 to exit boot ROM.**                          |
+
+## **Divider Registers (DIV0-DIV3)**
+
+The DIV0-DIV3 registers (F004-F007) together form a single, 32-bit, free-running counter that increments on every system clock cycle (T-cycle). This counter is read-only and cannot be stopped or reset by the game software. Writing to these registers has no effect.
+
+- **DIV0 (F002):** Byte 0 (LSB)
+- **DIV1 (F003):** Byte 1
+- **DIV2 (F004):** Byte 2
+- **DIV3 (F005):** Byte 3 (MSB)
+
+Because the counter is constantly running, it provides a simple, persistent time reference. The programmable timer (TIMA) uses specific bits from this divider as its clock source.
+
+### **Use-Cases**
+
+1.  **Basic Timing:** While the main timer (TIMA) is better for precise, interrupt-driven timing, the DIV registers can be used for simple, low-resolution time measurements. A game could read the value at the start and end of an operation to get a rough estimate of elapsed time.
+2.  **Pseudo-Random Number Generation:** The ever-changing value of the DIV registers makes them a common and effective source of entropy for generating pseudo-random numbers. By reading any of the DIV registers at an unpredictable time (e.g., when the player presses a button), the game can get a seed value for a random number algorithm.
 
 ## **Joypad Register (JOYP)**
 
-The JOYP register at F000 uses a matrix layout to read all 12 buttons (D-Pad, Action, Shoulder, and Utility buttons) using a small number of I/O bits. The game must first write to the register to select which group of four buttons it wants to read, and then read the register to get their state. Buttons that are currently pressed are represented by a 0 bit (active low).
+The JOYP register at F006 uses a matrix layout to read all 12 buttons (D-Pad, Action, Shoulder, and Utility buttons) using a small number of I/O bits. The game must first write to the register to select which group of four buttons it wants to read, and then read the register to get their state. Buttons that are currently pressed are represented by a 0 bit (active low).
 
-### **JOYP (F000) Bit Assignments**
+### **JOYP (F006) Bit Assignments**
 
 | Bit     | Name        | Type  | Description                                                        |
 | :------ | :---------- | :---- | :----------------------------------------------------------------- |
@@ -137,29 +154,13 @@ The 2-bit value written to GRP_SEL determines which set of physical buttons is m
    - To read the Utility Buttons (Start, Select, L, R), write `0x30`.
 2. **Read the Button State:** Read from F000. The lower 4 bits will reflect the state of the selected buttons. For example, if the Action group was selected and the player is pressing **A** and **X**, reading the register will return a value where bits 0 and 2 are 0.
 
-## **Divider Registers (DIV0-DIV3)**
-
-The DIV0-DIV3 registers (F004-F007) together form a single, 32-bit, free-running counter that increments on every system clock cycle (T-cycle). This counter is read-only and cannot be stopped or reset by the game software. Writing to these registers has no effect.
-
-- **DIV0 (F004):** Byte 0 (LSB)
-- **DIV1 (F005):** Byte 1
-- **DIV2 (F006):** Byte 2
-- **DIV3 (F007):** Byte 3 (MSB)
-
-Because the counter is constantly running, it provides a simple, persistent time reference. The programmable timer (TIMA) uses specific bits from this divider as its clock source.
-
-### **Use-Cases**
-
-1.  **Basic Timing:** While the main timer (TIMA) is better for precise, interrupt-driven timing, the DIV registers can be used for simple, low-resolution time measurements. A game could read the value at the start and end of an operation to get a rough estimate of elapsed time.
-2.  **Pseudo-Random Number Generation:** The ever-changing value of the DIV registers makes them a common and effective source of entropy for generating pseudo-random numbers. By reading any of the DIV registers at an unpredictable time (e.g., when the player presses a button), the game can get a seed value for a random number algorithm.
-
 ## **Programmable Timer (TIMA, TMA, TAC)**
 
-The console provides one 8-bit programmable timer that can be configured to fire an interrupt when it overflows. This system is controlled by three registers: TIMA, TMA, and TAC, now located at F008-F00A.
+The console provides one 8-bit programmable timer that can be configured to fire an interrupt when it overflows. This system is controlled by three registers: TIMA, TMA, and TAC, located at F007-F009.
 
-- **TIMA (F008 - Timer Counter):** This is the main 8-bit counter. It increments at a frequency selected by the TAC register. When TIMA overflows (increments past 255), it is automatically reloaded with the value from TMA and requests a Timer Interrupt by setting bit 2 of the IF register.
-- **TMA (F009 - Timer Modulo):** This 8-bit register holds the value that TIMA will be reset to after it overflows. This allows the game to control the starting point of the count, and thus the period of the timer interrupt. For example, if TMA is set to 200, the timer will count from 200 to 255 (56 ticks) before overflowing and firing an interrupt.
-- **TAC (F00A - Timer Control):** This register controls the timer's operation. It has been expanded to allow for a much wider range of timer frequencies.
+- **TIMA (F007 - Timer Counter):** This is the main 8-bit counter. It increments at a frequency selected by the TAC register. When TIMA overflows (increments past 255), it is automatically reloaded with the value from TMA and requests a Timer Interrupt by setting bit 2 of the IF register.
+- **TMA (F008 - Timer Modulo):** This 8-bit register holds the value that TIMA will be reset to after it overflows. This allows the game to control the starting point of the count, and thus the period of the timer interrupt. For example, if TMA is set to 200, the timer will count from 200 to 255 (56 ticks) before overflowing and firing an interrupt.
+- **TAC (F009 - Timer Control):** This register controls the timer's operation. It has been expanded to allow for a much wider range of timer frequencies.
 
 | Bit     | Name        | Type    | Description                                  |
 | :------ | :---------- | :------ | :------------------------------------------- |

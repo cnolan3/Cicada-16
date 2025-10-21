@@ -8,19 +8,19 @@ The DMA system is controlled by a set of memory-mapped I/O registers.
 
 | Address   | Name      | Description                                      |
 | :-------- | :-------- | :----------------------------------------------- |
-| F00B-F00C | `DMA_SRC` | The 16-bit source address for the transfer.      |
-| F00D-F00E | `DMA_DST` | The 16-bit destination address for the transfer. |
-| F00F      | `DMA_LEN` | The length of the transfer in bytes.             |
-| F010      | `DMA_CTL` | The DMA Control Register.                        |
+| F00A-F00B | `DMA_SRC` | The 16-bit source address for the transfer.      |
+| F00C-F00D | `DMA_DST` | The 16-bit destination address for the transfer. |
+| F00E      | `DMA_LEN` | The length of the transfer in bytes.             |
+| F00F      | `DMA_CTL` | The DMA Control Register.                        |
 
 ## **2. The DMA Transfer Process**
 
 A DMA transfer is a multi-step process initiated by the CPU.
 
-1.  **Set Source:** Write the 16-bit source address to `DMA_SRC` (low byte to `F00B`, high byte to `F00C`).
-2.  **Set Destination:** Write the 16-bit destination address to `DMA_DST` (low byte to `F00D`, high byte to `F00E`).
-3.  **Set Length:** Write the number of bytes to copy to `DMA_LEN` (`F00F`).
-4.  **Configure Control:** Set the desired transfer properties (e.g., address mode, safe transfer) in the `DMA_CTL` register (`F010`).
+1.  **Set Source:** Write the 16-bit source address to `DMA_SRC` (low byte to `F00A`, high byte to `F00B`).
+2.  **Set Destination:** Write the 16-bit destination address to `DMA_DST` (low byte to `F00C`, high byte to `F00D`).
+3.  **Set Length:** Write the number of bytes to copy to `DMA_LEN` (`F00E`).
+4.  **Configure Control:** Set the desired transfer properties (e.g., address mode, safe transfer) in the `DMA_CTL` register (`F00F`).
 5.  **Start Transfer:** Write a `1` to the `START` bit (bit 0) of the `DMA_CTL` register. The transfer will begin immediately (unless `VRAM_SAFE` is enabled).
 
 ## **3. CPU State and Timing**
@@ -28,12 +28,12 @@ A DMA transfer is a multi-step process initiated by the CPU.
 To prevent conflicts over the system bus, the DMA controller uses a **CPU Halting** model.
 
 - **CPU Halt:** The moment the `START` bit is written, the CPU is completely frozen and relinquishes control of the memory bus.
-- **Timing:** The DMA transfer takes **4 system clock cycles per byte** copied. For example, copying 256 bytes takes `256 * 4 = 1024` clock cycles.
+- **Timing:** The DMA transfer takes **4 system clock cycles per byte** copied in normal DMA mode. For example, copying 256 bytes takes `256 * 4 = 1024` clock cycles. In one of the special DMA modes (described in section 5 below) the transfer takes **2 system clock cycles per byte**. The previous example would have taken `512` clock cycles instead of `1024` in one of the special modes.
 - **Completion:** Once the specified number of bytes has been transferred, the DMA controller clears the `START` bit in `DMA_CTL` to `0`, releases the memory bus, and the CPU resumes execution on the next clock cycle.
 
 ## **4. Control Register (`DMA_CTL`)**
 
-The `DMA_CTL` register at `F010` configures the behavior of the transfer.
+The `DMA_CTL` register at `F00F` configures the behavior of the transfer.
 
 | Bit | Name        | Function                                                                                                                                                                                                                                                                                                           |
 | :-- | :---------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -44,7 +44,7 @@ The `DMA_CTL` register at `F010` configures the behavior of the transfer.
 
 ## **5. Length Register (`DMA_LEN`) and Special Transfers**
 
-The `DMA_LEN` register at `F00F` typically holds the number of bytes (1-255) for a standard transfer. However, it has special functions for values `0` and `1`.
+The `DMA_LEN` register at `F00E` typically holds the number of bytes (1-255) for a standard transfer. However, it has special functions for values `0` and `1`.
 
 - **Standard DMA:** If `DMA_LEN` is set to a value from `2` to `255` (e.g., `N`), the DMA controller will copy `N` bytes.
 - **OAM DMA:** If `DMA_LEN` is set to `0`, this triggers a special, high-speed **OAM DMA**. This is the primary way to update sprite data. In this mode:
