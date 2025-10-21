@@ -58,11 +58,11 @@ impl<'a> Encoder<'a> {
     }
 
     pub fn encode_inc(self, reg: &Register) -> Result<Vec<u8>, AssemblyError> {
-        Ok(vec![encode_reg_opcode(INC_BASE_OPCODE, reg)])
+        Ok(vec![FD_PREFIX, encode_reg_opcode(INC_BASE_SUB_OPCODE, reg)])
     }
 
     pub fn encode_dec(self, reg: &Register) -> Result<Vec<u8>, AssemblyError> {
-        Ok(vec![encode_reg_opcode(DEC_BASE_OPCODE, reg)])
+        Ok(vec![FD_PREFIX, encode_reg_opcode(DEC_BASE_SUB_OPCODE, reg)])
     }
 
     pub fn encode_acc_byte_math(

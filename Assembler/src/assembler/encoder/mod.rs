@@ -743,7 +743,7 @@ mod tests {
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
-            vec![0xE2]
+            vec![0xFD, 0xB1]
         );
     }
 
@@ -753,7 +753,7 @@ mod tests {
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
-            vec![0xDB]
+            vec![0xFD, 0xAA]
         );
     }
 
@@ -1130,7 +1130,7 @@ mod tests {
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
-            vec![0xFD, 0xA8, 0x00, 0xC0] // 0xFD prefix, 0xA8+0 (R0), addr_lo, addr_hi
+            vec![0xD9, 0x00, 0xC0] // 0xD9+0 (R0), addr_lo, addr_hi
         );
     }
 
@@ -1148,7 +1148,7 @@ mod tests {
         );
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
-            vec![0xFD, 0xAA, 0x21, 0xF0] // 0xFD prefix, 0xA8+2 (R2), addr_lo, addr_hi
+            vec![0xDB, 0x21, 0xF0] // 0xD9+2 (R2), addr_lo, addr_hi
         );
     }
 
@@ -1158,7 +1158,7 @@ mod tests {
         let symbol_table = SymbolTable::new();
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
-            vec![0xFD, 0xB3, 0x21, 0xF0] // 0xFD prefix, 0xB0+3 (R3), addr_lo, addr_hi
+            vec![0xE4, 0x21, 0xF0] // 0xE1+3 (R3), addr_lo, addr_hi
         );
     }
 
@@ -1175,7 +1175,7 @@ mod tests {
         );
         assert_eq!(
             encode_instruction(&instruction, &symbol_table, &0, &0, &0).unwrap(),
-            vec![0xFD, 0xB7, 0x20, 0xF0] // 0xFD prefix, 0xB0+7 (R7), addr_lo, addr_hi
+            vec![0xE8, 0x20, 0xF0] // 0xE1+7 (R7), addr_lo, addr_hi
         );
     }
 

@@ -46,4 +46,4 @@ The assembler's source code is organized into several modules, each with a disti
 
 ## Compatability
 
-**cicasm_v0.1.10** compatible with **HardwareSpec_v0.3.10**
+**cicasm_v0.1.11** compatible with **HardwareSpec_v0.3.11**
