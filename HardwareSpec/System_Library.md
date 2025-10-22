@@ -86,7 +86,12 @@ The 4 KiB (4096 bytes) of System Library RAM is allocated as follows:
 | 0x20      | Function   | `dmaCopyVBlank`          |
 | 0x21      | Function   | `callFar`                |
 | 0x22      | Function   | `jmpFar`                 |
-| 0x23-0x7F | ---        | **Unused**               |
+| 0x23      | Function   | `dmaOAM`                 |
+| 0x24      | Function   | `dmaVRAMSlot`            |
+| 0x25      | Function   | `dmaPalette`             |
+| 0x26      | Function   | `dmaWaveforms`           |
+| 0x27      | Function   | `dmaFill`                |
+| 0x28-0x7F | ---        | **Unused**               |
 
 ## **System Library Functions and Data**
 
@@ -463,14 +468,14 @@ For games running in "Enhanced Mode" (RAM-based vectors), this provides a safe, 
 
 ### `dmaCopy` : Index 0x1F
 
-A simple wrapper that configures and starts a DMA transfer. The developer provides source, destination, and length, and this function writes them to the DMA_SRC, DMA_DST, and DMA_LEN registers before setting the START bit. It abstracts away the I/O addresses.
+A simple wrapper that configures and starts a normal DMA transfer (Mode 0). The developer provides source, destination, and length, and this function writes them to the DMA_SRC, DMA_DST, and DMA_LEN registers, sets DMA_MODE to 0, and then sets the START bit. It abstracts away the I/O addresses.
 
 - **Inputs:**
-  - R0: Source
-  - R1: Destination
-  - R2: Length
+  - R0: Source address
+  - R1: Destination address
+  - R2: Length in bytes (1-65535, or 0 for 65536 bytes)
 - **Action:**
-  - Starts a DMA transfer.
+  - Starts a normal DMA transfer (Mode 0) at standard speed (4 cycles/byte).
 - **Output:** None.
 - **Clobbered Registers:** None (The CPU is halted during the transfer).
 
@@ -479,11 +484,11 @@ A simple wrapper that configures and starts a DMA transfer. The developer provid
 The most common use for DMA is updating graphics in VRAM. This is a specialized version of dmaCopy that automatically sets the VRAM_SAFE bit in the DMA_CTL register. This guarantees the transfer will only begin during a non-rendering period (H-Blank or V-Blank), preventing screen tearing and other artifacts automatically.
 
 - **Inputs:**
-  - R0: Source
-  - R1: Destination
-  - R2: Length
+  - R0: Source address
+  - R1: Destination address
+  - R2: Length in bytes (1-65535, or 0 for 65536 bytes)
 - **Action:**
-  - Starts a VRAM-safe DMA transfer.
+  - Starts a VRAM-safe normal DMA transfer (Mode 0 with VRAM_SAFE bit set).
 - **Output:** None.
 - **Clobbered Registers:** None.
 
@@ -520,6 +525,155 @@ This function provides a "trampoline" to jump to a label located in a different 
   2.  Jumps to the address specified in `R5`. Execution does not return to the caller.
 - **Register Usage:**
   - The state of all registers is preserved during the bank switch and jump. They are not used or modified by the `jmpFar` function itself.
+
+### `dmaOAM` : Index 0x23
+
+Convenient wrapper for OAM Scanline DMA (Mode 1). Allows updating a specific range of sprite entries without manually configuring DMA registers or calculating byte offsets.
+
+- **Inputs:**
+  - `R0`: Source address containing sprite data in RAM/ROM
+  - `R1.b`: Starting sprite index (0-63)
+  - `R2.b`: Number of sprites to copy (1-64)
+- **Action:**
+  1.  Configures DMA Mode 1 (OAM Scanline DMA) and initiates high-speed transfer (2 cycles/byte).
+  2.  Automatically calculates the OAM byte offset: `sprite_index × 8`
+  3.  Transfers `num_sprites × 8` bytes to OAM starting at the specified sprite index.
+- **Output:** None.
+- **Clobbered Registers:** R3 (used for internal calculations).
+- **Use case:** Update only active sprites, animate specific sprite groups. To update all 64 sprites, call with `R1 = 0, R2 = 64`.
+
+**Example:**
+
+```assembly
+; Update sprites 10-14 (5 sprites) with data from sprite_buffer
+LDI R0, sprite_buffer
+LDI R1, 10          ; Starting at sprite index 10
+LDI R2, 5           ; Copy 5 sprites
+SYSCALL 0x23        ; dmaOAM
+```
+
+### `dmaVRAMSlot` : Index 0x24
+
+Simplified wrapper for VRAM Slot DMA (Mode 2). Transfers data directly to a specific 2 KiB VRAM slot without manual bank switching.
+
+- **Inputs:**
+  - `R0`: Source address in ROM/RAM
+  - `R1`: Destination offset within the VRAM slot (0-2047)
+  - `R2`: Number of bytes to transfer (must be a multiple of 16, max 4080)
+  - `R3.b`: VRAM slot number (0-15)
+- **Action:**
+  1.  Configures DMA Mode 2 (VRAM Slot DMA) and initiates high-speed transfer (2 cycles/byte).
+  2.  Automatically encodes slot number into DMA_LEN register.
+  3.  Sets VRAM_SAFE bit to ensure transfer occurs during H-Blank/V-Blank.
+- **Output:** None.
+- **Clobbered Registers:** R3 (used for mode configuration).
+- **Use case:** Load tilemap data or tile graphics to a specific VRAM location. Ideal for level loading, dynamic tile updates.
+
+**Example:**
+
+```assembly
+; Copy 512 bytes of tile data to VRAM slot 5 at offset 256
+LDI R0, tile_data
+LDI R1, 256
+LDI R2, 512
+LDI R3, 5
+SYSCALL 0x24        ; dmaVRAMSlot
+```
+
+### `dmaPalette` : Index 0x25
+
+Fast palette update wrapper for CRAM DMA (Mode 3). Simplifies loading color palettes.
+
+- **Inputs:**
+  - `R0`: Source address containing palette data (RGB555 format, 2 bytes per color)
+  - `R1.b`: Starting palette index (0-255)
+  - `R2.b`: Number of colors to copy (1-256)
+- **Action:**
+  1.  Configures DMA Mode 3 (CRAM/Palette DMA) and initiates high-speed transfer (2 cycles/byte).
+  2.  Transfers `num_colors × 2` bytes to CRAM starting at the specified palette index.
+  3.  Automatically sets VRAM_SAFE bit for safe palette updates during rendering.
+- **Output:** None.
+- **Clobbered Registers:** R3 (used for internal calculations).
+- **Use case:** Palette swaps, fade effects, day/night cycles, cutscene color changes.
+
+**Example:**
+
+```assembly
+; Load a 16-color sub-palette (palette 0) from ROM
+LDI R0, palette_data
+LDI R1, 0           ; Starting at palette index 0
+LDI R2, 16          ; Load 16 colors
+SYSCALL 0x25        ; dmaPalette
+
+; Update only 4 colors in the middle of a sub-palette
+LDI R0, color_buffer
+LDI R1, 36          ; Palette index 36 (sub-palette 2, color 4)
+LDI R2, 4
+SYSCALL 0x25        ; dmaPalette
+```
+
+### `dmaWaveforms` : Index 0x26
+
+Convenient wrapper for Wave RAM DMA (Mode 4). Loads custom waveforms for the APU's wave channel.
+
+- **Inputs:**
+  - `R0`: Source address containing waveform data (32 bytes per waveform)
+  - `R1.b`: Starting waveform slot (0-31)
+  - `R2.b`: Number of waveforms to copy (1-32)
+- **Action:**
+  1.  Configures DMA Mode 4 (Wave RAM DMA) and initiates high-speed transfer (2 cycles/byte).
+  2.  Transfers `num_waveforms × 32` bytes to Wave RAM starting at the specified slot.
+- **Output:** None.
+- **Clobbered Registers:** R3 (used for mode configuration).
+- **Use case:** Load custom instrument waveforms, switch sound effect samples, implement dynamic audio synthesis.
+
+**Example:**
+
+```assembly
+; Load a single custom waveform to slot 10
+LDI R0, sawtooth_wave
+LDI R1, 10          ; Waveform slot 10
+LDI R2, 1           ; Load 1 waveform
+SYSCALL 0x26        ; dmaWaveforms
+
+; Load 4 consecutive instrument waveforms starting at slot 0
+LDI R0, instrument_bank
+LDI R1, 0
+LDI R2, 4
+SYSCALL 0x26        ; dmaWaveforms
+```
+
+### `dmaFill` : Index 0x27
+
+Hardware-accelerated memory fill using DMA Mode 6 (Fill/Pattern Mode). Much faster than CPU loops for large fills.
+
+- **Inputs:**
+  - `R0`: 16-bit pattern value to repeat
+  - `R1`: Destination address in memory
+  - `R2`: Number of 16-bit words to write
+- **Action:**
+  1.  Stores the pattern value to a temporary location in HRAM.
+  2.  Configures DMA Mode 6 (Fill/Pattern Mode) and initiates high-speed transfer (2 cycles/byte).
+  3.  Repeatedly writes the pattern value to consecutive 16-bit locations.
+- **Output:** None.
+- **Clobbered Registers:** R3 (used for internal operations).
+- **Use case:** Clear tilemaps with a specific tile, initialize background layers, fill VRAM regions with solid patterns, bulk initialization of data structures.
+
+**Example:**
+
+```assembly
+; Clear a 32×32 tilemap with tile index 0x0000
+LDI R0, 0x0000      ; Fill pattern (empty tile)
+LDI R1, tilemap_addr
+LDI R2, 1024        ; 32×32 = 1024 words
+SYSCALL 0x27        ; dmaFill
+
+; Initialize a tilemap region with tile 0x0042
+LDI R0, 0x0042
+LDI R1, tilemap_addr
+LDI R2, 256         ; Fill 256 words
+SYSCALL 0x27        ; dmaFill
+```
 
 ---
 

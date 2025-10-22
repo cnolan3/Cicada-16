@@ -40,7 +40,7 @@ The code on the Boot ROM executes the following steps in order:
 1. **Hardware Initialization**: From power-on, the Boot ROM has full access to WRAM, VRAM, CRAM, OAM, and all I/O registers. It performs basic hardware setup, which includes clearing WRAM and initializing the Stack Pointer (SP) to the top of WRAM0 (e.g., `0xCFFF`).
 2. **System Library Copy**: The Boot ROM initiates a DMA transfer to copy the 4 KiB System Library from its internal ROM to the dedicated System Library RAM at `E000-EFFF`. It does this by:
    - Writing the source address in the Boot ROM to the `DMA_SRC` register.
-   - Writing the value `1` to the `DMA_LEN` register, which triggers the special 4 KiB system library transfer mode.
+   - Setting the DMA mode to `1` (System Library DMA) in the `DMA_CTL` register (bits 5-3).
    - Setting the `START` bit in `DMA_CTL`.
      After the DMA transfer is complete, it sets the PPU and APU registers to a known-default, disabled state.
 3. **Display Boot Animation**: The Boot ROM displays the console logo, enables interrupts (EI), and uses its internal V-Blank ISR to perform a brief startup animation. It may read the **Boot Animation ID** from the cartridge header to select a specific visual effect.

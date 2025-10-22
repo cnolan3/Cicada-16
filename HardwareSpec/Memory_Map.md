@@ -85,9 +85,9 @@ Not all RAM is equal in speed.
 | F00B    | **DMA_SRC_H**  | **DMA source address high**                                          |
 | F00C    | **DMA_DST_L**  | **DMA destination low**                                              |
 | F00D    | **DMA_DST_H**  | **DMA destination high**                                             |
-| F00E    | **DMA_LEN**    | **DMA length in bytes (0 => OAM, 1 => Boot ROM, 2-255 => standard)** |
-| F00F    | **DMA_CTL**    | **DMA control: bit0=START, bit1=DIR, bit2=VRAM_ONLY, etc.**          |
-| F010    | -              | Reserved                                                             |
+| F00E    | **DMA_LEN_L**  | **DMA length/parameter low byte**                                    |
+| F00F    | **DMA_LEN_H**  | **DMA length/parameter high byte**                                   |
+| F010    | **DMA_CTL**    | **DMA control: bits5-3=MODE, bit2=VRAM_SAFE, bit1=ADDR_MODE, bit0=START** |
 | F011    | **MPR_BANK**   | **ROM bank select for 4000-7FFF window**                             |
 | F012    | **RAM_BANK**   | **Bank select for banked Cart RAM (if enabled)**                     |
 | F013    | **WE_LATCH**   | Write-enable latch for save RAM (write key)                          |
