@@ -56,11 +56,11 @@ pub fn calculate_instruction_size(instruction: &Instruction) -> u32 {
         Instruction::LdBIndirect(_, _) => 2,
         Instruction::LdBPreDec(_, _) => 3,
         Instruction::LdBPostInc(_, _) => 3,
-        Instruction::LdBAbs(_, _) => 4,
+        Instruction::LdBAbs(_, _) => 3,
         Instruction::StBIndirect(_, _) => 2,
         Instruction::StBPreDec(_, _) => 3,
         Instruction::StBPostInc(_, _) => 3,
-        Instruction::StBAbs(_, _) => 4,
+        Instruction::StBAbs(_, _) => 3,
         // LEA
         Instruction::Lea(_, _, _) => 3,
         // Stack Operations
@@ -105,8 +105,8 @@ pub fn calculate_instruction_size(instruction: &Instruction) -> u32 {
         Instruction::XorIReg(_, _) => 4,
         Instruction::CmpIReg(_, _) => 4,
         Instruction::AddSp(_) => 2,
-        Instruction::Inc(_) => 1,
-        Instruction::Dec(_) => 1,
+        Instruction::Inc(_) => 2,
+        Instruction::Dec(_) => 2,
         // 8 bit accumulator arithmetic
         Instruction::AddBAcc(_) => 2,
         Instruction::SubBAcc(_) => 2,
