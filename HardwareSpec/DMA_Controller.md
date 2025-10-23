@@ -6,12 +6,12 @@ This document describes the design and functionality of the Direct Memory Access
 
 The DMA system is controlled by a set of memory-mapped I/O registers.
 
-| Address   | Name      | Description                                                            |
-| :-------- | :-------- | :--------------------------------------------------------------------- |
-| F00A-F00B | `DMA_SRC` | The 16-bit source address for the transfer.                            |
-| F00C-F00D | `DMA_DST` | The 16-bit destination address for the transfer.                       |
-| F00E-F00F | `DMA_LEN` | The 16-bit length/parameter register. Usage depends on the DMA mode.   |
-| F010      | `DMA_CTL` | The DMA Control Register.                                              |
+| Address   | Name      | Description                                                          |
+| :-------- | :-------- | :------------------------------------------------------------------- |
+| F00A-F00B | `DMA_SRC` | The 16-bit source address for the transfer.                          |
+| F00C-F00D | `DMA_DST` | The 16-bit destination address for the transfer.                     |
+| F00E-F00F | `DMA_LEN` | The 16-bit length/parameter register. Usage depends on the DMA mode. |
+| F010      | `DMA_CTL` | The DMA Control Register.                                            |
 
 ## **2. The DMA Transfer Process**
 
@@ -40,7 +40,7 @@ The `DMA_CTL` register at `F010` configures the behavior of the transfer.
 | Bit | Name        | Function                                                                                                                                                                                                                                                                                                           |
 | :-- | :---------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 7-6 | -           | Reserved.                                                                                                                                                                                                                                                                                                          |
-| 5-3 | `DMA_MODE`  | **DMA Mode Select.** A 3-bit field (0-7) that selects the DMA transfer mode. See section 5 for details on each mode.                                                                                                                                                                                              |
+| 5-3 | `DMA_MODE`  | **DMA Mode Select.** A 3-bit field (0-7) that selects the DMA transfer mode. See section 5 for details on each mode.                                                                                                                                                                                               |
 | 2   | `VRAM_SAFE` | **VRAM Safe Transfer.** If this bit is `1`, the DMA transfer will not begin until the PPU enters a non-rendering period (H-Blank or V-Blank). This prevents visual artifacts when writing to VRAM or CRAM, but adds a small, variable delay to the start of the transfer. If `0`, the transfer begins immediately. |
 | 1   | `ADDR_MODE` | **Address Mode.** If `0`, the source and destination addresses increment after each byte is copied. If `1`, the addresses decrement. **Note:** This bit is ignored in special DMA modes that have fixed destination behavior.                                                                                      |
 | 0   | `START`     | **Start/Status Bit.** Writing a `1` to this bit initiates the transfer. This bit will read as `1` while the transfer is in progress and is automatically cleared to `0` by the hardware upon completion.                                                                                                           |
@@ -76,9 +76,10 @@ This mode has two different behaviors depending on whether the console is in boo
 #### **After Boot (OAM Scanline DMA)**
 
 - **DMA_SRC**: Source address in ROM/RAM containing sprite data.
-- **DMA_DST**: The low byte specifies the starting OAM offset in bytes (0-504, must be a multiple of 8).
+- **DMA_DST**: The low byte specifies the starting OAM sprite slot (0-63).
 - **DMA_LEN**: Number of sprite entries to copy. Each sprite entry is 8 bytes, so the actual bytes transferred = `DMA_LEN × 8`.
 - **Speed**: 2 clock cycles per byte.
+- **Actual bytes transferred**: `DMA_LEN * 8`
 - **Destination Calculation**: `F400 + (DMA_DST & 0x00FF)`
 - **Behavior**: Copies sprite data to a specific portion of OAM. This allows partial sprite updates without transferring all 512 bytes.
 - **Use case**: Update only active sprites, animate specific sprite groups, or perform incremental OAM updates. To copy all 64 sprites, set `DMA_DST = 0x0000` and `DMA_LEN = 64`.
@@ -88,23 +89,13 @@ This mode has two different behaviors depending on whether the console is in boo
 Transfers data directly to a specific 2 KiB slot within VRAM's 32 KiB address space, bypassing the need for manual bank switching.
 
 - **DMA_SRC**: Source address in ROM/RAM.
-- **DMA_DST**: Offset within the selected VRAM slot (0-2047).
-- **DMA_LEN**:
-  - **Bits 15-4**: Number of bytes to transfer (max 4080 bytes in increments of 16).
-  - **Bits 3-0**: VRAM slot selection (0-15).
+- **DMA_DST**: Low byte specifies the starting destination VRAM slot (0-15).
+- **DMA_LEN**: Number of VRAM slots to transfer.
 - **Speed**: 2 clock cycles per byte.
-- **Actual bytes transferred**: `DMA_LEN & 0xFFF0`
-- **Target VRAM slot**: `DMA_LEN & 0x000F`
+- **Actual bytes transferred**: `DMA_LEN * 2048`
 - **Destination Calculation**: VRAM address = `(slot × 2048) + DMA_DST`
 - **Behavior**: The hardware automatically routes writes to the correct internal VRAM bank. The CPU's VRAM bank register is not affected.
 - **Use case**: Rapidly upload tilemap or tile graphics data to a specific VRAM region without managing bank switching. Ideal for level loading or dynamic tile updates.
-
-**Example:** To copy 512 bytes to VRAM slot 5 at offset 256:
-```
-DMA_SRC = source_address
-DMA_DST = 256
-DMA_LEN = (512 & 0xFFF0) | 5 = 0x0205
-```
 
 ### **Mode 3: CRAM (Palette) DMA**
 
@@ -154,17 +145,6 @@ Hardware-accelerated memory fill operation that writes a repeating 16-bit patter
 - **Actual bytes written**: `DMA_LEN × 2`
 - **Behavior**: Reads a single 16-bit value from the source address once, then repeatedly writes this value to consecutive 16-bit locations starting at the destination. This is significantly faster than a CPU loop for large fills.
 - **Use case**: Clear tilemaps with a specific tile, initialize background layers, fill VRAM regions with solid patterns, bulk initialization of data structures.
-
-**Example:** To fill 100 tilemap entries with tile index 0x0042:
-```
-; Store pattern in RAM or use immediate location
-WORD pattern_data: 0x0042
-
-DMA_SRC = &pattern_data
-DMA_DST = tilemap_address
-DMA_LEN = 100
-DMA_CTL = (6 << 3) | 0x01  ; Mode 6, START
-```
 
 ### **Mode 7: Reserved**
 

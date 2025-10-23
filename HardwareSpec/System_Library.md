@@ -536,8 +536,7 @@ Convenient wrapper for OAM Scanline DMA (Mode 1). Allows updating a specific ran
   - `R2.b`: Number of sprites to copy (1-64)
 - **Action:**
   1.  Configures DMA Mode 1 (OAM Scanline DMA) and initiates high-speed transfer (2 cycles/byte).
-  2.  Automatically calculates the OAM byte offset: `sprite_index × 8`
-  3.  Transfers `num_sprites × 8` bytes to OAM starting at the specified sprite index.
+  2.  Transfers `num_sprites × 8` bytes to OAM starting at the specified sprite index.
 - **Output:** None.
 - **Clobbered Registers:** R3 (used for internal calculations).
 - **Use case:** Update only active sprites, animate specific sprite groups. To update all 64 sprites, call with `R1 = 0, R2 = 64`.
@@ -558,9 +557,8 @@ Simplified wrapper for VRAM Slot DMA (Mode 2). Transfers data directly to a spec
 
 - **Inputs:**
   - `R0`: Source address in ROM/RAM
-  - `R1`: Destination offset within the VRAM slot (0-2047)
-  - `R2`: Number of bytes to transfer (must be a multiple of 16, max 4080)
-  - `R3.b`: VRAM slot number (0-15)
+  - `R1`: Destination VRAM slot (0-15)
+  - `R2`: Number of VRAM slots to transfer
 - **Action:**
   1.  Configures DMA Mode 2 (VRAM Slot DMA) and initiates high-speed transfer (2 cycles/byte).
   2.  Automatically encodes slot number into DMA_LEN register.
@@ -572,11 +570,10 @@ Simplified wrapper for VRAM Slot DMA (Mode 2). Transfers data directly to a spec
 **Example:**
 
 ```assembly
-; Copy 512 bytes of tile data to VRAM slot 5 at offset 256
+; Copy 4096 bytes (2 slots) of tile data to VRAM slot 5
 LDI R0, tile_data
-LDI R1, 256
-LDI R2, 512
-LDI R3, 5
+LDI R1, 5
+LDI R2, 2
 SYSCALL 0x24        ; dmaVRAMSlot
 ```
 
