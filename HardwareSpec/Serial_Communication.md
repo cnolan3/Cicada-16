@@ -6,21 +6,21 @@ The Cicada-16 features a serial communication interface that allows two consoles
 
 Serial communication is controlled by two I/O registers.
 
-| Address | Name | Description                                                              |
-| :------ | :--- | :----------------------------------------------------------------------- |
-| F002    | **SB** | **Serial Buffer (R/W)** - Holds one byte of data to be transferred.      |
-| F003    | **SC** | **Serial Control (R/W)** - Configures and controls the serial port.      |
+| Address | Name   | Description                                                         |
+| :------ | :----- | :------------------------------------------------------------------ |
+| F000    | **SB** | **Serial Buffer (R/W)** - Holds one byte of data to be transferred. |
+| F001    | **SC** | **Serial Control (R/W)** - Configures and controls the serial port. |
 
-### **SC (F003) - Serial Control Register**
+### **SC (F001) - Serial Control Register**
 
-| Bit | Name        | Type | Function                                                                                                                   |
-| :-- | :---------- | :--- | :------------------------------------------------------------------------------------------------------------------------- |
-| 7   | START       | R/W  | **Start Transfer:** Writing a 1 to this bit begins a transfer. It is automatically cleared by hardware when the transfer is complete. |
-| 6   | CONNECTED   | R    | **Connection Status:** 1 if a link partner is detected, 0 otherwise. This bit is read-only.                                |
-| 5-3 | -           | R    | (Reserved)                                                                                                               |
-| 2   | SPEED       | R/W  | **Transfer Speed:** 0 = Normal (8 Kbps), 1 = Fast (256 Kbps).                                                              |
-| 1   | CLK_SRC     | R/W  | **Clock Source:** 0 = Master (Internal Clock), 1 = Slave (External Clock).                                               |
-| 0   | ENABLE      | R/W  | **Serial Enable:** 1 = Serial port is enabled, 0 = Disabled.                                                               |
+| Bit | Name      | Type | Function                                                                                                                              |
+| :-- | :-------- | :--- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| 7   | START     | R/W  | **Start Transfer:** Writing a 1 to this bit begins a transfer. It is automatically cleared by hardware when the transfer is complete. |
+| 6   | CONNECTED | R    | **Connection Status:** 1 if a link partner is detected, 0 otherwise. This bit is read-only.                                           |
+| 5-3 | -         | R    | (Reserved)                                                                                                                            |
+| 2   | SPEED     | R/W  | **Transfer Speed:** 0 = Normal (8 Kbps), 1 = Fast (256 Kbps).                                                                         |
+| 1   | CLK_SRC   | R/W  | **Clock Source:** 0 = Master (Internal Clock), 1 = Slave (External Clock).                                                            |
+| 0   | ENABLE    | R/W  | **Serial Enable:** 1 = Serial port is enabled, 0 = Disabled.                                                                          |
 
 The `CONNECTED` bit is set to 1 by the hardware whenever the console's Serial In (SI) pin detects a high logic level, which indicates that another active console is on the other end of the cable.
 
@@ -28,9 +28,9 @@ The `CONNECTED` bit is set to 1 by the hardware whenever the console's Serial In
 
 To allow for efficient, event-driven handling of connection events, a dedicated interrupt is provided.
 
--   **Interrupt:** Link Status Interrupt
--   **IE/IF Bit:** 5
--   **Trigger:** This interrupt is requested by the hardware whenever the `CONNECTED` status bit in the `SC` register changes its state (from 0 to 1, or from 1 to 0).
+- **Interrupt:** Link Status Interrupt
+- **IE/IF Bit:** 5
+- **Trigger:** This interrupt is requested by the hardware whenever the `CONNECTED` status bit in the `SC` register changes its state (from 0 to 1, or from 1 to 0).
 
 This allows the game's CPU to ignore the connection status until the hardware interrupts it, at which point an interrupt service routine can run to handle the "Connected" or "Disconnected" event immediately.
 
@@ -72,7 +72,6 @@ Once roles are established, the Master console initiates all data transfers by s
 2.  The hardware will immediately and automatically set the `SC.CONNECTED` bit back to 0.
 3.  This change triggers the **Link Status Interrupt**.
 4.  The game's interrupt handler can then gracefully exit the multiplayer session (e.g., "Your friend has disconnected.") instead of crashing or hanging while waiting for a transfer that will never complete.
-
 
 ---
 
