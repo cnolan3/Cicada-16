@@ -10,30 +10,33 @@ This section details the memory-mapped registers used to control all APU functio
 
 | Address   | Name         | Description                                                |
 | :-------- | :----------- | :--------------------------------------------------------- |
-| F080      | CH0_CTRL     | Pulse A: Control Register                                  |
-| F081-F082 | CH0_ADSR     | ADSR settings for Channel 0                                |
-| F083      | CH0_SWP      | Sweep settings for Channel 0                               |
+| F080      | **reserved** | Reserved for future use                                    |
+| F081      | CH0_CTRL     | Pulse A: Control Register                                  |
+| F082-F083 | CH0_ADSR     | ADSR settings for Channel 0                                |
 | F084-F085 | CH0_FREQ     | 16-bit frequency for Channel 0                             |
-| F086      | CH1_CTRL     | Pulse B: Control Register                                  |
-| F087-F088 | CH1_ADSR     | ADSR settings for Channel 1                                |
-| F089-F08A | CH1_FREQ     | 16-bit frequency for Channel 1                             |
-| F08B      | CH2_CTRL     | Wave channel: Control Register                             |
-| F08C-F08D | CH2_ADSR     | ADSR settings for Channel 2                                |
-| F08E-F08F | CH2_FREQ     | 16-bit frequency for Channel 2                             |
-| F090      | CH3_CTRL     | Noise channel: Control Register                            |
-| F091-F092 | CH3_ADSR     | ADSR settings for Channel 3                                |
-| F093      | MIX_CTRL     | Master APU enable, individual channel enables              |
-| F094      | MIX_VOL_L    | Master volume Left (0-15)                                  |
-| F095      | MIX_VOL_R    | Master volume Right (0-15)                                 |
-| F096      | CH0_OUT      | Pulse A channel stereo volume/panning control              |
-| F097      | CH1_OUT      | Pulse B channel stereo volume/panning control              |
-| F098      | CH2_OUT      | Wave channel stereo volume/panning control                 |
-| F099      | CH3_OUT      | Noise channel stereo volume/panning control                |
-| F09A      | DSP_CTRL     | DSP Control Register                                       |
-| F09B      | DSP_DELAY    | Delay time/length (controls read offset into delay buffer) |
-| F09C      | DSP_FBACK    | Feedback level (0-15). Controls echo decay.                |
-| F09D      | DSP_WET      | Wet signal mix level (0-15). Controls echo volume.         |
-| F09E-F0BF | **reserved** | Reserved for future use                                    |
+| F086      | CH0_SWP      | Sweep settings for Channel 0                               |
+| F087      | CH1_CTRL     | Pulse B: Control Register                                  |
+| F088-F089 | CH1_ADSR     | ADSR settings for Channel 1                                |
+| F08A-F08B | CH1_FREQ     | 16-bit frequency for Channel 1                             |
+| F08C      | **reserved** | Reserved for future use                                    |
+| F08D      | CH2_CTRL     | Wave channel: Control Register                             |
+| F08E-F08F | CH2_ADSR     | ADSR settings for Channel 2                                |
+| F090-F091 | CH2_FREQ     | 16-bit frequency for Channel 2                             |
+| F092      | **reserved** | Reserved for future use                                    |
+| F093      | CH3_CTRL     | Noise channel: Control Register                            |
+| F094-F095 | CH3_ADSR     | ADSR settings for Channel 3                                |
+| F096      | MIX_CTRL     | Master APU enable, individual channel enables              |
+| F097      | MIX_VOL_L    | Master volume Left (0-15)                                  |
+| F098      | MIX_VOL_R    | Master volume Right (0-15)                                 |
+| F099      | CH0_OUT      | Pulse A channel stereo volume/panning control              |
+| F09A      | CH1_OUT      | Pulse B channel stereo volume/panning control              |
+| F09B      | CH2_OUT      | Wave channel stereo volume/panning control                 |
+| F09C      | CH3_OUT      | Noise channel stereo volume/panning control                |
+| F09D      | DSP_CTRL     | DSP Control Register                                       |
+| F09E      | DSP_DELAY    | Delay time/length (controls read offset into delay buffer) |
+| F09F      | DSP_FBACK    | Feedback level (0-15). Controls echo decay.                |
+| F0A0      | DSP_WET      | Wet signal mix level (0-15). Controls echo volume.         |
+| F0A1-F0BF | **reserved** | Reserved for future use                                    |
 
 ## **2. Core Features**
 
@@ -91,7 +94,7 @@ The sweep unit is controlled by the `CH0_SWP` register.
 
 ### 3.3. Pulse Channel Registers
 
-#### **F080: CH0_CTRL (Pulse A)**
+#### **F081: CH0_CTRL (Pulse A)**
 
 | Bit | Name   | Description                                                                                             |
 | :-- | :----- | :------------------------------------------------------------------------------------------------------ |
@@ -99,7 +102,7 @@ The sweep unit is controlled by the `CH0_SWP` register.
 | 6-5 | DUTY   | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
 | 4-0 | -      | Unused.                                                                                                 |
 
-#### **F083: CH0_SWP (Pulse A Sweep)**
+#### **F086: CH0_SWP (Pulse A Sweep)**
 
 | Bit | Name      | Description                                                                                                                                                          |
 | :-- | :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -112,7 +115,7 @@ The sweep unit is controlled by the `CH0_SWP` register.
 
 This 16-bit register controls the frequency of the pulse wave for Channel 0.
 
-#### **F086: CH1_CTRL (Pulse B)**
+#### **F087: CH1_CTRL (Pulse B)**
 
 | Bit | Name   | Description                                                                                             |
 | :-- | :----- | :------------------------------------------------------------------------------------------------------ |
@@ -120,7 +123,7 @@ This 16-bit register controls the frequency of the pulse wave for Channel 0.
 | 6-5 | DUTY   | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
 | 4-0 | -      | Unused.                                                                                                 |
 
-#### **F089-F08A: CH1_FREQ**
+#### **F08A-F08B: CH1_FREQ**
 
 This 16-bit register controls the frequency of the pulse wave for Channel 1.
 
@@ -159,7 +162,7 @@ This value will cause the 64 samples of the waveform to be played back at a rate
 
 ### 4.2. Wave Channel Registers
 
-#### **F08B: CH2_CTRL (Wave)**
+#### **F08D: CH2_CTRL (Wave)**
 
 | Bit | Name     | Description                                                                                             |
 | :-- | :------- | :------------------------------------------------------------------------------------------------------ |
@@ -167,7 +170,7 @@ This value will cause the 64 samples of the waveform to be played back at a rate
 | 6   | -        | Unused.                                                                                                 |
 | 5-0 | WAVE_IDX | Selects which 32-byte waveform to play from Wave RAM (0-31).                                            |
 
-#### **F08E-F08F: CH2_FREQ**
+#### **F090-F091: CH2_FREQ**
 
 This 16-bit register controls the playback frequency of the selected waveform for Channel 2.
 
@@ -201,7 +204,7 @@ The "pitch" of the noise is controlled by the rate at which the LFSR is clocked.
 
 ### 5.3. Noise Channel Registers
 
-#### **F090: CH3_CTRL (Noise)**
+#### **F093: CH3_CTRL (Noise)**
 
 | Bit | Name      | Description                                                                                             |
 | :-- | :-------- | :------------------------------------------------------------------------------------------------------ |
@@ -217,28 +220,28 @@ When a channel's `KEY_ON` bit is set to 1, the envelope enters the **Attack** ph
 
 ### 6.1. ADSR Registers
 
-Each channel has a pair of registers to control its ADSR envelope: `CH0_ADSR` (F081-F082), `CH1_ADSR` (F087-F088), `CH2_ADSR` (F08C-F08D), and `CH3_ADSR` (F091-F092).
+Each channel has a pair of registers to control its ADSR envelope: `CH0_ADSR` (F082-F083), `CH1_ADSR` (F088-F089), `CH2_ADSR` (F08E-F08F), and `CH3_ADSR` (F094-F095).
 
-- **F0x1, Bits 7-4: Attack Rate (A)**
+- **First byte, Bits 7-4: Attack Rate (A)**
 
   - This 4-bit value (0-15) determines how quickly the volume rises from 0 to its peak of 15.
   - The value `A` specifies the number of Envelope Clock ticks to wait before the volume is incremented by 1.
   - **Time per step:** `(A + 1) * (1/256 seconds)`
   - **Total Attack Time (0 to 15):** `15 * (A + 1) * ~3.9ms`
 
-- **F0x1, Bits 3-0: Decay Rate (D)**
+- **First byte, Bits 3-0: Decay Rate (D)**
 
   - This 4-bit value (0-15) determines how quickly the volume falls from its peak of 15 to the Sustain Level.
   - The value `D` specifies the number of Envelope Clock ticks to wait before the volume is decremented by 1.
   - **Time per step:** `(D + 1) * (1/256 seconds)`
 
-- **F0x2, Bits 7-4: Sustain Level (S)**
+- **Second byte, Bits 7-4: Sustain Level (S)**
 
   - This 4-bit value (0-15) sets the target volume level for the sustain phase.
   - `0000` (0) is silent, `1111` (15) is maximum volume.
   - The envelope holds at this volume as long as the `KEY_ON` bit is active.
 
-- **F0x2, Bits 3-0: Release Rate (R)**
+- **Second byte, Bits 3-0: Release Rate (R)**
   - This 4-bit value (0-15) determines how quickly the volume falls from the Sustain Level to 0 after `KEY_ON` is cleared.
   - The value `R` specifies the number of Envelope Clock ticks to wait before the volume is decremented by 1.
   - **Time per step:** `(R + 1) * (1/256 seconds)`
@@ -267,7 +270,7 @@ The DSP operates on the final mixed audio signal just before it is sent to the s
 
 ### 7.3. DSP Registers
 
-#### **F09A: DSP_CTRL**
+#### **F09D: DSP_CTRL**
 
 | Bit | Name   | Description                                          |
 | :-- | :----- | :--------------------------------------------------- |
@@ -278,11 +281,11 @@ The DSP operates on the final mixed audio signal just before it is sent to the s
 | 1   | CH1_IN | 1: Send Channel 1's output into the DSP echo buffer. |
 | 0   | CH0_IN | 1: Send Channel 0's output into the DSP echo buffer. |
 
-#### **F09B: DSP_DELAY**
+#### **F09E: DSP_DELAY**
 
 An 8-bit register that controls the delay time by setting the read offset into the delay buffer. The delay is `(value + 1) * 4` samples.
 
-#### **F09C: DSP_FBACK**
+#### **F09F: DSP_FBACK**
 
 A 4-bit value (0-15) that controls the feedback level (how much of the delayed signal is mixed back into the delay line input).
 
@@ -290,7 +293,7 @@ A 4-bit value (0-15) that controls the feedback level (how much of the delayed s
 - `15`: Maximum feedback, creating long, repeating echoes.
 - **Formula:** `Feedback = DelayedSample * (DSP_FBACK / 16)`
 
-#### **F09D: DSP_WET**
+#### **F0A0: DSP_WET**
 
 A 4-bit value (0-15) that controls the wet/dry mix. This is the volume of the delayed signal in the final output.
 
@@ -347,7 +350,7 @@ This is where the `CHx_OUT` registers are used. The APU calculates the final mix
 For each of the four channels:
 
 1.  It takes the channel's "pre-mix" output from Step 1.
-2.  It looks at the channel's `CHx_OUT` register (`F096` - `F099`).
+2.  It looks at the channel's `CHx_OUT` register (`F099` - `F09C`).
 3.  The pre-mix signal is scaled by the `VOL_L` nibble (0-15) and added to the `FinalLeft` accumulator.
 4.  The pre-mix signal is scaled by the `VOL_R` nibble (0-15) and added to the `FinalRight` accumulator.
 
