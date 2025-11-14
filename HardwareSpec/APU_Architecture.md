@@ -26,12 +26,12 @@ This section details the memory-mapped registers used to control all APU functio
 | F093      | CH3_CTRL     | Noise channel: Control Register                            |
 | F094-F095 | CH3_ADSR     | ADSR settings for Channel 3                                |
 | F096      | MIX_CTRL     | Master APU enable, individual channel enables              |
-| F097      | MIX_VOL_L    | Master volume Left (0-15)                                  |
-| F098      | MIX_VOL_R    | Master volume Right (0-15)                                 |
-| F099      | CH0_OUT      | Pulse A channel stereo volume/panning control              |
-| F09A      | CH1_OUT      | Pulse B channel stereo volume/panning control              |
-| F09B      | CH2_OUT      | Wave channel stereo volume/panning control                 |
-| F09C      | CH3_OUT      | Noise channel stereo volume/panning control                |
+| F097      | MIX_VOL      | Master volume: Left (bits 7-4), Right (bits 3-0), 0-15 each |
+| F098      | **reserved** | Reserved for future use                                    |
+| F099      | CH0_OUT      | Pulse A channel stereo volume/panning control (L: 7-4, R: 3-0) |
+| F09A      | CH1_OUT      | Pulse B channel stereo volume/panning control (L: 7-4, R: 3-0) |
+| F09B      | CH2_OUT      | Wave channel stereo volume/panning control (L: 7-4, R: 3-0)    |
+| F09C      | CH3_OUT      | Noise channel stereo volume/panning control (L: 7-4, R: 3-0)   |
 | F09D      | DSP_CTRL     | DSP Control Register                                       |
 | F09E      | DSP_DELAY    | Delay time/length (controls read offset into delay buffer) |
 | F09F      | DSP_FBACK    | Feedback level (0-15). Controls echo decay.                |
@@ -96,11 +96,12 @@ The sweep unit is controlled by the `CH0_SWP` register.
 
 #### **F081: CH0_CTRL (Pulse A)**
 
-| Bit | Name   | Description                                                                                             |
-| :-- | :----- | :------------------------------------------------------------------------------------------------------ |
-| 7   | KEY_ON | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
-| 6-5 | DUTY   | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
-| 4-0 | -      | Unused.                                                                                                 |
+| Bit | Name      | Description                                                                                             |
+| :-- | :-------- | :------------------------------------------------------------------------------------------------------ |
+| 7   | KEY_ON    | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
+| 6-5 | DUTY      | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
+| 4   | RETRIGGER | Restart ADSR attack phase. Automatically clears to 0 after triggering. See section 6 for details.       |
+| 3-0 | -         | Unused.                                                                                                 |
 
 #### **F086: CH0_SWP (Pulse A Sweep)**
 
@@ -117,11 +118,12 @@ This 16-bit register controls the frequency of the pulse wave for Channel 0.
 
 #### **F087: CH1_CTRL (Pulse B)**
 
-| Bit | Name   | Description                                                                                             |
-| :-- | :----- | :------------------------------------------------------------------------------------------------------ |
-| 7   | KEY_ON | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
-| 6-5 | DUTY   | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
-| 4-0 | -      | Unused.                                                                                                 |
+| Bit | Name      | Description                                                                                             |
+| :-- | :-------- | :------------------------------------------------------------------------------------------------------ |
+| 7   | KEY_ON    | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
+| 6-5 | DUTY      | Square wave duty cycle: 00: 12.5%, 01: 25%, 10: 50%, 11: 75%                                            |
+| 4   | RETRIGGER | Restart ADSR attack phase. Automatically clears to 0 after triggering. See section 6 for details.       |
+| 3-0 | -         | Unused.                                                                                                 |
 
 #### **F08A-F08B: CH1_FREQ**
 
@@ -164,11 +166,11 @@ This value will cause the 64 samples of the waveform to be played back at a rate
 
 #### **F08D: CH2_CTRL (Wave)**
 
-| Bit | Name     | Description                                                                                             |
-| :-- | :------- | :------------------------------------------------------------------------------------------------------ |
-| 7   | KEY_ON   | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
-| 6   | -        | Unused.                                                                                                 |
-| 5-0 | WAVE_IDX | Selects which 32-byte waveform to play from Wave RAM (0-31).                                            |
+| Bit | Name      | Description                                                                                             |
+| :-- | :-------- | :------------------------------------------------------------------------------------------------------ |
+| 7   | KEY_ON    | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
+| 6   | RETRIGGER | Restart ADSR attack phase. Automatically clears to 0 after triggering. See section 6 for details.       |
+| 5-0 | WAVE_IDX  | Selects which 32-byte waveform to play from Wave RAM (0-31).                                            |
 
 #### **F090-F091: CH2_FREQ**
 
@@ -195,12 +197,33 @@ The channel's audio output is `1` if the LSB of the LFSR is `0`, and `-1` if the
 
 ### 5.2. Noise Frequency
 
-The "pitch" of the noise is controlled by the rate at which the LFSR is clocked. This clock rate is derived from the master APU clock and the 6-bit `CLK_DIV` value in the `CH3_CTRL` register.
+The "pitch" of the noise is controlled by the rate at which the LFSR is clocked. This clock rate is derived from the master APU clock and the 5-bit `CLK_DIV` value in the `CH3_CTRL` register.
 
-**`LFSR Clock Rate (Hz) = 2,097,152 / (256 * (CLK_DIV + 1))`**
+Unlike the pulse and wave channels, the noise channel uses a **non-linear mapping** from the `CLK_DIV` value to the actual divider bit in the system's 32-bit free-running counter. This mapping provides optimal frequency resolution in the musically useful percussion range while still allowing access to ultra-low rumble frequencies.
 
-- A lower `CLK_DIV` value results in a higher-pitched, "brighter" noise.
-- A higher `CLK_DIV` value results in a lower-pitched, "rumbling" noise.
+**Mapping Formula:**
+
+The `CLK_DIV` value (0-31) is mapped to a specific bit of the system's 32-bit divider counter (DIV0-DIV3). The hardware uses a 32-entry lookup table to determine which divider bit to use:
+
+| CLK_DIV Range | Mapped to DIV Bits | Frequency Range | Purpose                           |
+| :------------ | :----------------- | :-------------- | :-------------------------------- |
+| 0-15          | 10-25              | 8192 - 256 Hz   | Hi-hats, snares, kicks (linear)   |
+| 16-23         | 26-33              | 128 - 16 Hz     | Bass rumble, thunder (linear)     |
+| 24-27         | 34-37              | 8 - 1 Hz        | Deep rumble, earthquake           |
+| 28-31         | 38-41              | < 1 Hz          | Ultra-low special effects         |
+
+**Frequency Calculation:**
+
+Once the divider bit is selected from the lookup table, the LFSR clock rate is determined by:
+
+**`LFSR Clock Rate (Hz) = 2,097,152 / (2^(selected_bit + 1))`**
+
+This non-linear approach provides:
+- **Fine control** in the 256 Hz - 8 kHz range (16 steps) for precise percussion tuning
+- **Good control** in the 16 Hz - 256 Hz range (8 steps) for rumble and bass effects
+- **Extended range** below 16 Hz (8 steps) for special low-frequency effects
+
+A lower `CLK_DIV` value results in a higher-pitched, "brighter" noise, while a higher `CLK_DIV` value results in a lower-pitched, "rumbling" noise.
 
 ### 5.3. Noise Channel Registers
 
@@ -210,7 +233,8 @@ The "pitch" of the noise is controlled by the rate at which the LFSR is clocked.
 | :-- | :-------- | :------------------------------------------------------------------------------------------------------ |
 | 7   | KEY_ON    | 1 = Note On (Attack->Decay->Sustain). 0 = Note Off (Release). The channel is active when this bit is 1. |
 | 6   | LFSR_MODE | 0: 15-bit LFSR (White noise), 1: 7-bit LFSR (Metallic noise).                                           |
-| 5-0 | CLK_DIV   | Clock divider for the LFSR, controls the base pitch of the noise.                                       |
+| 5   | RETRIGGER | Restart ADSR attack phase. Automatically clears to 0 after triggering. See section 6 for details.       |
+| 4-0 | CLK_DIV   | Clock divider for the LFSR (0-31), controls the base pitch of the noise. See section 5.2 for mapping.   |
 
 ## **6. ADSR Volume Envelopes**
 
@@ -218,33 +242,158 @@ The APU uses a traditional 4-stage ADSR (Attack, Decay, Sustain, Release) envelo
 
 When a channel's `KEY_ON` bit is set to 1, the envelope enters the **Attack** phase, where the volume rises from 0 to its peak (15). When it reaches the peak, it moves to the **Decay** phase, where it falls to the specified **Sustain** level. It then remains in the **Sustain** phase as long as `KEY_ON` is 1. When `KEY_ON` is cleared to 0, it immediately enters the **Release** phase, where the volume falls from the current level to 0.
 
+### **RETRIGGER Bit Behavior**
+
+Each channel's `CTRL` register includes a `RETRIGGER` bit that provides a way to restart the ADSR envelope without toggling the `KEY_ON` bit. This is useful for rapid note retriggering, arpeggio effects, and note slides where you want to restart the envelope attack phase while the channel remains active.
+
+**Operation:**
+1. When the `RETRIGGER` bit is written to `1`, the envelope is marked for retriggering.
+2. On the next **Envelope Clock** update (256 Hz), the envelope immediately restarts from the beginning of the **Attack** phase, regardless of its current state.
+3. The `RETRIGGER` bit is automatically cleared to `0` by the hardware after the retrigger occurs.
+4. The `KEY_ON` bit state is not affected by the retrigger operation.
+
+**Use Cases:**
+- **Arpeggio effects**: Rapidly retrigger notes without audible clicks from toggling `KEY_ON`
+- **Note slides/portamento**: Change frequency while restarting the envelope for a fresh attack
+- **Rapid-fire sound effects**: Retrigger percussion or effects at high speed
+- **Tremolo effects**: Rhythmic envelope retriggering for amplitude modulation
+
+**Important Notes:**
+- The `RETRIGGER` bit is edge-triggered and auto-clearing. Reading it will typically return `0` unless read immediately after writing and before the next envelope update.
+- If both `KEY_ON` is set to `0` and `RETRIGGER` is set to `1` simultaneously, the `KEY_ON` state takes priority and the channel enters the Release phase instead of retriggering.
+
 ### 6.1. ADSR Registers
 
 Each channel has a pair of registers to control its ADSR envelope: `CH0_ADSR` (F082-F083), `CH1_ADSR` (F088-F089), `CH2_ADSR` (F08E-F08F), and `CH3_ADSR` (F094-F095).
 
-- **First byte, Bits 7-4: Attack Rate (A)**
+#### **ADSR Register Format**
 
+**First Byte (CHx_ADSR+0):**
+
+| Bit | Name         | Description                                            |
+| :-- | :----------- | :----------------------------------------------------- |
+| 7-4 | Attack Rate  | How quickly volume rises from 0→15 (0-15)              |
+| 3-0 | Decay Rate   | How quickly volume falls from 15→Sustain Level (0-15)  |
+
+**Second Byte (CHx_ADSR+1):**
+
+| Bit | Name          | Description                                           |
+| :-- | :------------ | :---------------------------------------------------- |
+| 7-4 | Sustain Level | Target volume for sustain phase (0-15)                |
+| 3-0 | Release Rate  | How quickly volume falls to 0 after key off (0-15)    |
+
+#### **Parameter Details**
+
+- **Attack Rate (A):**
   - This 4-bit value (0-15) determines how quickly the volume rises from 0 to its peak of 15.
   - The value `A` specifies the number of Envelope Clock ticks to wait before the volume is incremented by 1.
-  - **Time per step:** `(A + 1) * (1/256 seconds)`
+  - **Time per step:** `(A + 1) * (1/256 seconds)` = `(A + 1) * ~3.9ms`
   - **Total Attack Time (0 to 15):** `15 * (A + 1) * ~3.9ms`
+  - **Example:** A=0 gives fastest attack (15 steps × 3.9ms = ~59ms), A=15 gives slowest (15 steps × 62.5ms = ~938ms)
 
-- **First byte, Bits 3-0: Decay Rate (D)**
-
+- **Decay Rate (D):**
   - This 4-bit value (0-15) determines how quickly the volume falls from its peak of 15 to the Sustain Level.
   - The value `D` specifies the number of Envelope Clock ticks to wait before the volume is decremented by 1.
-  - **Time per step:** `(D + 1) * (1/256 seconds)`
+  - **Time per step:** `(D + 1) * (1/256 seconds)` = `(D + 1) * ~3.9ms`
+  - **Total Decay Time:** Depends on sustain level: `(15 - S) * (D + 1) * ~3.9ms`
 
-- **Second byte, Bits 7-4: Sustain Level (S)**
-
+- **Sustain Level (S):**
   - This 4-bit value (0-15) sets the target volume level for the sustain phase.
-  - `0000` (0) is silent, `1111` (15) is maximum volume.
+  - `0000` (0) is silent, `1111` (15) is maximum volume (no decay phase).
   - The envelope holds at this volume as long as the `KEY_ON` bit is active.
 
-- **Second byte, Bits 3-0: Release Rate (R)**
-  - This 4-bit value (0-15) determines how quickly the volume falls from the Sustain Level to 0 after `KEY_ON` is cleared.
+- **Release Rate (R):**
+  - This 4-bit value (0-15) determines how quickly the volume falls from the current level to 0 after `KEY_ON` is cleared.
   - The value `R` specifies the number of Envelope Clock ticks to wait before the volume is decremented by 1.
-  - **Time per step:** `(R + 1) * (1/256 seconds)`
+  - **Time per step:** `(R + 1) * (1/256 seconds)` = `(R + 1) * ~3.9ms`
+  - **Total Release Time:** Depends on volume at release: `current_volume * (R + 1) * ~3.9ms`
+
+### 6.2. Mixer and Output Control Registers
+
+After the ADSR envelope shapes each channel's volume, the mixer and output control registers determine how channels are combined, panned, and sent to the left and right speakers.
+
+#### **F096: MIX_CTRL (Mixer Control)**
+
+This register enables or disables the APU and individual channels.
+
+| Bit | Name       | Description                                          |
+| :-- | :--------- | :--------------------------------------------------- |
+| 7   | APU_ENABLE | 1: APU is active and outputting audio. 0: APU muted. |
+| 6-4 | -          | Unused.                                              |
+| 3   | CH3_ENABLE | 1: Noise channel is enabled. 0: Channel 3 muted.     |
+| 2   | CH2_ENABLE | 1: Wave channel is enabled. 0: Channel 2 muted.      |
+| 1   | CH1_ENABLE | 1: Pulse B is enabled. 0: Channel 1 muted.           |
+| 0   | CH0_ENABLE | 1: Pulse A is enabled. 0: Channel 0 muted.           |
+
+**Notes:**
+- Disabling a channel via `CHx_ENABLE` mutes it but doesn't stop its internal oscillators or ADSR envelopes.
+- Disabling `APU_ENABLE` mutes all audio output regardless of individual channel enable states.
+
+#### **F097: MIX_VOL (Master Volume)**
+
+This register controls the global volume for both the left and right stereo outputs.
+
+| Bit | Name  | Description                               |
+| :-- | :---- | :---------------------------------------- |
+| 7-4 | VOL_L | Master left channel volume (0-15)          |
+| 3-0 | VOL_R | Master right channel volume (0-15)         |
+
+**Volume Levels:**
+- `0`: Silent (channel muted)
+- `1-14`: Gradual volume increase
+- `15`: Maximum volume
+
+**Notes:**
+- These volume controls are applied after all channel mixing and panning.
+- Setting both to 0 effectively mutes all audio output.
+- Asymmetric values (e.g., VOL_L=15, VOL_R=8) can create stereo balance effects.
+
+#### **F099-F09C: CHx_OUT (Channel Output Control)**
+
+Each channel has its own output control register that determines its volume and stereo panning. These registers allow independent control of how each channel appears in the left and right speakers.
+
+| Address | Register | Channel        |
+| :------ | :------- | :------------- |
+| F099    | CH0_OUT  | Pulse A output |
+| F09A    | CH1_OUT  | Pulse B output |
+| F09B    | CH2_OUT  | Wave output    |
+| F09C    | CH3_OUT  | Noise output   |
+
+**Register Format (applies to all CHx_OUT registers):**
+
+| Bit | Name  | Description                                    |
+| :-- | :---- | :--------------------------------------------- |
+| 7-4 | VOL_L | Channel volume for left speaker (0-15)          |
+| 3-0 | VOL_R | Channel volume for right speaker (0-15)         |
+
+**Volume and Panning Examples:**
+
+| VOL_L | VOL_R | Effect                           |
+| :---- | :---- | :------------------------------- |
+| 0     | 0     | Channel completely silent        |
+| 15    | 15    | Full volume, center              |
+| 15    | 0     | Full volume, hard left pan       |
+| 0     | 15    | Full volume, hard right pan      |
+| 15    | 8     | Louder in left, softer in right  |
+| 10    | 10    | Reduced volume, center           |
+
+**Signal Flow:**
+
+The channel output volumes interact with the master volume as follows:
+
+1. Each channel's ADSR-modulated signal is scaled by its `VOL_L` value for the left output
+2. The same channel signal is scaled by its `VOL_R` value for the right output
+3. All channels' left outputs are summed together
+4. All channels' right outputs are summed together
+5. The summed left signal is then scaled by `MIX_VOL.VOL_L` (master left volume)
+6. The summed right signal is then scaled by `MIX_VOL.VOL_R` (master right volume)
+7. The final signals are sent to the left and right audio outputs
+
+**Use Cases:**
+- **Stereo positioning**: Create a stereo soundscape by panning different instruments/effects left and right
+- **Dynamic panning**: Change `VOL_L` and `VOL_R` values over time to move sounds across the stereo field
+- **Per-channel volume mixing**: Balance multiple sound elements without adjusting their ADSR envelopes
+- **Sound effects**: Set VOL_L/VOL_R to 0 to temporarily mute a channel without stopping it
 
 ## **7. DSP (Digital Signal Processor)**
 
@@ -367,8 +516,8 @@ The "wet" signal (the echo read from the delay buffer in Step 3) is now added to
 
 This is the final stage before the sound is sent to the speakers.
 
-- The `FinalLeft` signal is scaled by the master left volume (`MIX_VOL_L`).
-- The `FinalRight` signal is scaled by the master right volume (`MIX_VOL_R`).
+- The `FinalLeft` signal is scaled by the master left volume (`MIX_VOL.VOL_L`, bits 7-4 of register F097).
+- The `FinalRight` signal is scaled by the master right volume (`MIX_VOL.VOL_R`, bits 3-0 of register F097).
 - These two resulting values are the final samples sent to the digital-to-analog converter (DAC).
 
 ---

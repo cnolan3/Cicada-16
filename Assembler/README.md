@@ -43,7 +43,3 @@ The assembler's source code is organized into several modules, each with a disti
   - `mod.rs`: Implements the two-pass logic. `build_symbol_table` (Pass 1) and `generate_bytecode` (Pass 2).
   - `symbol_table.rs`: Defines the data structures for the symbol table, which maps label strings to their calculated addresses.
   - `encoder/`: This module handles the final translation from a single AST `Instruction` node into its corresponding sequence of bytes.
-
-## Compatability
-
-**cicasm_v0.1.11** compatible with **HardwareSpec_v0.3.11** - **HardwareSpec_v0.3.12**

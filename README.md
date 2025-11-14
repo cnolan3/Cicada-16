@@ -50,20 +50,9 @@ This repository contains all the components that make up the Cicada-16 ecosystem
 
 ## Versioning
 
-The Cicada-16 project uses a **hybrid versioning system**:
+The Cicada-16 project uses a **global versioning system**, all aspects of the repository (hardware spec, assembler, assets, etc.) fall under the same version. When the project version increases, the version number of all subdirectories increase with it.
 
-- **The Hardware Specification version is the primary version** for the repository and serves as the authoritative version for compatibility.
-- Each subdirectory (`Assembler/`, `ProgrammingDocs/`, `BootROM/`, etc.) maintains its own independent version number.
-- **Git tags are prefixed** to indicate which component they version: `HardwareSpec_v0.3.10`, `cicasm_v0.1.10`, `ProgrammingDocs_v1.2.0`, etc.
-- Each component directory contains a compatibility document (typically named `COMPATIBILITY.md` or included in its README) that relates its version to the Hardware Specification versions it supports.
-
-For example:
-
-- Git tag: `HardwareSpec_v0.4.0` → Hardware Specification v0.4.0
-- Git tag: `cicasm_v1.3.0` → Assembler v1.3.0 (compatible with Hardware Spec v0.3.0 - v0.4.0)
-- Git tag: `ProgrammingDocs_v2.1.0` → Programming Docs v2.1.0 (for Hardware Spec v0.4.0+)
-
-**The Hardware Specification version is the authoritative version for compatibility.** When developing games or tools, always reference which Hardware Spec version you are targeting.
+Version numbers are recorded as git tags.
 
 ---
 
