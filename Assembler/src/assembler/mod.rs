@@ -91,12 +91,13 @@ pub fn process_constants(
 }
 
 /// Pass 1: Build the symbol table.
-pub fn build_symbol_table(
+pub fn build_symbol_table<F: crate::file_reader::FileReader>(
     lines: &[AssemblyLine],
     final_logical_addr: &u16,
     expected_interrupt_table_addr: Option<u16>,
     expected_header_addr: Option<u16>,
     constant_table: &ConstantTable,
+    reader: &F,
 ) -> Result<SymbolTable, AssemblyError> {
     let mut symbol_table = SymbolTable::new();
     let mut addr_counter: AddrCounter = AddrCounter::new();
@@ -220,6 +221,16 @@ pub fn build_symbol_table(
                 Directive::Word(words) => {
                     let num_bytes = (words.len() as u32) * 2;
                     addr_counter.increment_by(num_bytes);
+                }
+                Directive::Incbin(path) => {
+                    // Get the file size to determine how many bytes to allocate
+                    let binary_data = reader
+                        .read_binary(std::path::Path::new(path))
+                        .map_err(|e| AssemblyError::StructuralError {
+                            line: line.line_number,
+                            reason: format!("Failed to read binary file '{}': {}", path, e),
+                        })?;
+                    addr_counter.increment_by(binary_data.len() as u32);
                 }
                 Directive::Header(_) => {
                     if let None = expected_header_addr {
@@ -439,9 +450,10 @@ pub fn build_symbol_table(
 }
 
 /// Pass 2: Generate machine code.
-pub fn generate_bytecode(
+pub fn generate_bytecode<F: crate::file_reader::FileReader>(
     lines: &[AssemblyLine],
     symbol_table: &SymbolTable,
+    reader: &F,
 ) -> Result<Vec<u8>, AssemblyError> {
     let mut bytecode = Vec::new();
     let mut addr_counter = AddrCounter::new();
@@ -510,6 +522,17 @@ pub fn generate_bytecode(
                         .collect();
                     addr_counter.increment_by(word_bytes.len() as u32);
                     bytecode.extend(word_bytes);
+                }
+                Directive::Incbin(path) => {
+                    // Read the binary file and include its contents
+                    let binary_data = reader
+                        .read_binary(std::path::Path::new(path))
+                        .map_err(|e| AssemblyError::StructuralError {
+                            line: line.line_number,
+                            reason: format!("Failed to read binary file '{}': {}", path, e),
+                        })?;
+                    addr_counter.increment_by(binary_data.len() as u32);
+                    bytecode.extend(binary_data);
                 }
                 Directive::Header(info) => {
                     let mut header: Vec<u8> = Vec::new();

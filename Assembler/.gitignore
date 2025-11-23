@@ -21,7 +21,7 @@ target
 #.idea/
 
 test.asm
-test_out.bin
+*.bin
 
 
 # Added by cargo

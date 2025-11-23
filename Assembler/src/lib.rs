@@ -52,10 +52,11 @@ pub fn assemble<F: FileReader>(
         expected_interrupt_table_addr,
         expected_header_addr,
         &constant_table,
+        reader,
     )
     .context("Failed during assembler phase 1")?;
 
-    let machine_code = assembler::generate_bytecode(&parsed_lines, &symbol_table)
+    let machine_code = assembler::generate_bytecode(&parsed_lines, &symbol_table, reader)
         .context("Failed during assembler phase 2")?;
 
     let mut final_rom = Vec::new();

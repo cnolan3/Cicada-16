@@ -155,6 +155,11 @@ mod tests {
                 .cloned()
                 .ok_or_else(|| anyhow::anyhow!("Mock file not found: {}", path.display()))
         }
+
+        fn read_binary(&self, _path: &Path) -> Result<Vec<u8>> {
+            // Parser tests don't use binary files, so this is a stub
+            Err(anyhow::anyhow!("Binary file reading not supported in parser tests"))
+        }
     }
 
     /// Helper function to simplify calling the parser with mock data.

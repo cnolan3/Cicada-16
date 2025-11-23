@@ -212,6 +212,7 @@ pub enum Directive {
     Word(Vec<Operand>),           // .word 0x0001, 0x0002, 0x0003 AND .word label, label, label
     Define(String, Operand),      // .define label 0x01
     Include(String),              // .include path
+    Incbin(String),               // .incbin path
     Header(HeaderInfo),           // .header_start ... .header_end
     Interrupt(Vec<Operand>),      // .interrupt_table ... .table_end
     SectionStart(SectionOptions), // .section

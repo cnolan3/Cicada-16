@@ -1170,3 +1170,116 @@ fn test_section_align_1_no_padding() {
     // No padding needed for align=1
     assert_eq!(result[0x0001], 0x00); // NOP in section
 }
+
+#[test]
+fn test_incbin() {
+    let mut reader = MockFileReader::default();
+
+    // Add binary file to mock reader
+    let binary_data: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+    reader.add_binary_file("test_data.bin", &binary_data);
+
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        BINARY_START:
+        .incbin "test_data.bin"
+        BINARY_END:
+        .byte 0xFF, 0xFE
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+
+    // First NOP
+    assert_eq!(result[0x0000], 0x00);
+
+    // Binary data should be included starting at 0x0001
+    for (i, byte) in binary_data.iter().enumerate() {
+        assert_eq!(
+            result[0x0001 + i],
+            *byte,
+            "Expected binary data byte {} to match at offset 0x{:04X}",
+            i,
+            0x0001 + i
+        );
+    }
+
+    // Bytes after the binary data
+    assert_eq!(result[0x0009], 0xFF);
+    assert_eq!(result[0x000A], 0xFE);
+
+    // Padding
+    assert_eq!(result[0x000B], 0xFF);
+}
+
+#[test]
+fn test_incbin_with_labels() {
+    let mut reader = MockFileReader::default();
+
+    // Add binary file to mock reader
+    let binary_data: Vec<u8> = vec![0xAA, 0xBB, 0xCC, 0xDD];
+    reader.add_binary_file("sprite.bin", &binary_data);
+
+    reader.add_file(
+        "test.asm",
+        r#"
+        SPRITE_DATA:
+        .incbin "sprite.bin"
+        AFTER_SPRITE:
+        NOP
+        JMP SPRITE_DATA
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+
+    // Binary data at start
+    assert_eq!(result[0x0000], 0xAA);
+    assert_eq!(result[0x0001], 0xBB);
+    assert_eq!(result[0x0002], 0xCC);
+    assert_eq!(result[0x0003], 0xDD);
+
+    // NOP after binary
+    assert_eq!(result[0x0004], 0x00);
+
+    // JMP to SPRITE_DATA (address 0x0000)
+    assert_eq!(result[0x0005], 0x51); // JMP opcode
+    assert_eq!(result[0x0006], 0x00); // Low byte of SPRITE_DATA
+    assert_eq!(result[0x0007], 0x00); // High byte of SPRITE_DATA
+}
+
+#[test]
+fn test_incbin_empty_file() {
+    let mut reader = MockFileReader::default();
+
+    // Add empty binary file to mock reader
+    let binary_data: Vec<u8> = vec![];
+    reader.add_binary_file("empty.bin", &binary_data);
+
+    reader.add_file(
+        "test.asm",
+        r#"
+        NOP
+        .incbin "empty.bin"
+        NOP
+        "#,
+    );
+
+    let entry_path = Path::new("test.asm");
+    let result = assemble(entry_path, 0x3FFF, None, None, &reader).unwrap();
+
+    assert_eq!(result.len(), BANK_SIZE * 2);
+
+    // Two NOPs back-to-back (empty file contributes nothing)
+    assert_eq!(result[0x0000], 0x00);
+    assert_eq!(result[0x0001], 0x00);
+    assert_eq!(result[0x0002], 0xFF); // Padding
+}

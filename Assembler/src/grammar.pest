@@ -307,6 +307,8 @@ define_directive = { ^".define" ~ operand ~ operand }
 
 include_directive = { ^".include" ~ operand }
 
+incbin_directive = { ^".incbin" ~ operand }
+
 section_start_directive = { ^".section" ~ (section_attribute)* }
 
 section_end_directive = { ^".section_end" }
@@ -324,6 +326,7 @@ org_directive
 | word_directive
 | define_directive
 | include_directive
+| incbin_directive
 | header_directive_block
 | interrupt_directive_block
 | section_end_directive

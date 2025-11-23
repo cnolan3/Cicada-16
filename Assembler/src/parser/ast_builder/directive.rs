@@ -144,6 +144,22 @@ impl<'a> AstBuilder<'a> {
         }
     }
 
+    // build an incbin directive
+    pub fn build_incbin_directive(mut self) -> Result<Directive> {
+        let op = self.pop_operand().context("Invalid incbin value.")?;
+
+        match op {
+            Operand::String(s) => Ok(Directive::Incbin(s)),
+            _ => {
+                return Err(AssemblyError::StructuralError {
+                    line: self.line_number,
+                    reason: ".incbin value must be a path string.".to_string(),
+                }
+                .into());
+            }
+        }
+    }
+
     // build a header info block directive
     pub fn build_header_directive(self) -> Result<Directive> {
         let mut info = HeaderInfo::default();
