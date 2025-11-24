@@ -76,6 +76,85 @@ start:
     CALL my_subroutine  ; my_subroutine is defined in subroutines.asm
 ```
 
+## .incbin
+
+Includes raw binary data from an external file directly into the ROM.
+
+- **Syntax**: `.incbin "path/to/file.bin"`
+- **Operand**: A string literal containing the path to the binary file to be included.
+- **Description**: The `.incbin` directive reads the contents of a binary file and includes it byte-for-byte into the assembled ROM at the current location. This is particularly useful for including:
+  - Graphics data (sprite tiles, background tiles, palettes)
+  - Audio samples or music data
+  - Level data or maps
+  - Pre-compiled data tables
+  - Any other binary assets
+
+Unlike `.include`, which parses assembly source code, `.incbin` treats the file as raw binary data with no interpretation or processing. The entire file contents are inserted as-is into the ROM.
+
+Paths are resolved relative to the file containing the `.incbin` directive.
+
+**Example 1: Including sprite data**
+
+```asm
+; Load sprite tiles from a binary file
+sprite_data:
+    .incbin "assets/player_sprites.bin"
+
+sprite_data_end:
+    ; Calculate sprite data size using labels
+    .define SPRITE_DATA_SIZE sprite_data_end - sprite_data
+```
+
+**Example 2: Including multiple assets**
+
+```asm
+; Organize assets in ROM
+.org 0x8000
+
+font_tiles:
+    .incbin "assets/font.bin"
+
+.align 256  ; Align next section to 256-byte boundary
+
+background_tiles:
+    .incbin "assets/background.bin"
+
+.align 256
+
+sprite_tiles:
+    .incbin "assets/sprites.bin"
+```
+
+**Example 3: Creating a pointer table to binary assets**
+
+```asm
+; Table of pointers to various binary assets
+asset_table:
+    .word music_track_1
+    .word music_track_2
+    .word sound_effect_1
+    .word sound_effect_2
+
+music_track_1:
+    .incbin "audio/track1.bin"
+
+music_track_2:
+    .incbin "audio/track2.bin"
+
+sound_effect_1:
+    .incbin "audio/sfx_jump.bin"
+
+sound_effect_2:
+    .incbin "audio/sfx_coin.bin"
+```
+
+**Notes:**
+
+- The binary file is read during the assembly process, so the file must exist and be accessible when assembling
+- If the file cannot be read (doesn't exist, permissions error, etc.), the assembler will report an error
+- Empty binary files are allowed and will contribute zero bytes to the ROM
+- Binary data included with `.incbin` counts toward the current bank's size limits
+
 ## .byte
 
 Defines one or more 8-bit constant values.
