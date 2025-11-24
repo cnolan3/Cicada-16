@@ -4,44 +4,44 @@ This document provides comprehensive documentation for all I/O peripherals and t
 
 ## **IO Registers (F000–F03F)**
 
-| Address | Name           | Description                                                          |
-| :------ | :------------- | :------------------------------------------------------------------- |
-| F000    | **SB**         | **Serial Buffer (R/W)**                                              |
-| F001    | **SC**         | **Serial Control (R/W)**                                             |
-| F002    | **DIV0**       | **32-bit free-running divider (byte 0, LSB)**                        |
-| F003    | **DIV1**       | **32-bit free-running divider (byte 1)**                             |
-| F004    | **DIV2**       | **32-bit free-running divider (byte 2)**                             |
-| F005    | **DIV3**       | **32-bit free-running divider (byte 3, MSB)**                        |
-| F006    | **JOYP**       | **Joypad: read buttons, write column select**                        |
-| F007    | **TIMA**       | **8-bit timer counter (IRQ on overflow → IF.TMR)**                   |
-| F008    | **TMA**        | **8-bit timer modulo (reload value on overflow)**                    |
-| F009    | **TAC**        | **Timer control: bit2=EN, bits1..0=clock sel**                       |
-| F00A    | **DMA_SRC_L**  | **DMA source address low**                                           |
-| F00B    | **DMA_SRC_H**  | **DMA source address high**                                          |
-| F00C    | **DMA_DST_L**  | **DMA destination low**                                              |
-| F00D    | **DMA_DST_H**  | **DMA destination high**                                             |
-| F00E    | **DMA_LEN_L**  | **DMA length/parameter low byte**                                    |
-| F00F    | **DMA_LEN_H**  | **DMA length/parameter high byte**                                   |
+| Address | Name           | Description                                                               |
+| :------ | :------------- | :------------------------------------------------------------------------ |
+| F000    | **SB**         | **Serial Buffer (R/W)**                                                   |
+| F001    | **SC**         | **Serial Control (R/W)**                                                  |
+| F002    | **DIV0**       | **32-bit free-running divider (byte 0, LSB)**                             |
+| F003    | **DIV1**       | **32-bit free-running divider (byte 1)**                                  |
+| F004    | **DIV2**       | **32-bit free-running divider (byte 2)**                                  |
+| F005    | **DIV3**       | **32-bit free-running divider (byte 3, MSB)**                             |
+| F006    | **JOYP**       | **Joypad: read buttons, write column select**                             |
+| F007    | **TIMA0**      | **Timer 0: 8-bit timer counter (IRQ on overflow → IF.TMR)**               |
+| F008    | **TMA0**       | **Timer 0: 8-bit timer modulo (reload value on overflow)**                |
+| F009    | **TAC0**       | **Timer 0 control: bit2=EN, bits1..0=clock sel**                          |
+| F00A    | **DMA_SRC_L**  | **DMA source address low**                                                |
+| F00B    | **DMA_SRC_H**  | **DMA source address high**                                               |
+| F00C    | **DMA_DST_L**  | **DMA destination low**                                                   |
+| F00D    | **DMA_DST_H**  | **DMA destination high**                                                  |
+| F00E    | **DMA_LEN_L**  | **DMA length/parameter low byte**                                         |
+| F00F    | **DMA_LEN_H**  | **DMA length/parameter high byte**                                        |
 | F010    | **DMA_CTL**    | **DMA control: bits5-3=MODE, bit2=VRAM_SAFE, bit1=ADDR_MODE, bit0=START** |
-| F011    | **MPR_BANK**   | **ROM bank select for 4000-7FFF window**                             |
-| F012    | **RAM_BANK**   | **Bank select for banked Cart RAM (if enabled)**                     |
-| F013    | **WE_LATCH**   | Write-enable latch for save RAM (write key)                          |
-| F014    | **VRAM_BANK**  | **VRAM Bank Select (0-3 for 9000-AFFF window)**                      |
-| F015    | **WRAM_BANK**  | **WRAM Bank Select (0-5 for D000-DFFF window -> maps banks 1-6)**    |
-| F018    | **RTC_SEC**    | **Seconds (0-59)**                                                   |
-| F019    | **RTC_MIN**    | **Minutes (0-59)**                                                   |
-| F01A    | **RTC_HOUR**   | **Hours (0-23)**                                                     |
-| F01B    | **RTC_DAY**    | **Day of the month (1-31)**                                          |
-| F01C    | **RTC_MONTH**  | **Month of the year (1-12)**                                         |
-| F01D    | **RTC_YEAR_L** | **Lower 8 bits of the year**                                         |
-| F01E    | **RTC_YEAR_H** | **Upper 8 bits of the year**                                         |
-| F01F    | **RTC_CTL**    | **Control register (LATCH, HALT)**                                   |
-| F020    | **IE**         | **Interrupt Enable Register**                                        |
-| F021    | **IF**         | **Interrupt Flag Register**                                          |
-| F022    | **BOOT_CTRL**  | **Boot Control: Write 1 to exit boot ROM.**                          |
-| F023    | **TIMA1**      | **Timer 1: 8-bit counter (IRQ on overflow → IF.TMR1)**               |
-| F024    | **TMA1**       | **Timer 1: 8-bit modulo (reload value on overflow)**                 |
-| F025    | **TAC1**       | **Timer 1 control: bit5=EN, bits4..0=clock sel**                     |
+| F011    | **MPR_BANK**   | **ROM bank select for 4000-7FFF window**                                  |
+| F012    | **RAM_BANK**   | **Bank select for banked Cart RAM (if enabled)**                          |
+| F013    | **WE_LATCH**   | Write-enable latch for save RAM (write key)                               |
+| F014    | **VRAM_BANK**  | **VRAM Bank Select (0-3 for 9000-AFFF window)**                           |
+| F015    | **WRAM_BANK**  | **WRAM Bank Select (0-5 for D000-DFFF window -> maps banks 1-6)**         |
+| F018    | **RTC_SEC**    | **Seconds (0-59)**                                                        |
+| F019    | **RTC_MIN**    | **Minutes (0-59)**                                                        |
+| F01A    | **RTC_HOUR**   | **Hours (0-23)**                                                          |
+| F01B    | **RTC_DAY**    | **Day of the month (1-31)**                                               |
+| F01C    | **RTC_MONTH**  | **Month of the year (1-12)**                                              |
+| F01D    | **RTC_YEAR_L** | **Lower 8 bits of the year**                                              |
+| F01E    | **RTC_YEAR_H** | **Upper 8 bits of the year**                                              |
+| F01F    | **RTC_CTL**    | **Control register (LATCH, HALT)**                                        |
+| F020    | **IE**         | **Interrupt Enable Register**                                             |
+| F021    | **IF**         | **Interrupt Flag Register**                                               |
+| F022    | **BOOT_CTRL**  | **Boot Control: Write 1 to exit boot ROM.**                               |
+| F023    | **TIMA1**      | **Timer 1: 8-bit counter (IRQ on overflow → IF.TMR1)**                    |
+| F024    | **TMA1**       | **Timer 1: 8-bit modulo (reload value on overflow)**                      |
+| F025    | **TAC1**       | **Timer 1 control: bit5=EN, bits4..0=clock sel**                          |
 
 ## **Divider Registers (DIV0-DIV3)**
 
@@ -96,13 +96,13 @@ The 2-bit value written to GRP_SEL determines which set of physical buttons is m
 
 The console provides two independent 8-bit programmable timers that can be configured to fire interrupts when they overflow. Each timer is controlled by three registers.
 
-### **Timer 0 (TIMA, TMA, TAC)**
+### **Timer 0 (TIMA0, TMA0, TAC0)**
 
 Timer 0 is controlled by three registers located at F007-F009.
 
-- **TIMA (F007 - Timer 0 Counter):** This is the main 8-bit counter. It increments at a frequency selected by the TAC register. When TIMA overflows (increments past 255), it is automatically reloaded with the value from TMA and requests a Timer 0 Interrupt by setting bit 3 of the IF register.
-- **TMA (F008 - Timer 0 Modulo):** This 8-bit register holds the value that TIMA will be reset to after it overflows. This allows the game to control the starting point of the count, and thus the period of the timer interrupt. For example, if TMA is set to 200, the timer will count from 200 to 255 (56 ticks) before overflowing and firing an interrupt.
-- **TAC (F009 - Timer 0 Control):** This register controls the timer's operation. It has been expanded to allow for a much wider range of timer frequencies.
+- **TIMA0 (F007 - Timer 0 Counter):** This is the main 8-bit counter. It increments at a frequency selected by the TAC register. When TIMA overflows (increments past 255), it is automatically reloaded with the value from TMA and requests a Timer 0 Interrupt by setting bit 3 of the IF register.
+- **TMA0 (F008 - Timer 0 Modulo):** This 8-bit register holds the value that TIMA will be reset to after it overflows. This allows the game to control the starting point of the count, and thus the period of the timer 0 interrupt. For example, if TMA is set to 200, the timer 0 will count from 200 to 255 (56 ticks) before overflowing and firing an interrupt.
+- **TAC0 (F009 - Timer 0 Control):** This register controls the timer's operation. It has been expanded to allow for a much wider range of timer frequencies.
 
 ### **Timer 1 (TIMA1, TMA1, TAC1)**
 
@@ -116,10 +116,10 @@ Timer 1 is controlled by three registers located at F023-F025. It operates ident
 
 Both TAC (F009) and TAC1 (F025) share the same bit layout:
 
-| Bit     | Name        | Type    | Description                                  |
-| :------ | :---------- | :------ | :------------------------------------------- |
-| 7-6     | -           | R/W     | Unused                                       |
-| **5**   | **TMR_EN**  | **R/W** | **Timer Enable (0 = Stop, 1 = Start)**       |
+| Bit     | Name        | Type    | Description                                   |
+| :------ | :---------- | :------ | :-------------------------------------------- |
+| 7-6     | -           | R/W     | Unused                                        |
+| **5**   | **TMR_EN**  | **R/W** | **Timer Enable (0 = Stop, 1 = Start)**        |
 | **4-0** | **CLK_SEL** | **R/W** | **Clock Select (determines timer frequency)** |
 
 ### **Clock Selection (CLK_SEL)**
