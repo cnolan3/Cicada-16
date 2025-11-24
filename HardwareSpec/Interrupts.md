@@ -27,14 +27,15 @@ The process for triggering and handling an interrupt or CPU fault is as follows:
 
 ## **3. Interrupt Sources and Registers**
 
-The Cicada-16 has seven hardware interrupt sources, controlled via the `IE` (`F020`) and `IF` (`F021`) registers.
+The Cicada-16 has eight hardware interrupt sources, controlled via the `IE` (`F020`) and `IF` (`F021`) registers.
 
 | Bit | Name            | Description                                                                 |
 | :-- | :-------------- | :-------------------------------------------------------------------------- |
+| 7   | **Joypad**      | Occurs when a joypad button is pressed **(on the 1-to-0 transition only)**. |
 | 6   | **Link Status** | Occurs when the serial port `CONNECTED` bit changes state.                  |
-| 5   | **Joypad**      | Occurs when a joypad button is pressed **(on the 1-to-0 transition only)**. |
-| 4   | **Serial**      | Occurs when a serial data transfer is complete.                             |
-| 3   | **Timer**       | Occurs when the TIMA timer overflows.                                       |
+| 5   | **Serial**      | Occurs when a serial data transfer is complete.                             |
+| 4   | **Timer 1**     | Occurs when the TIMA1 timer overflows.                                      |
+| 3   | **Timer 0**     | Occurs when the TIMA timer overflows.                                       |
 | 2   | **LYC == LY**   | Occurs when the PPU's `LY` register equals the `LYC` register.              |
 | 1   | **H-Blank**     | Occurs when the PPU enters the H-Blank period.                              |
 | 0   | **V-Blank**     | Occurs when the PPU enters the V-Blank period.                              |
@@ -45,12 +46,12 @@ This register controls whether a specific hardware interrupt is allowed to trigg
 
 | Bit | Name            | Type | Function                                  |
 | :-- | :-------------- | :--- | :---------------------------------------- |
-| 7   | -               | R    | Unused                                    |
+| 7   | **Joypad**      | R/W  | Enable Joypad Interrupt                   |
 | 6   | **Link Status** | R/W  | Enable Link Status Interrupt              |
-| 5   | **Joypad**      | R/W  | Enable Joypad Interrupt                   |
-| 4   | **Serial**      | R/W  | Enable Serial Transfer Complete Interrupt |
-| 3   | **Timer**       | R/W  | Enable Timer Overflow Interrupt           |
-| 2   | **LYC == LY**   | R/W  | Enable PPU LYC Interrupt                |
+| 5   | **Serial**      | R/W  | Enable Serial Transfer Complete Interrupt |
+| 4   | **Timer 1**     | R/W  | Enable Timer 1 Overflow Interrupt         |
+| 3   | **Timer 0**     | R/W  | Enable Timer 0 Overflow Interrupt         |
+| 2   | **LYC == LY**   | R/W  | Enable PPU LYC Interrupt                  |
 | 1   | **H-Blank**     | R/W  | Enable PPU H-Blank Interrupt              |
 | 0   | **V-Blank**     | R/W  | Enable PPU V-Blank Interrupt              |
 
@@ -60,11 +61,11 @@ This register holds the flags for pending hardware interrupts. When a hardware e
 
 | Bit | Name            | Type | Function                                                                                     |
 | :-- | :-------------- | :--- | :------------------------------------------------------------------------------------------- |
-| 7   | -               | R    | Unused                                                                                       |
+| 7   | **Joypad**      | R/W  | Joypad Interrupt Flag. Set when a joypad button is pressed.                                  |
 | 6   | **Link Status** | R/W  | Link Status Interrupt Flag. Set when the `CONNECTED` bit in the `SC` register changes state. |
-| 5   | **Joypad**      | R/W  | Joypad Interrupt Flag. Set when a joypad button is pressed.                                  |
-| 4   | **Serial**      | R/W  | Serial Transfer Complete Flag. Set when a serial data transfer finishes.                     |
-| 3   | **Timer**       | R/W  | Timer Overflow Flag. Set when the `TIMA` register overflows.                                 |
+| 5   | **Serial**      | R/W  | Serial Transfer Complete Flag. Set when a serial data transfer finishes.                     |
+| 4   | **Timer 1**     | R/W  | Timer 1 Overflow Flag. Set when the `TIMA1` register overflows.                              |
+| 3   | **Timer 0**     | R/W  | Timer 0 Overflow Flag. Set when the `TIMA` register overflows.                               |
 | 2   | **LYC == LY**   | R/W  | PPU LYC Flag. Set when `LY` == `LYC`.                                                        |
 | 1   | **H-Blank**     | R/W  | PPU H-Blank Flag. Set when the PPU enters the H-Blank period.                                |
 | 0   | **V-Blank**     | R/W  | PPU V-Blank Flag. Set when the PPU enters the V-Blank period.                                |
@@ -80,7 +81,7 @@ CPU Faults are critical, non-maskable events triggered by illegal or dangerous o
 
 ## **5. Interrupt Vector Table**
 
-The Interrupt Vector Table is a 32-byte block of memory containing the 16-bit addresses for each ISR or Fault Handler. The layout below is defined by its offset from the table's base address. The order also determines priority if multiple interrupts or faults occur simultaneously.
+The Interrupt Vector Table is a 26-byte block of memory containing the 16-bit addresses for each ISR or Fault Handler. The layout below is defined by its offset from the table's base address. The order also determines priority if multiple interrupts or faults occur simultaneously.
 
 | Vector Address Offset | Interrupt Source        | Priority  |
 | :-------------------- | :---------------------- | :-------- |
@@ -92,10 +93,11 @@ The Interrupt Vector Table is a 32-byte block of memory containing the 16-bit ad
 | `+0xA`                | `V-Blank`               | 1         |
 | `+0xC`                | `H-Blank`               | 2         |
 | `+0xE`                | `LYC == LY`             | 3         |
-| `+0x10`               | `Timer`                 | 4         |
-| `+0x12`               | `Serial`                | 5         |
-| `+0x14`               | `Link Status`           | 6         |
-| `+0x16`               | `Joypad`                | 7         |
+| `+0x10`               | `Timer 0`               | 4         |
+| `+0x12`               | `Timer 1`               | 5         |
+| `+0x14`               | `Serial`                | 6         |
+| `+0x16`               | `Link Status`           | 7         |
+| `+0x18`               | `Joypad`                | 8         |
 
 ## **6. Vector Table Location Modes**
 
@@ -106,7 +108,7 @@ The Cicada-16 supports two modes for the location of the interrupt vector table,
 This is the default and simplest mode.
 
 - **Cartridge Header Flag**: The "Interrupt Mode" bit (Bit 7 of byte `0x0028`) is set to `0`.
-  the CPU is hardwired to look for the interrupt vector table at a fixed location within the cartridge ROM: **`0x0060 - 0x007F`**.
+  the CPU is hardwired to look for the interrupt vector table at a fixed location within the cartridge ROM: **`0x0060 - 0x0079`** (26 bytes).
 - **Implementation**: The game developers place a static list of 16-bit addresses at this location in their ROM file. The interrupt handlers are fixed for the lifetime of the game.
 
 ### **Enhanced Mode (RAM-Based)**
@@ -115,8 +117,8 @@ This mode enables advanced programming techniques by allowing the game to modify
 
 - **Cartridge Header Flag**: The "Interrupt Mode" bit is set to `1`.
 - **Console Boot Behavior**: The boot ROM reads this flag and performs two actions:
-  1.  It sets a hardware latch that re-routes the CPU's interrupt vector lookups to a fixed location in Work RAM Bank 0 (WRAM0): **`0xBFE0 - 0xBFFF`**.
-  2.  It uses the DMA controller to automatically copy the 32-byte vector table from the cartridge ROM (`0x0060`, mapped to `0x4060` during boot) to WRAM (`0xBFE0`) as a default starting point.
+  1.  It sets a hardware latch that re-routes the CPU's interrupt vector lookups to a fixed location in Work RAM Bank 0 (WRAM0): **`0xBFE0 - 0xBFF9`** (26 bytes).
+  2.  It uses the DMA controller to automatically copy the 26-byte vector table from the cartridge ROM (`0x0060`, mapped to `0x4060` during boot) to WRAM (`0xBFE0`) as a default starting point.
 - **Flexibility**: Because the interrupt table is in RAM, the game can overwrite any of these vector addresses at any time to point to different handler routines, allowing for dynamic, state-based interrupt handling.
 
 ---

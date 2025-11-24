@@ -46,7 +46,7 @@ The code on the Boot ROM executes the following steps in order:
 3. **Display Boot Animation**: The Boot ROM displays the console logo, enables interrupts (EI), and uses its internal V-Blank ISR to perform a brief startup animation. It may read the **Boot Animation ID** from the cartridge header to select a specific visual effect.
 4. **Cartridge Detection & Verification**: While the animation is playing, the Boot ROM checks for a cartridge and verifies its header.
 5. **Configure Game Interrupt Mode**: It reads the "Interrupt Mode" flag from the cartridge header and sets an internal hardware latch that determines where the CPU will look for interrupt vectors once the game starts (either the cartridge ROM or WRAM).
-6. **Initialize RAM Vectors (If Needed)**: If "Enhanced Mode" is selected, the Boot ROM configures and triggers the DMA controller to copy the 32-byte interrupt vector table from the cartridge (at `0x4060` during boot) to WRAM (at `0xBFE0`).
+6. **Initialize RAM Vectors (If Needed)**: If "Enhanced Mode" is selected, the Boot ROM configures and triggers the DMA controller to copy the 26-byte interrupt vector table from the cartridge (at `0x4060` during boot) to WRAM (at `0xBFE0`).
 7. **Finalize and Disable Interrupts**: Once the animation is complete and the cartridge is ready, the Boot ROM executes a DI instruction to disable interrupts, ensuring a clean handover.
 8. **Memory Map Handover**: The Boot ROM writes a value of `0x01` to the **`BOOT_CTRL`** register at `F022`. This write-only action commands the memory controller to:
    - **Disable and unmap** the internal Boot ROM and its vector table.

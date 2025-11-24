@@ -104,6 +104,9 @@ Not all RAM is equal in speed.
 | F020    | **IE**         | **Interrupt Enable Register**                                        |
 | F021    | **IF**         | **Interrupt Flag Register**                                          |
 | F022    | **BOOT_CTRL**  | **Boot Control: Write 1 to exit boot ROM.**                          |
+| F023    | **TIMA1**      | **Timer 1: 8-bit counter (IRQ on overflow → IF.TMR1)**               |
+| F024    | **TMA1**       | **Timer 1: 8-bit modulo (reload value on overflow)**                 |
+| F025    | **TAC1**       | **Timer 1 control: bit5=EN, bits4..0=clock sel**                     |
 
 ## **Divider Registers (DIV0-DIV3)**
 
@@ -154,19 +157,35 @@ The 2-bit value written to GRP_SEL determines which set of physical buttons is m
    - To read the Utility Buttons (Start, Select, L, R), write `0x30`.
 2. **Read the Button State:** Read from F000. The lower 4 bits will reflect the state of the selected buttons. For example, if the Action group was selected and the player is pressing **A** and **X**, reading the register will return a value where bits 0 and 2 are 0.
 
-## **Programmable Timer (TIMA, TMA, TAC)**
+## **Programmable Timers**
 
-The console provides one 8-bit programmable timer that can be configured to fire an interrupt when it overflows. This system is controlled by three registers: TIMA, TMA, and TAC, located at F007-F009.
+The console provides two independent 8-bit programmable timers that can be configured to fire interrupts when they overflow. Each timer is controlled by three registers.
 
-- **TIMA (F007 - Timer Counter):** This is the main 8-bit counter. It increments at a frequency selected by the TAC register. When TIMA overflows (increments past 255), it is automatically reloaded with the value from TMA and requests a Timer Interrupt by setting bit 2 of the IF register.
-- **TMA (F008 - Timer Modulo):** This 8-bit register holds the value that TIMA will be reset to after it overflows. This allows the game to control the starting point of the count, and thus the period of the timer interrupt. For example, if TMA is set to 200, the timer will count from 200 to 255 (56 ticks) before overflowing and firing an interrupt.
-- **TAC (F009 - Timer Control):** This register controls the timer's operation. It has been expanded to allow for a much wider range of timer frequencies.
+### **Timer 0 (TIMA, TMA, TAC)**
+
+Timer 0 is controlled by three registers located at F007-F009.
+
+- **TIMA (F007 - Timer 0 Counter):** This is the main 8-bit counter. It increments at a frequency selected by the TAC register. When TIMA overflows (increments past 255), it is automatically reloaded with the value from TMA and requests a Timer 0 Interrupt by setting bit 3 of the IF register.
+- **TMA (F008 - Timer 0 Modulo):** This 8-bit register holds the value that TIMA will be reset to after it overflows. This allows the game to control the starting point of the count, and thus the period of the timer interrupt. For example, if TMA is set to 200, the timer will count from 200 to 255 (56 ticks) before overflowing and firing an interrupt.
+- **TAC (F009 - Timer 0 Control):** This register controls the timer's operation. It has been expanded to allow for a much wider range of timer frequencies.
+
+### **Timer 1 (TIMA1, TMA1, TAC1)**
+
+Timer 1 is controlled by three registers located at F023-F025. It operates identically to Timer 0 but independently.
+
+- **TIMA1 (F023 - Timer 1 Counter):** The 8-bit counter for Timer 1. When it overflows, it is automatically reloaded with the value from TMA1 and requests a Timer 1 Interrupt by setting bit 4 of the IF register.
+- **TMA1 (F024 - Timer 1 Modulo):** The 8-bit reload value for Timer 1 after overflow.
+- **TAC1 (F025 - Timer 1 Control):** Controls Timer 1's operation with the same configuration options as TAC.
+
+### **Timer Control Register (TAC / TAC1) Bit Assignments**
+
+Both TAC (F009) and TAC1 (F025) share the same bit layout:
 
 | Bit     | Name        | Type    | Description                                  |
 | :------ | :---------- | :------ | :------------------------------------------- |
 | 7-6     | -           | R/W     | Unused                                       |
 | **5**   | **TMR_EN**  | **R/W** | **Timer Enable (0 = Stop, 1 = Start)**       |
-| **4-0** | **CLK_SEL** | **R/W** | **Clock Select (determines TIMA frequency)** |
+| **4-0** | **CLK_SEL** | **R/W** | **Clock Select (determines timer frequency)** |
 
 ### **Clock Selection (CLK_SEL)**
 
@@ -209,19 +228,24 @@ The 5-bit value in CLK_SEL selects the clock source for the timer by directly ma
 
 ### **Timer Operation Flow**
 
-1.  **Configure:** Set the desired reload value in **TMA** and the clock frequency in **TAC**.
-2.  **Enable:** Set bit 5 of **TAC** to start the timer.
-3.  **Counting:** **TIMA** increments at the selected frequency.
-4.  **Overflow:** When **TIMA** counts past 255, it overflows.
+The operation flow is the same for both Timer 0 and Timer 1:
+
+1.  **Configure:** Set the desired reload value in **TMA/TMA1** and the clock frequency in **TAC/TAC1**.
+2.  **Enable:** Set bit 5 of **TAC/TAC1** to start the timer.
+3.  **Counting:** **TIMA/TIMA1** increments at the selected frequency.
+4.  **Overflow:** When **TIMA/TIMA1** counts past 255, it overflows.
 5.  **Interrupt & Reload:** On overflow, two things happen simultaneously:
-    - The Timer Interrupt Flag (bit 2 in **IF**) is set to 1.
-    - **TIMA** is reloaded with the value from **TMA**.
+    - The Timer Interrupt Flag (bit 3 for Timer 0, bit 4 for Timer 1 in **IF**) is set to 1.
+    - **TIMA/TIMA1** is reloaded with the value from **TMA/TMA1**.
 
 ### **Use-Cases**
 
-1.  **Scheduled Game Events:** The timer interrupt can be used to drive regularly scheduled game logic, such as updating animations, moving non-player characters, or checking for game state changes at a fixed interval.
-2.  **Controlling Music/Sound Tempo:** The timer can provide a steady beat for a software-driven music engine.
-3.  **Implementing Time-based Mechanics:** A countdown timer for a level, a temporary power-up that wears off, or a day/night cycle can all be implemented using the timer interrupt.
+Having two independent timers provides flexibility for managing multiple timing-critical tasks:
+
+1.  **Scheduled Game Events:** Timer interrupts can be used to drive regularly scheduled game logic, such as updating animations, moving non-player characters, or checking for game state changes at a fixed interval.
+2.  **Controlling Music/Sound Tempo:** One timer can provide a steady beat for a software-driven music engine while the other handles game logic timing.
+3.  **Implementing Time-based Mechanics:** A countdown timer for a level, a temporary power-up that wears off, or a day/night cycle can all be implemented using timer interrupts.
+4.  **Dual-rate Processing:** Use Timer 0 for high-frequency updates (e.g., audio processing) and Timer 1 for lower-frequency updates (e.g., enemy AI), reducing overhead compared to manually dividing a single timer.
 
 ## **Real-Time Clock (RTC)**
 

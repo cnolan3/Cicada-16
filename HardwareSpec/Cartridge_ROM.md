@@ -7,7 +7,8 @@ This document specifies the internal memory layout of a Cicada-16 game cartridge
 | Address Range   | Size      | Description                             |
 | :-------------- | :-------- | :-------------------------------------- |
 | 0x0000 - 0x005F | 96 Bytes  | Cartridge Header (metadata, mode flags) |
-| 0x0060 - 0x007F | 32 Bytes  | Interrupt Vector Table Template         |
+| 0x0060 - 0x0079 | 26 Bytes  | Interrupt Vector Table Template         |
+| 0x007A - 0x007F | 6 Bytes   | Reserved                                |
 | 0x0080          | -         | Game Code Entry Point                   |
 | 0x0081 - 0x3FFF | ~16 KiB   | Remainder of Fixed ROM Bank 0           |
 
@@ -55,7 +56,7 @@ The rest of the cartridge ROM is dedicated to the game's program code, graphics 
 
 ### **3. Interrupt Vector Table**
 
-The 32-byte block from `0x0060` to `0x007F` is reserved for the Interrupt Vector Table. This table contains the starting addresses for the game's interrupt service routines.
+The 26-byte block from `0x0060` to `0x0079` is reserved for the Interrupt Vector Table. This table contains the starting addresses for the game's interrupt service routines.
 
 The Cicada-16 supports two different modes for handling interrupts ("Standard" and "Enhanced"), which control whether this table is used directly from ROM or copied to RAM for dynamic modification. The desired mode is selected via a flag in the cartridge header (Bit 7 of byte `0x0028`).
 

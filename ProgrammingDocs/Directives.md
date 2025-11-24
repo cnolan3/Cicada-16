@@ -415,7 +415,7 @@ These directives define the interrupt vector table.
       ; ... and so on
   .table_end
   ```
-- **Description**: This block is used to define the addresses of your interrupt service routines (ISRs). The assembler will create a 32-byte table of these addresses. The order of the `.word` directives inside the block matters and must correspond to the interrupt vector order defined in `HardwareSpec/Interrupts.md`. You must provide at least 12 vectors, and at most 16.
+- **Description**: This block is used to define the addresses of your interrupt service routines (ISRs). The assembler will create a 26-byte table of these addresses. The order of the `.word` directives inside the block matters and must correspond to the interrupt vector order defined in `HardwareSpec/Interrupts.md`. You must provide exactly 13 vectors.
 
 **Example:**
 
@@ -429,7 +429,8 @@ These directives define the interrupt vector table.
     .word vblank_handler        ; V-Blank
     .word hblank_handler        ; H-Blank
     .word lyc_handler           ; LY == LYC
-    .word timer_handler         ; Timer
+    .word timer0_handler        ; Timer 0
+    .word timer1_handler        ; Timer 1
     .word serial_handler        ; Serial
     .word link_status_handler   ; Link Status
     .word joypad_handler        ; Joypad

@@ -240,17 +240,19 @@ This example demonstrates how to structure a complete, valid cartridge file usin
 .org 0x0060
 
 .interrupt_table
-    .word reset_handler
-    .word default_handler
-    .word default_handler
-    .word default_handler
-    .word default_handler
-    .word vblank_handler
-    .word default_handler
-    .word default_handler
-    .word default_handler
-    .word default_handler
-    .word default_handler
+    .word reset_handler         ; RESET
+    .word default_handler       ; Bus Error
+    .word default_handler       ; Illegal Instruction
+    .word default_handler       ; Protected Memory
+    .word default_handler       ; Stack Overflow
+    .word vblank_handler        ; V-Blank
+    .word default_handler       ; H-Blank
+    .word default_handler       ; LYC == LY
+    .word default_handler       ; Timer 0
+    .word default_handler       ; Timer 1
+    .word default_handler       ; Serial
+    .word default_handler       ; Link Status
+    .word default_handler       ; Joypad
 .table_end
 
 .org 0x0080

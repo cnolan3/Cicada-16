@@ -239,7 +239,7 @@ impl<'a> AstBuilder<'a> {
                         return Err(AssemblyError::StructuralError {
                             line: line_number,
                             reason:
-                                ".interrupt_mode must be an unsigned 2 bit value (max: 3, min: 0)."
+                                ".hardware_rev must be an unsigned 2 bit value (max: 3, min: 0)."
                                     .to_string(),
                         }
                         .into());
@@ -251,9 +251,8 @@ impl<'a> AstBuilder<'a> {
                     if val > 7 {
                         return Err(AssemblyError::StructuralError {
                             line: line_number,
-                            reason:
-                                ".interrupt_mode must be an unsigned 3 bit value (max: 7, min: 0)."
-                                    .to_string(),
+                            reason: ".region must be an unsigned 3 bit value (max: 7, min: 0)."
+                                .to_string(),
                         }
                         .into());
                     }
@@ -302,10 +301,10 @@ impl<'a> AstBuilder<'a> {
             }
         }
 
-        if op_table.len() < 12 || op_table.len() > 16 {
+        if op_table.len() < 13 || op_table.len() > 16 {
             Err(AssemblyError::StructuralError {
                 line: self.line_number,
-                reason: "Vector interrupt table must contain at least 12 entries and at most 16 entries."
+                reason: "Vector interrupt table must contain at least 13 entries and at most 16 entries."
                     .to_string(),
             }
             .into())
