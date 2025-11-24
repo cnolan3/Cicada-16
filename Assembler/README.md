@@ -1,12 +1,12 @@
-# Cicada-16 Assembler (`casm`)
+# Cicada-16 Assembler (`cicasm`)
 
-This directory contains the complete source code for `casm`, the official assembler for the Cicada-16 fantasy console. This program is responsible for translating human-readable Cicada-16 assembly language into the binary machine code that the console can execute.
+This directory contains the complete source code for `cicasm`, the official assembler for the Cicada-16 fantasy console. This program is responsible for translating human-readable Cicada-16 assembly language into the binary machine code that the console can execute.
 
 It is a command-line tool written in Rust that takes a source `.asm` file and outputs a `.bin` file representing the final cartridge ROM image.
 
 ## Architecture
 
-`casm` is a classic **two-pass assembler**. This design is crucial for handling forward references, where a label is used before it is defined (e.g., jumping forward to a label that appears later in the code).
+`cicasm` is a classic **two-pass assembler**. This design is crucial for handling forward references, where a label is used before it is defined (e.g., jumping forward to a label that appears later in the code).
 
 - **Pass 1**: The assembler reads through the entire source code to build a **symbol table**. It calculates the memory address for every label it encounters. To do this, it must know the size of every instruction, but it doesn't generate the full machine code yet.
 
