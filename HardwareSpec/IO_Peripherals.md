@@ -112,9 +112,9 @@ Timer 1 is controlled by three registers located at F023-F025. It operates ident
 - **TMA1 (F024 - Timer 1 Modulo):** The 8-bit reload value for Timer 1 after overflow.
 - **TAC1 (F025 - Timer 1 Control):** Controls Timer 1's operation with the same configuration options as TAC.
 
-### **Timer Control Register (TAC / TAC1) Bit Assignments**
+### **Timer Control Register (TAC0 / TAC1) Bit Assignments**
 
-Both TAC (F009) and TAC1 (F025) share the same bit layout:
+Both TAC0 (F009) and TAC1 (F025) share the same bit layout:
 
 | Bit     | Name        | Type    | Description                                   |
 | :------ | :---------- | :------ | :-------------------------------------------- |
@@ -165,13 +165,13 @@ The 5-bit value in CLK_SEL selects the clock source for the timer by directly ma
 
 The operation flow is the same for both Timer 0 and Timer 1:
 
-1.  **Configure:** Set the desired reload value in **TMA/TMA1** and the clock frequency in **TAC/TAC1**.
-2.  **Enable:** Set bit 5 of **TAC/TAC1** to start the timer.
-3.  **Counting:** **TIMA/TIMA1** increments at the selected frequency.
-4.  **Overflow:** When **TIMA/TIMA1** counts past 255, it overflows.
+1.  **Configure:** Set the desired reload value in **TMA0/TMA1** and the clock frequency in **TAC0/TAC1**.
+2.  **Enable:** Set bit 5 of **TAC0/TAC1** to start the timer.
+3.  **Counting:** **TIMA0/TIMA1** increments at the selected frequency.
+4.  **Overflow:** When **TIMA0/TIMA1** counts past 255, it overflows.
 5.  **Interrupt & Reload:** On overflow, two things happen simultaneously:
     - The Timer Interrupt Flag (bit 3 for Timer 0, bit 4 for Timer 1 in **IF**) is set to 1.
-    - **TIMA/TIMA1** is reloaded with the value from **TMA/TMA1**.
+    - **TIMA0/TIMA1** is reloaded with the value from **TMA0/TMA1**.
 
 ### **Use-Cases**
 
