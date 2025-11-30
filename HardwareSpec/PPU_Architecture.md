@@ -179,7 +179,7 @@ These registers, mapped to the CPU's address space, control the PPU's operation.
 | F047      | WINX    | **Window X-Position:** The left edge of the Window layer.                                                                                                                  |
 | F048      | LY      | **LCD Y-Coordinate:** Indicates the current vertical scanline being drawn (Read-only). Ranges from 0 to 215.                                                               |
 | F049      | LYC     | **LY Compare:** The PPU compares LY with this value. If they match, a flag is set in the STAT register, which can trigger an interrupt. Useful for scanline-based effects. |
-| F04A      | BG_MODE | **Background Mode:** Configures the size (dimensions) of the BG0 and BG1 tilemaps.                                                                                         |
+| F04A      | BG_MODE | **Background Mode:** Configures the size (dimensions) of the BG0 and BG1 tilemaps. Bits 1-0 = BG0 size, Bits 3-2 = BG1 size. See section 7.3.                             |
 | F04B      | BG_TMB  | **Background Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for BG0 (bits 3-0) and BG1 (bits 7-4).                                                            |
 | F04C      | WIN_TMB | **Window Tilemap Base:** Sets the 2KiB-aligned starting slot in VRAM for the Window tilemap (bits 3-0). Bits 7-4 are reserved.                                            |
 | F04D-F07F | ---     | **Reserved**                                                                                                                                                               |
@@ -203,6 +203,62 @@ The `BG_TMB` register at `F04B` and `WIN_TMB` register at `F04C` provide an effi
 The PPU calculates the final base address using the formula: `base_address = slot_id × 2048`. For example:
 - If `BG_TMB` = `0x42`: BG0's tilemap starts at slot 2 (address `0x1000`), and BG1's tilemap starts at slot 4 (address `0x2000`).
 - If `WIN_TMB` = `0x06`: Window's tilemap starts at slot 6 (address `0x3000`).
+
+### **7.3. BG_MODE Register (F04A)**
+
+The `BG_MODE` register at `F04A` controls the dimensions of the BG0 and BG1 tilemaps. This allows games to select different tilemap sizes based on their needs—from compact 32×32 tilemaps for static screens to large 64×64 tilemaps for expansive scrolling worlds.
+
+**BG_MODE Register (F04A) Bit Assignments:**
+
+| Bit(s) | Name       | Description                                                                                              |
+| :----- | :--------- | :------------------------------------------------------------------------------------------------------- |
+| 7-4    | (Reserved) | Unused. Should be set to 0.                                                                              |
+| **3-2** | **BG1_SIZE** | **BG1 tilemap size.** See size table below.                                                              |
+| **1-0** | **BG0_SIZE** | **BG0 tilemap size.** See size table below.                                                              |
+
+**Tilemap Size Encoding:**
+
+The 2-bit size value selects from four possible tilemap dimensions:
+
+| Size Value | Tilemap Dimensions | Pixel Dimensions | VRAM Required |
+| :--------- | :----------------- | :--------------- | :------------ |
+| **00**     | 32×32 tiles        | 256×256 pixels   | 2 KiB         |
+| **01**     | 64×32 tiles        | 512×256 pixels   | 4 KiB         |
+| **10**     | 32×64 tiles        | 256×512 pixels   | 4 KiB         |
+| **11**     | 64×64 tiles        | 512×512 pixels   | 8 KiB         |
+
+**Important Notes:**
+
+- The Window layer has a fixed size of 32×32 tiles and is not affected by this register.
+- When changing tilemap sizes, ensure that sufficient VRAM space is allocated for the new dimensions.
+- The tilemap base addresses (set via `BG_TMB`) must point to VRAM slots with enough consecutive space to hold the entire tilemap.
+- Tilemap sizes should typically only be changed during V-Blank to avoid visual artifacts.
+
+**Example Configurations:**
+
+```assembly
+; Set BG0 to 64×64 (large scrolling world) and BG1 to 32×32 (small overlay)
+LDI R0, 0b00000011  ; BG1_SIZE=00 (32×32), BG0_SIZE=11 (64×64)
+ST.b (0xF04A), R0
+
+; Set both backgrounds to 64×32 (wide horizontal scrolling)
+LDI R0, 0b00000101  ; BG1_SIZE=01 (64×32), BG0_SIZE=01 (64×32)
+ST.b (0xF04A), R0
+
+; Set BG0 to 32×64 (tall vertical scrolling) and BG1 to 32×32
+LDI R0, 0b00000010  ; BG1_SIZE=00 (32×32), BG0_SIZE=10 (32×64)
+ST.b (0xF04A), R0
+```
+
+**VRAM Layout Considerations:**
+
+When using larger tilemaps, carefully plan your VRAM allocation:
+
+- **32×32 tilemap**: Occupies 1 slot (2 KiB). Can start at any slot (0-15).
+- **64×32 or 32×64 tilemap**: Occupies 2 consecutive slots (4 KiB). Should start at an even slot (0, 2, 4, 6, 8, 10, 12, 14).
+- **64×64 tilemap**: Occupies 4 consecutive slots (8 KiB). Should start at a slot divisible by 4 (0, 4, 8, 12).
+
+While the hardware does not enforce alignment restrictions beyond the 2 KiB slot boundaries, following these alignment recommendations simplifies VRAM management and prevents tilemaps from being split across non-contiguous memory regions.
 
 ## **8. LCDC Register (F040)**
 
